@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
@@ -9,6 +11,7 @@ function ContributionHistory() {
     const [filter, setFilter] = useState('ALL'); // ALL, INDIVIDUAL, GROUP
     const [periodFilter, setPeriodFilter] = useState('');
     const [contributionPeriods, setContributionPeriods] = useState([]);
+    const [showTypeChoice, setShowTypeChoice] = useState(false);
     
     const navigate = useNavigate();
 
@@ -37,6 +40,70 @@ function ContributionHistory() {
             navigate('/login');
         }
     };
+
+        // Fonction d'export PDF personnalisée
+        const exportPDF = () => {
+            const doc = new jsPDF();
+            const pageWidth = doc.internal.pageSize.getWidth();
+            let y = 10;
+
+            // Ajout du logo (si disponible)
+            const logoUrl = `${window.location.origin}/logo192.png`;
+            const addLogo = (callback) => {
+                const img = new window.Image();
+                img.crossOrigin = '';
+                img.onload = function() {
+                    doc.addImage(img, 'PNG', (pageWidth-30)/2, y, 30, 30);
+                    y += 32;
+                    callback();
+                };
+                img.onerror = function() {
+                    // Si le logo ne charge pas, continuer sans
+                    callback();
+                };
+                img.src = logoUrl;
+            };
+
+            const addContent = () => {
+                // Infos utilisateur
+                if (currentUser) {
+                    doc.setFontSize(12);
+                    doc.text(`Membre : ${currentUser.name} ${currentUser.firstName}`, 14, y+5);
+                    y += 8;
+                }
+                // Date d'édition
+                doc.setFontSize(10);
+                doc.text(`Date d'édition : ${new Date().toLocaleDateString('fr-FR')}`, 14, y+5);
+                y += 10;
+                // Titre
+                doc.setFontSize(16);
+                doc.text('Historique des cotisations', pageWidth/2, y+5, {align: 'center'});
+                y += 10;
+
+                // Tableau
+                const tableColumn = [
+                    'Date',
+                    'Type',
+                    'Période',
+                    'Montant',
+                    'Mode de paiement',
+                    'Statut'
+                ];
+                const tableRows = contributions.map(contribution => [
+                    formatDate(contribution.paymentDate),
+                    contribution.contributionType === 'INDIVIDUAL' ? 'Individuelle' : 'Groupée',
+                    contribution.contributionPeriod?.description || 'N/A',
+                    formatAmount(contribution.amount),
+                    contribution.paymentMode || 'Non spécifié',
+                    (new Date() - new Date(contribution.paymentDate)) / (1000 * 60 * 60 * 24) < 7 ? 'Récent' : 'Ancien'
+                ]);
+                doc.autoTable({ head: [tableColumn], body: tableRows, startY: y+5 });
+                doc.save('historique_cotisations.pdf');
+            };
+
+            // Ajout du logo puis du contenu
+            addLogo(addContent);
+        };
 
     const fetchContributions = async () => {
         try {
@@ -161,13 +228,22 @@ function ContributionHistory() {
                             <i className="bi bi-clock-history me-2"></i>
                             Historique de mes Cotisations
                         </h4>
-                        <button 
-                            className="btn btn-light btn-sm"
-                            onClick={() => navigate('/dashboard')}
-                        >
-                            <i className="bi bi-arrow-left me-1"></i>
-                            Retour
-                        </button>
+                            <div>
+                                <button 
+                                    className="btn btn-success btn-sm me-2"
+                                    onClick={exportPDF}
+                                >
+                                    <i className="bi bi-file-earmark-pdf me-1"></i>
+                                    Exporter PDF
+                                </button>
+                                <button 
+                                    className="btn btn-light btn-sm"
+                                    onClick={() => navigate('/dashboard')}
+                                >
+                                    <i className="bi bi-arrow-left me-1"></i>
+                                    Retour
+                                </button>
+                            </div>
                     </div>
                 </div>
 
@@ -252,13 +328,38 @@ function ContributionHistory() {
                                     : `Aucune cotisation ${filter === 'INDIVIDUAL' ? 'individuelle' : 'groupée'} trouvée.`
                                 }
                             </p>
-                            <button 
-                                className="btn btn-primary mt-2"
-                                onClick={() => navigate('/add-contribution')}
-                            >
-                                <i className="bi bi-plus-circle me-2"></i>
-                                Faire une cotisation
-                            </button>
+                            {/* Choix du type de cotisation */}
+                            {showTypeChoice ? (
+                                <div className="d-flex flex-column align-items-center gap-2 mt-2">
+                                    <button
+                                        className="btn btn-outline-primary"
+                                        onClick={() => navigate('/mut/contribution/individual')}
+                                    >
+                                        Cotisation individuelle
+                                    </button>
+                                    <button
+                                        className="btn btn-outline-warning"
+                                        onClick={() => navigate('/mut/contribution/group')}
+                                    >
+                                        Cotisation groupée
+                                    </button>
+                                    <button
+                                        className="btn btn-link text-danger"
+                                        onClick={() => setShowTypeChoice(false)}
+                                    >
+                                        Annuler
+                                    </button>
+                                </div>
+                            ) : (
+                                <button
+                                    className="btn btn-primary mt-2"
+                                    onClick={() => setShowTypeChoice(true)}
+                                >
+                                    <i className="bi bi-plus-circle me-2"></i>
+                                    Faire une cotisation
+                                </button>
+                            )}
+
                         </div>
                     ) : (
                         <div className="table-responsive">

@@ -11,6 +11,8 @@
     "@testing-library/user-event": "^13.5.0",
     "axios": "^1.12.2",
     "bootstrap": "^5.3.8",
+    "jspdf": "^3.0.3",
+    "jspdf-autotable": "^5.0.2",
     "kkiapay": "^2.0.23",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",

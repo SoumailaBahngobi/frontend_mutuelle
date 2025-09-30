@@ -122,7 +122,7 @@ function AddGroupContribution() {
             formData.append('file', file);
             
             const response = await axios.post(
-                'http://localhost:8080/mut/upload/payment-proof', 
+                'http://localhost:8080/mut/contribution/upload/payment-proof', 
                 formData,
                 {
                     headers: {

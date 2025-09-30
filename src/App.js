@@ -27,8 +27,9 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path='/mut/contribution/individual' element={<AddIndividualContribution/>}/>
-        <Route path='/mut/contribution/group' element={<AddGroupContribution/>}/>
-        <Route path="/contribution-history" element={<ContributionHistory />} />
+  <Route path='/mut/contribution/group' element={<AddGroupContribution/>}/>
+  <Route path="/contribution-history" element={<ContributionHistory />} />
+  <Route path="/mut/contribution/individual/my-contributions" element={<ContributionHistory />} />
         {/* autres routes ici si besoin */}
       </Routes>
     </>

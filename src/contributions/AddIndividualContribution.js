@@ -90,10 +90,10 @@ function AddIndividualContribution() {
             const formData = new FormData();
             formData.append('file', file);
             
-            console.log('📤 Début upload du fichier:', file.name);
+            console.log(' Début upload du fichier:', file.name);
             
             const response = await axios.post(
-                'http://localhost:8080/mut/upload/payment-proof', 
+                'http://localhost:8080/mut/contribution/upload/payment-proof', 
                 formData,
                 {
                     headers: {
@@ -108,7 +108,7 @@ function AddIndividualContribution() {
             return response.data; // Retourne le nom du fichier
             
         } catch (error) {
-            console.error('❌ Erreur upload:', error);
+            console.error('Erreur upload:', error);
             
             if (error.response) {
                 // Le serveur a répondu avec un code d'erreur
