@@ -10,6 +10,8 @@ import ContributionHistory from './contributions/ContributionHistory.js';
 import AddLoanRequest from './loanRequest/AddLoanRequest.js';
 import AddLoan from './loan/AddLoan.js';
 import AddRepayment from './repayment/AddRepayment.js';
+import LoanApproval from './loan/LoanApproval.js';
+import MyLoanRequests from './loanRequest/MyLoanRequest.js';
 
 function App() {
   return (
@@ -28,6 +30,8 @@ function App() {
         <Route path="/loans/request" element={<AddLoanRequest />} />
         <Route path="/loans/create" element={<AddLoan />} />
         <Route path="/loans/repayment" element={<AddRepayment />} />
+        <Route path="/loans/approval" element={<LoanApproval />} />
+        <Route path="/loans/requests" element={<MyLoanRequests />} />
       </Routes>
     </>
   );

@@ -47,7 +47,8 @@ const AddLoan = () => {
             const token = localStorage.getItem('token');
             
             // Récupérer les détails de la demande sélectionnée
-            const request = approvedRequests.find(req => req.id == selectedRequest);
+            // const request = approvedRequests.find(req => req.id == selectedRequest);
+            const request = approvedRequests.find(req => req.id === parseInt(selectedRequest));
             
             if (!request) {
                 setError('Demande de prêt non trouvée');
@@ -143,7 +144,8 @@ const AddLoan = () => {
                                                 </div>
                                                 <div className="card-body">
                                                     {(() => {
-                                                        const request = approvedRequests.find(req => req.id == selectedRequest);
+                                                        // const request = approvedRequests.find(req => req.id == selectedRequest);
+                                                        const request = approvedRequests.find(req => req.id === parseInt(selectedRequest));
                                                         if (!request) return null;
                                                         
                                                         const repaymentAmount = calculateRepaymentAmount(

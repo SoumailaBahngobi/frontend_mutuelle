@@ -62,22 +62,16 @@ export default function Dashboard() {
     };
     fetchProfile();
   }, []);
+
   const fetchLoanData = async (token) => {
     try {
-      // Vérifier l'éligibilité aux prêts
-      /*
-      const eligibilityRes = await axios.get('http://localhost:8080/mut/member/current/loan-eligibility', {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      });
-      setLoanEligibility(eligibilityRes.data);
-*/
       // Charger mes demandes de prêt
       const requestsRes = await axios.get('http://localhost:8080/mut/loan_request/my-requests', {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       setMyLoanRequests(requestsRes.data);
 
-      // Charger mes prêts (vous devrez peut-être adapter l'endpoint)
+      // Charger mes prêts
       const loansRes = await axios.get('http://localhost:8080/mut/loan', {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
@@ -142,16 +136,6 @@ export default function Dashboard() {
           <p className="mb-1"><strong>NPI :</strong> {user.npi}</p>
           <p className="mb-1"><strong>Téléphone :</strong> {user.phone}</p>
           
-          {/* Statut de cotisation */}
-          {loanEligibility && (
-            <p className="mb-1">
-              <strong>Statut cotisation :</strong>{' '}
-              <span className={`badge ${loanEligibility.isRegular ? 'bg-success' : 'bg-danger'}`}>
-                {loanEligibility.isRegular ? 'À jour' : 'En retard'}
-              </span>
-            </p>
-          )}
-          
           <input
             type="file"
             accept="image/*"
@@ -177,21 +161,14 @@ export default function Dashboard() {
               <h5 className="card-title mb-0">💰 Gestion des Prêts</h5>
             </div>
             <div className="card-body">
-              {loanEligibility && !loanEligibility.isEligible && (
-                <div className="alert alert-warning small mb-3">
-                  <strong>⚠️ Non éligible aux prêts</strong>
-                  <ul className="mb-0 mt-1">
-                    {!loanEligibility.isRegular && <li>Cotisations non à jour</li>}
-                    {!loanEligibility.hasNoDebt && <li>Dettes antérieures</li>}
-                  </ul>
-                </div>
-              )}
+              <div className="alert alert-success mb-3">
+                <strong>✅ Prêts accessibles à tous les membres !</strong>
+              </div>
 
               <div className="d-grid gap-2">
                 <button 
                   className="btn btn-success"
                   onClick={() => navigate('/loans/request')}
-                  disabled={loanEligibility && !loanEligibility.isEligible}
                 >
                   📋 Demander un prêt
                 </button>
@@ -211,7 +188,7 @@ export default function Dashboard() {
                 </button>
 
                 {/* Options pour les administrateurs */}
-                {(user.role === 'ADMIN' || user.role === 'PRESIDENT' || user.role === 'TREASURER') && (
+                {(user.role === 'ADMIN' || user.role === 'PRESIDENT' || user.role === 'TREASURER' || user.role === 'SECRETARY') && (
                   <>
                     <hr />
                     <button 
@@ -271,7 +248,7 @@ export default function Dashboard() {
                 <div className="small">
                   {myLoanRequests.slice(0, 3).map(request => (
                     <div key={request.id} className="d-flex justify-content-between align-items-center border-bottom py-1">
-                      <span>{request.requestAmount}FCFA</span>
+                      <span>{request.requestAmount} FCFA</span>
                       <span className={`badge ${getStatusBadge(request.status)}`}>
                         {request.status}
                       </span>
@@ -296,7 +273,7 @@ export default function Dashboard() {
                 <div className="small">
                   {myLoans.filter(loan => !loan.isRepaid).slice(0, 2).map(loan => (
                     <div key={loan.id} className="d-flex justify-content-between align-items-center border-bottom py-1">
-                      <span>{loan.amount}FCFA</span>
+                      <span>{loan.amount} FCFA</span>
                       <span className={`badge ${getLoanStatusBadge(loan.isRepaid)}`}>
                         {loan.isRepaid ? 'Remboursé' : 'En cours'}
                       </span>
@@ -308,6 +285,66 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Section Validation des Prêts pour les administrateurs */}
+      {(user.role === 'ADMIN' || user.role === 'PRESIDENT' || user.role === 'SECRETARY' || user.role === 'TREASURER') && (
+        <div className="row mb-4">
+          <div className="col-12">
+            <div className="card">
+              <div className="card-header bg-warning text-white">
+                <h5 className="card-title mb-0">⚡ Panel de Validation des Prêts</h5>
+              </div>
+              <div className="card-body">
+                <div className="row">
+                  <div className="col-md-8">
+                    <h6>Fonctions de validation disponibles :</h6>
+                    <div className="row">
+                      {(user.role === 'PRESIDENT' || user.role === 'ADMIN') && (
+                        <div className="col-md-4 mb-2">
+                          <div className="card border-primary">
+                            <div className="card-body text-center">
+                              <h6>👑 Président</h6>
+                              <small className="text-muted">Validation stratégique</small>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {(user.role === 'SECRETARY' || user.role === 'ADMIN') && (
+                        <div className="col-md-4 mb-2">
+                          <div className="card border-info">
+                            <div className="card-body text-center">
+                              <h6>📝 Secrétaire</h6>
+                              <small className="text-muted">Vérification administrative</small>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {(user.role === 'TREASORIER' || user.role === 'ADMIN') && (
+                        <div className="col-md-4 mb-2">
+                          <div className="card border-success">
+                            <div className="card-body text-center">
+                              <h6>💰 Trésorier</h6>
+                              <small className="text-muted">Analyse financière</small>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="col-md-4 d-flex align-items-center">
+                    <button 
+                      className="btn btn-warning w-100"
+                      onClick={() => navigate('/loans/approval')}
+                    >
+                      📋 Accéder aux validations
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="row mb-4">
         <div className="col-md-6 mb-3">
