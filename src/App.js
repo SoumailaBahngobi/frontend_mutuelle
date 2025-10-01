@@ -1,22 +1,15 @@
 import './App.css';
-import "../node_modules/bootstrap/dist/css/bootstrap.min.css";
-import Navbar from './layout/NavBar.js';  
-import AddMember from './members/AddMember.js';
 import { Routes, Route } from 'react-router-dom';
+import Navbar from './layout/NavBar.js';
+import AddMember from './members/AddMember.js';
 import Login from './pages/Login.js';
 import Dashboard from './pages/Dashboard.js';
 import AddIndividualContribution from './contributions/AddIndividualContribution.js';
 import AddGroupContribution from './contributions/AddGroupContribution.js';
-import EditMember from './members/EditMember.js';
-import ViewMember from './members/ViewMember.js';
-import Home from './pages/Home.js';
 import ContributionHistory from './contributions/ContributionHistory.js';
-import React from 'react';
-import { useEffect } from 'react';
-import axios from 'axios';
-import { useState } from 'react';
-
-
+import AddLoanRequest from './loanRequest/AddLoanRequest.js';
+import AddLoan from './loan/AddLoan.js';
+import AddRepayment from './repayment/AddRepayment.js';
 
 function App() {
   return (
@@ -26,11 +19,15 @@ function App() {
         <Route path="/register" element={<AddMember />} />
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path='/mut/contribution/individual' element={<AddIndividualContribution/>}/>
-  <Route path='/mut/contribution/group' element={<AddGroupContribution/>}/>
-  <Route path="/contribution-history" element={<ContributionHistory />} />
-  <Route path="/mut/contribution/individual/my-contributions" element={<ContributionHistory />} />
-        {/* autres routes ici si besoin */}
+        <Route path='/mut/contribution/individual' element={<AddIndividualContribution />} />
+        <Route path='/mut/contribution/group' element={<AddGroupContribution />} />
+        <Route path="/contribution-history" element={<ContributionHistory />} />
+        <Route path="/mut/contribution/individual/my-contributions" element={<ContributionHistory />} />
+        
+        {/* Routes pour la gestion des prêts */}
+        <Route path="/loans/request" element={<AddLoanRequest />} />
+        <Route path="/loans/create" element={<AddLoan />} />
+        <Route path="/loans/repayment" element={<AddRepayment />} />
       </Routes>
     </>
   );
