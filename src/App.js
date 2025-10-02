@@ -12,6 +12,7 @@ import AddLoan from './loan/AddLoan.js';
 import AddRepayment from './repayment/AddRepayment.js';
 import LoanApproval from './loan/LoanApproval.js';
 import MyLoanRequests from './loanRequest/MyLoanRequest.js';
+import AddContributionPeriod from './contributionPeriod/AddContributionPeriod.js';
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
         <Route path="/register" element={<AddMember />} />
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/mut/contribution_period" element={< AddContributionPeriod/>} />
         <Route path='/mut/contribution/individual' element={<AddIndividualContribution />} />
         <Route path='/mut/contribution/group' element={<AddGroupContribution />} />
         <Route path="/contribution-history" element={<ContributionHistory />} />

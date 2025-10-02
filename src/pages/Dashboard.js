@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import 'bootstrap/dist/css/bootstrap.min.css';
+
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
@@ -12,7 +14,7 @@ export default function Dashboard() {
   const [myLoans, setMyLoans] = useState([]);
   const fileInputRef = useRef();
   const [showContributionModal, setShowContributionModal] = useState(false);
-  
+
   const navigate = useNavigate();
 
   // Upload photo handler
@@ -63,6 +65,8 @@ export default function Dashboard() {
     fetchProfile();
   }, []);
 
+
+
   const fetchLoanData = async (token) => {
     try {
       // Charger mes demandes de prêt
@@ -76,7 +80,7 @@ export default function Dashboard() {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       // Filtrer seulement les prêts de l'utilisateur connecté
-      const userLoans = loansRes.data.filter(loan => 
+      const userLoans = loansRes.data.filter(loan =>
         loan.member && loan.member.id === user?.id
       );
       setMyLoans(userLoans);
@@ -101,6 +105,11 @@ export default function Dashboard() {
     navigate('/login');
   };
 
+  const handleContributionPeriod = () => {
+    navigate('/mut/contribution_period');
+  };
+
+
   const getStatusBadge = (status) => {
     const statusClasses = {
       PENDING: 'bg-warning',
@@ -122,12 +131,12 @@ export default function Dashboard() {
   return (
     <div className="container mt-4">
       <div className="d-flex align-items-center mb-4">
-        <img 
-          src={user.photo || 'https://via.placeholder.com/100'} 
-          alt="Profil" 
-          className="rounded-circle me-3" 
-          width={100} 
-          height={100} 
+        <img
+          src={user.photo || 'https://via.placeholder.com/100'}
+          alt="Profil"
+          className="rounded-circle me-3"
+          width={100}
+          height={100}
         />
         <div>
           <h3>{user.name} {user.firstName}</h3>
@@ -135,7 +144,7 @@ export default function Dashboard() {
           <p className="mb-1"><strong>Email :</strong> {user.email}</p>
           <p className="mb-1"><strong>NPI :</strong> {user.npi}</p>
           <p className="mb-1"><strong>Téléphone :</strong> {user.phone}</p>
-          
+
           <input
             type="file"
             accept="image/*"
@@ -166,21 +175,21 @@ export default function Dashboard() {
               </div>
 
               <div className="d-grid gap-2">
-                <button 
+                <button
                   className="btn btn-success"
                   onClick={() => navigate('/loans/request')}
                 >
                   📋 Demander un prêt
                 </button>
-                
-                <button 
+
+                <button
                   className="btn btn-info text-white"
                   onClick={() => navigate('/loans/requests')}
                 >
                   📄 Mes demandes de prêt
                 </button>
-                
-                <button 
+
+                <button
                   className="btn btn-warning"
                   onClick={() => navigate('/loans/list')}
                 >
@@ -191,21 +200,29 @@ export default function Dashboard() {
                 {(user.role === 'ADMIN' || user.role === 'PRESIDENT' || user.role === 'TREASURER' || user.role === 'SECRETARY') && (
                   <>
                     <hr />
-                    <button 
+
+                    <button
+                      className="btn btn-outline-secondary btn-sm"
+                      onClick={() => navigate('/mut/contribution_period')}
+                    >
+                      🗓️ Gérer les périodes de cotisation
+                    </button>
+
+                    <button
                       className="btn btn-outline-primary btn-sm"
                       onClick={() => navigate('/loans/approval')}
                     >
                       ✅ Validation des prêts
                     </button>
-                    
-                    <button 
+
+                    <button
                       className="btn btn-outline-success btn-sm"
                       onClick={() => navigate('/loans/create')}
                     >
                       ➕ Créer un prêt
                     </button>
-                    
-                    <button 
+                    {/* mut/contribution_period/add */}
+                    <button
                       className="btn btn-outline-info btn-sm"
                       onClick={() => navigate('/loans/repayment')}
                     >
@@ -255,7 +272,7 @@ export default function Dashboard() {
                     </div>
                   ))}
                   {myLoanRequests.length > 3 && (
-                    <button 
+                    <button
                       className="btn btn-link btn-sm p-0 mt-1"
                       onClick={() => navigate('/loans/requests')}
                     >
@@ -332,7 +349,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="col-md-4 d-flex align-items-center">
-                    <button 
+                    <button
                       className="btn btn-warning w-100"
                       onClick={() => navigate('/loans/approval')}
                     >
@@ -351,16 +368,16 @@ export default function Dashboard() {
           <div className="card">
             <div className="card-body">
               <h5 className="card-title">📋 Cotisations</h5>
-              
-              <button 
-                className="btn btn-primary w-100 mb-2" 
+
+              <button
+                className="btn btn-primary w-100 mb-2"
                 onClick={() => setShowContributionModal(true)}
               >
                 Faire une cotisation
               </button>
-              
-              <button 
-                className="btn btn-secondary w-100" 
+
+              <button
+                className="btn btn-secondary w-100"
                 onClick={() => navigate('/mut/contribution/individual/my-contributions')}
               >
                 Voir historique de mes cotisations
@@ -368,7 +385,7 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-       
+
         <div className="col-md-6 mb-3">
           <div className="card">
             <div className="card-body">
@@ -380,7 +397,7 @@ export default function Dashboard() {
                     ✅ Vous avez des demandes de prêt approuvées !
                   </li>
                 )}
-                
+
                 {myLoanRequests.some(req => req.status === 'REJECTED') && (
                   <li className="list-group-item list-group-item-danger">
                     ❌ Certaines demandes de prêt ont été rejetées
@@ -404,8 +421,8 @@ export default function Dashboard() {
 
       {/* Modal de sélection du type de cotisation */}
       {showContributionModal && (
-        <div 
-          className="modal fade show" 
+        <div
+          className="modal fade show"
           style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }}
           onClick={() => setShowContributionModal(false)}
         >
@@ -413,16 +430,16 @@ export default function Dashboard() {
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
                 <h5 className="modal-title">Choisir le type de cotisation</h5>
-                <button 
-                  type="button" 
-                  className="btn-close" 
+                <button
+                  type="button"
+                  className="btn-close"
                   onClick={() => setShowContributionModal(false)}
                 ></button>
               </div>
               <div className="modal-body">
                 <p>Veuillez sélectionner le type de cotisation :</p>
                 <div className="d-grid gap-3">
-                  <button 
+                  <button
                     className="btn btn-primary btn-lg"
                     onClick={() => handleContributionType('individuelle')}
                   >
@@ -430,8 +447,8 @@ export default function Dashboard() {
                     <br />
                     <small className="text-light">Pour un seul membre</small>
                   </button>
-                  
-                  <button 
+
+                  <button
                     className="btn btn-success btn-lg"
                     onClick={() => handleContributionType('groupe')}
                   >
@@ -442,9 +459,9 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="modal-footer">
-                <button 
-                  type="button" 
-                  className="btn btn-secondary" 
+                <button
+                  type="button"
+                  className="btn btn-secondary"
                   onClick={() => setShowContributionModal(false)}
                 >
                   Annuler
@@ -465,7 +482,7 @@ export default function Dashboard() {
           </div>
         </div>
         <div className="col-md-6 mb-3 d-flex align-items-end">
-          <button 
+          <button
             className="btn btn-danger w-100"
             onClick={handleLogout}
           >
