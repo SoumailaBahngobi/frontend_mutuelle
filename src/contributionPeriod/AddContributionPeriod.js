@@ -63,7 +63,6 @@ const AddContributionPeriod = () => {
                 setLoading(false);
                 return;
             }
-
             // ✅ CORRECTION : individualAmount au lieu de amount
             const apiData = {
                 startDate: form.startDate,
@@ -88,7 +87,7 @@ const AddContributionPeriod = () => {
             
             console.log('✅ Réponse reçue:', response.data);
             
-            alert('Période de cotisation ajoutée avec succès !');
+            alert('Campagne de cotisation ajoutée avec succès !');
             setForm({
                 startDate: '', 
                 endDate: '',
@@ -111,7 +110,7 @@ const AddContributionPeriod = () => {
                 return;
             }
             
-            let errorMessage = 'Erreur lors de l\'ajout de la période de cotisation';
+            let errorMessage = 'Erreur lors de l\'ajout de la campagne de cotisation';
             
             if (error.response?.data) {
                 // Afficher le message d'erreur spécifique du backend
@@ -213,7 +212,7 @@ const AddContributionPeriod = () => {
                                         name="name" 
                                         value={form.name} 
                                         onChange={handleChange} 
-                                        placeholder="Ex: Période de Cotisation 2024"
+                                        placeholder="Campane de Cotisation du premier trimestre"
                                     />
                                 </div>
 

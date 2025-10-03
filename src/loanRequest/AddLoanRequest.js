@@ -148,7 +148,7 @@ const AddLoanRequest = () => {
                                         placeholder="Ex: 12"
                                     />
                                     <div className="form-text">
-                                        Durée entre 1 et 6 mois (10 ans maximum)
+                                        Durée entre 1 et 6 mois (6 mois maximum)
                                     </div>
                                 </div>
 
@@ -177,7 +177,7 @@ const AddLoanRequest = () => {
                                                 📝 Conditions de remboursement
                                             </h6>
                                             <ul className="small mb-0">
-                                                <li>✅ Taux d'intérêt: <strong>5%</strong></li>
+                                                <li>✅ Taux d'intérêt: <strong>3%</strong></li>
                                                 <li>✅ Remboursement mensuel</li>
                                                 <li>✅ Validation par le comité</li>
                                                 <li>✅ Aucune condition préalable</li>

@@ -151,12 +151,12 @@ function AddIndividualContribution() {
         }
 
         if (!form.contributionPeriodId) {
-            alert('Veuillez sélectionner une période de cotisation');
+            alert('Veuillez sélectionner une campagne  de cotisation');
             return;
         }
 
         if (!form.amount || parseFloat(form.amount) <= 0) {
-            alert('Veuillez saisir un montant valide');
+            alert('Veuillez choisir la campagne de cotisation et le montant sera automatique');
             return;
         }
 
@@ -303,7 +303,7 @@ function AddIndividualContribution() {
                                             name="amount" 
                                             value={form.amount} 
                                             onChange={handleChange} 
-                                            placeholder="Le montant est automaitique selon la période sélectionnée " 
+                                            placeholder="Le montant est automaitique selon la campagne sélectionnée " 
                                             required
                                             min="1"
                                             step="1"
@@ -311,7 +311,7 @@ function AddIndividualContribution() {
                                         />
                                         {getSelectedPeriodAmount() && (
                                             <small className="form-text text-muted">
-                                                Le montant est automatiquement défini selon la période sélectionnée
+                                                Le montant est automatiquement défini selon la campagne sélectionnée
                                             </small>
                                         )}
                                     </div>

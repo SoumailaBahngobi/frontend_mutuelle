@@ -9,7 +9,7 @@ function AddGroupContribution() {
         paymentDate: new Date().toISOString().split('T')[0],
         contributionPeriodId: '',
         paymentMode: 'ESPECES',
-        paymentProof: null // Changé pour stocker le fichier
+        paymentProof: null
     });
     
     const [contributionPeriods, setContributionPeriods] = React.useState([]);
@@ -64,8 +64,8 @@ function AddGroupContribution() {
             const response = await axios.get('http://localhost:8080/mut/contribution_period');
             setContributionPeriods(response.data);
         } catch (error) {
-            console.error('Erreur lors de la récupération des périodes de cotisation', error);
-            alert('Erreur lors du chargement des périodes de cotisation');
+            console.error('Erreur lors de la récupération des campagnes de cotisation', error);
+            alert('Erreur lors du chargement des campagnes de cotisation');
         } finally {
             setLoading(false);
         }
@@ -94,7 +94,7 @@ function AddGroupContribution() {
         const { name, value } = e.target;
         
         if (name === 'contributionPeriodId') {
-            // Trouver la période sélectionnée
+            // Trouver les campagnes sélectionnée
             const selectedPeriod = contributionPeriods.find(period => period.id === parseInt(value));
             
             if (selectedPeriod) {
@@ -197,7 +197,7 @@ function AddGroupContribution() {
         }
 
         if (!form.contributionPeriodId) {
-            alert('Veuillez sélectionner une période de cotisation');
+            alert('Veuillez sélectionner une campagne de cotisation');
             return;
         }
 
@@ -214,39 +214,32 @@ function AddGroupContribution() {
             const token = localStorage.getItem('token');
             const individualAmount = parseFloat(form.individualAmount);
 
-            // Créer une cotisation pour chaque membre sélectionné
-            const contributionPromises = selectedMembers.map(memberId => {
-                const contributionData = {
-                    amount: individualAmount,
-                    paymentDate: form.paymentDate + "T00:00:00",
-                    paymentMode: form.paymentMode,
-                    paymentProof: paymentProofUrl, // URL du fichier uploadé
-                    member: { 
-                        id: memberId
-                    },
-                    contributionPeriod: { 
-                        id: parseInt(form.contributionPeriodId) 
-                    },
-                    contributionType: "INDIVIDUAL"
-                };
+            // STRUCTURE CORRIGÉE POUR LE BACKEND
+            const groupContributionData = {
+                amount: individualAmount,
+                paymentDate: form.paymentDate + "T00:00:00",
+                paymentMode: form.paymentMode,
+                paymentProof: paymentProofUrl,
+                contributionPeriodId: parseInt(form.contributionPeriodId), // ID seulement, pas l'objet complet
+                memberIds: selectedMembers
+            };
 
-                return axios.post(
-                    'http://localhost:8080/mut/contribution/individual', 
-                    contributionData,
-                    {
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        }
+            console.log('📤 Données envoyées pour cotisation groupée:', groupContributionData);
+
+            const response = await axios.post(
+                'http://localhost:8080/mut/contribution/group', 
+                groupContributionData,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
                     }
-                );
-            });
-
-            const results = await Promise.all(contributionPromises);
+                }
+            );
             
-            console.log(`${results.length} cotisation(s) créée(s) avec succès`);
+            console.log('✅ Réponse reçue:', response.data);
             
-            alert(`${selectedMembers.length} cotisation(s) individuelle(s) ajoutée(s) avec succès !`);  
+            alert(`${selectedMembers.length} cotisation(s) individuelle(s) créée(s) avec succès ! Chaque membre verra sa cotisation dans son historique.`);
             
             // Réinitialiser le formulaire
             setForm({
@@ -263,11 +256,13 @@ function AddGroupContribution() {
             navigate('/dashboard');
             
         } catch (error) {
-            console.error('ERREUR COMPLETE:', error);
+            console.error('❌ ERREUR COMPLETE:', error);
             
             if (error.response?.status === 400) {
                 alert('Erreur de validation: ' + 
                     (error.response.data.message || JSON.stringify(error.response.data)));
+            } else if (error.response?.status === 500) {
+                alert('Erreur serveur: ' + (error.response.data || 'Veuillez contacter l\'administrateur'));
             } else {
                 alert('Erreur lors de la création des cotisations: ' + 
                     (error.message || 'Veuillez réessayer'));
@@ -310,15 +305,27 @@ function AddGroupContribution() {
         <div>
             <div className='container'>
                 <div className="card">
-                    <div className="card-header">
-                        <h3>Ajouter une Cotisation Individuelle</h3>
-                        <small className="text-muted">Sélectionnez un ou plusieurs membres</small>
+                    <div className="card-header bg-primary text-white">
+                        <h3>Ajouter des Cotisations Groupées</h3>
+                        <small className="text-light">
+                            Sélectionnez un ou plusieurs membres - Chaque membre recevra une cotisation individuelle
+                        </small>
                     </div>
                     <div className="card-body">
                         <div className="alert alert-info">
-                            <strong>Utilisateur :</strong> {currentUser.name} {currentUser.firstName}
-                            <br />
-                            <small>ID: {currentUser.id || currentUser.memberId}</small>
+                            <div className="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>Utilisateur :</strong> {currentUser.name} {currentUser.firstName}
+                                    <br />
+                                    <small>ID: {currentUser.id || currentUser.memberId}</small>
+                                </div>
+                                <div className="text-end">
+                                    <small className="text-muted">
+                                        <i className="bi bi-info-circle me-1"></i>
+                                        Chaque membre sélectionné verra sa propre cotisation
+                                    </small>
+                                </div>
+                            </div>
                         </div>
                         
                         <form onSubmit={handleSubmit}>
@@ -326,25 +333,32 @@ function AddGroupContribution() {
                             <div className="mb-4">
                                 <div className="d-flex justify-content-between align-items-center mb-3">
                                     <label className="form-label fw-bold">Sélection des membres *</label>
-                                    <button 
-                                        type="button"
-                                        className="btn btn-outline-primary btn-sm"
-                                        onClick={selectAllMembers}
-                                    >
-                                        {selectedMembers.length === allMembers.length ? 
-                                            'Tout désélectionner' : 'Tout sélectionner'}
-                                    </button>
+                                    <div>
+                                        <span className="badge bg-primary me-2">
+                                            {selectedMembers.length} sélectionné(s)
+                                        </span>
+                                        <button 
+                                            type="button"
+                                            className="btn btn-outline-primary btn-sm"
+                                            onClick={selectAllMembers}
+                                        >
+                                            {selectedMembers.length === allMembers.length ? 
+                                                'Tout désélectionner' : 'Tout sélectionner'}
+                                        </button>
+                                    </div>
                                 </div>
                                 
                                 {membersLoading ? (
                                     <div className="alert alert-info text-center">
+                                        <div className="spinner-border spinner-border-sm me-2" role="status"></div>
                                         Chargement de la liste des membres...
                                     </div>
                                 ) : (
                                     <div className="border rounded p-3" style={{ maxHeight: '300px', overflowY: 'auto' }}>
                                         {allMembers.length === 0 ? (
-                                            <div className="text-center text-muted">
-                                                Aucun membre trouvé
+                                            <div className="text-center text-muted py-3">
+                                                <i className="bi bi-people display-4"></i>
+                                                <p className="mt-2">Aucun membre trouvé</p>
                                             </div>
                                         ) : (
                                             allMembers.map((member) => (
@@ -358,20 +372,14 @@ function AddGroupContribution() {
                                                     />
                                                     <label className="form-check-label" htmlFor={`member-${member.id}`}>
                                                         <strong>{member.name} {member.firstName}</strong>
-                                                        {member.npi && ` - NPI: ${member.npi}`}
-                                                        {member.phone && ` - Tél: ${member.phone}`}
+                                                        {member.npi && <span className="text-muted"> - NPI: {member.npi}</span>}
+                                                        {member.phone && <span className="text-muted"> - Tél: {member.phone}</span>}
                                                     </label>
                                                 </div>
                                             ))
                                         )}
                                     </div>
                                 )}
-                                
-                                <div className="mt-2">
-                                    <strong>
-                                        {selectedMembers.length} membre(s) sélectionné(s)
-                                    </strong>
-                                </div>
                             </div>
 
                             <div className="row">
@@ -381,7 +389,8 @@ function AddGroupContribution() {
                                             Montant par membre (FCFA) *
                                             {getSelectedPeriodAmount() && (
                                                 <span className="text-success ms-2">
-                                                    (Montant automatique: {getSelectedPeriodAmount()} FCFA)
+                                                    <i className="bi bi-check-circle me-1"></i>
+                                                    Montant automatique: {getSelectedPeriodAmount()} FCFA
                                                 </span>
                                             )}
                                         </label>
@@ -396,11 +405,12 @@ function AddGroupContribution() {
                                             required
                                             min="1"
                                             step="1"
-                                            readOnly={!!getSelectedPeriodAmount()} // Rendre le champ en lecture seule si le montant est automatique
+                                            readOnly={!!getSelectedPeriodAmount()}
                                         />
                                         {getSelectedPeriodAmount() && (
                                             <small className="form-text text-muted">
-                                                Le montant est automatiquement défini selon la période sélectionnée
+                                                <i className="bi bi-info-circle me-1"></i>
+                                                Le montant est automatiquement défini selon la campagne sélectionnée
                                             </small>
                                         )}
                                     </div>
@@ -409,19 +419,20 @@ function AddGroupContribution() {
                                 <div className="col-md-6">
                                     <div className="form-group mb-3">
                                         <label htmlFor="totalAmount" className="form-label">
+                                            <i className="bi bi-calculator me-1"></i>
                                             Montant total calculé (FCFA)
                                         </label>
                                         <input 
                                             type="text" 
-                                            className="form-control" 
+                                            className="form-control bg-light" 
                                             id="totalAmount" 
                                             name="totalAmount" 
-                                            value={form.totalAmount} 
+                                            value={form.totalAmount ? `${form.totalAmount} FCFA` : ''} 
                                             readOnly
-                                            style={{ backgroundColor: '#f8f9fa', fontWeight: 'bold' }}
+                                            style={{ fontWeight: 'bold', fontSize: '1.1em' }}
                                         />
                                         <small className="form-text text-muted">
-                                            {selectedMembers.length} × {form.individualAmount || 0} = {form.totalAmount || 0} FCFA
+                                            Calcul: {selectedMembers.length} membre(s) × {form.individualAmount || 0} FCFA = {form.totalAmount || 0} FCFA
                                         </small>
                                     </div>
                                 </div>
@@ -430,7 +441,10 @@ function AddGroupContribution() {
                             <div className="row">
                                 <div className="col-md-6">
                                     <div className="form-group mb-3">
-                                        <label htmlFor="paymentDate" className="form-label">Date de paiement *</label>
+                                        <label htmlFor="paymentDate" className="form-label">
+                                            <i className="bi bi-calendar me-1"></i>
+                                            Date de paiement *
+                                        </label>
                                         <input 
                                             type="date" 
                                             className="form-control" 
@@ -445,7 +459,10 @@ function AddGroupContribution() {
                                 
                                 <div className="col-md-6">
                                     <div className="form-group mb-3">
-                                        <label htmlFor="paymentMode" className="form-label">Mode de paiement *</label>
+                                        <label htmlFor="paymentMode" className="form-label">
+                                            <i className="bi bi-credit-card me-1"></i>
+                                            Mode de paiement *
+                                        </label>
                                         <select 
                                             id="paymentMode" 
                                             name="paymentMode" 
@@ -467,7 +484,10 @@ function AddGroupContribution() {
                             <div className="row">
                                 <div className="col-md-6">
                                     <div className="form-group mb-3">
-                                        <label htmlFor="paymentProof" className="form-label">Preuve de paiement</label>
+                                        <label htmlFor="paymentProof" className="form-label">
+                                            <i className="bi bi-paperclip me-1"></i>
+                                            Preuve de paiement
+                                        </label>
                                         <div className="input-group">
                                             <input 
                                                 type="file" 
@@ -487,7 +507,7 @@ function AddGroupContribution() {
                                             <div className="mt-2 p-2 border rounded bg-light">
                                                 <div className="d-flex justify-content-between align-items-center">
                                                     <span>
-                                                        <i className="fas fa-file me-2"></i>
+                                                        <i className="bi bi-file-earmark me-2"></i>
                                                         {fileName}
                                                     </span>
                                                     <button 
@@ -495,7 +515,7 @@ function AddGroupContribution() {
                                                         className="btn btn-sm btn-outline-danger"
                                                         onClick={removeFile}
                                                     >
-                                                        <i className="fas fa-times"></i>
+                                                        <i className="bi bi-x"></i>
                                                     </button>
                                                 </div>
                                             </div>
@@ -505,9 +525,15 @@ function AddGroupContribution() {
                                 
                                 <div className="col-md-6">
                                     <div className="form-group mb-3">
-                                        <label htmlFor="contributionPeriodId" className="form-label">Campagne de Cotisation *</label>
+                                        <label htmlFor="contributionPeriodId" className="form-label">
+                                            <i className="bi bi-clock me-1"></i>
+                                            Campagnes de cotisation *
+                                        </label>
                                         {loading ? (
-                                            <div className="form-control">Chargement...</div>
+                                            <div className="form-control">
+                                                <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+                                                Chargement des campagnes de cotisation...
+                                            </div>
                                         ) : (
                                             <select 
                                                 id="contributionPeriodId" 
@@ -517,7 +543,7 @@ function AddGroupContribution() {
                                                 onChange={handleChange}
                                                 required
                                             >
-                                                <option value="">Choisir une campagne de cotisation</option>
+                                                <option value="">Choisir la campagne  de cotisation</option>
                                                 {contributionPeriods.map((period) => (
                                                     <option key={period.id} value={period.id}>
                                                         {period.description} 
@@ -531,12 +557,14 @@ function AddGroupContribution() {
                                 </div>
                             </div>
                             
-                            <div className="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <div className="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
                                 <button 
                                     type="button" 
                                     className="btn btn-secondary me-md-2" 
                                     onClick={() => navigate('/dashboard')}
+                                    disabled={uploading}
                                 >
+                                    <i className="bi bi-arrow-left me-1"></i>
                                     Annuler
                                 </button>
                                 <button 
@@ -544,8 +572,35 @@ function AddGroupContribution() {
                                     className="btn btn-primary" 
                                     disabled={loading || membersLoading || uploading || selectedMembers.length === 0}
                                 >
-                                    {uploading ? 'Upload en cours...' : (loading ? 'En cours...' : `Valider ${selectedMembers.length} cotisation(s)`)}
+                                    {uploading ? (
+                                        <>
+                                            <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+                                            Création en cours...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <i className="bi bi-check-circle me-1"></i>
+                                            {selectedMembers.length > 0 
+                                                ? `Créer ${selectedMembers.length} cotisation(s) individuelle(s)`
+                                                : 'Créer les cotisations'
+                                            }
+                                        </>
+                                    )}
                                 </button>
+                            </div>
+
+                            {/* Information sur le processus */}
+                            <div className="alert alert-warning mt-3">
+                                <h6 className="alert-heading">
+                                    <i className="bi bi-lightbulb me-1"></i>
+                                    Comment ça marche ?
+                                </h6>
+                                <ul className="mb-0 small">
+                                    <li>Chaque membre sélectionné recevra une <strong>cotisation individuelle</strong></li>
+                                    <li>Le montant sera le même pour tous les membres sélectionnés</li>
+                                    <li>Chaque membre verra sa cotisation dans son historique personnel</li>
+                                    <li>La preuve de paiement sera associée à chaque cotisation</li>
+                                </ul>
                             </div>
                         </form>
                     </div>

@@ -546,7 +546,7 @@ function ContributionHistory() {
                                 value={periodFilter}
                                 onChange={(e) => setPeriodFilter(e.target.value)}
                             >
-                                <option value="">Toutes les campagnes</option>
+                                <option value="">Toutes les campagnes de cotisation</option>
                                 {contributionPeriods.map(period => (
                                     <option key={period.id} value={period.id}>
                                         {period.description} 
@@ -628,7 +628,7 @@ function ContributionHistory() {
                                 <thead className="table-light">
                                     <tr>
                                         <th>Date</th>
-                                        <th>Type</th>
+                                        {/* <th>Type</th> */}
                                         <th>Campagne de cotisation</th>
                                         <th>Montant</th>
                                         <th>Mode de paiement</th>
@@ -641,7 +641,7 @@ function ContributionHistory() {
                                             <td>
                                                 <strong>{formatDate(contribution.paymentDate)}</strong>
                                             </td>
-                                            <td>
+                                            {/* <td>
                                                 <span className={`badge ${
                                                     contribution.contributionType === 'INDIVIDUAL' 
                                                         ? 'bg-primary' 
@@ -652,7 +652,7 @@ function ContributionHistory() {
                                                         : 'Groupée'
                                                     }
                                                 </span>
-                                            </td>
+                                            </td> */}
                                             <td>
                                                 {contribution.contributionPeriod?.description || 'N/A'}
                                             </td>
