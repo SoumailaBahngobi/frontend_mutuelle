@@ -92,7 +92,7 @@ const MyLoanRequests = () => {
                         <div key={request.id} className="col-md-6 mb-3">
                             <div className="card h-100">
                                 <div className="card-header d-flex justify-content-between align-items-center">
-                                    <strong>{request.requestAmount} €</strong>
+                                    <strong>{request.requestAmount} FCFA</strong>
                                     {getStatusBadge(request.status)}
                                 </div>
                                 <div className="card-body">

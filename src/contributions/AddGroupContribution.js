@@ -91,7 +91,26 @@ function AddGroupContribution() {
     };
 
     const handleChange = (e) => {
-        setForm({ ...form, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        
+        if (name === 'contributionPeriodId') {
+            // Trouver la période sélectionnée
+            const selectedPeriod = contributionPeriods.find(period => period.id === parseInt(value));
+            
+            if (selectedPeriod) {
+                // Mettre à jour le montant individuel automatiquement
+                const periodAmount = selectedPeriod.individualAmount || selectedPeriod.amount || '';
+                setForm({ 
+                    ...form, 
+                    [name]: value,
+                    individualAmount: periodAmount
+                });
+            } else {
+                setForm({ ...form, [name]: value });
+            }
+        } else {
+            setForm({ ...form, [name]: value });
+        }
     };
 
     const handleFileChange = (e) => {
@@ -263,6 +282,13 @@ function AddGroupContribution() {
         setFileName('');
     };
 
+    // Fonction pour obtenir le montant de la période sélectionnée
+    const getSelectedPeriodAmount = () => {
+        if (!form.contributionPeriodId) return null;
+        const selectedPeriod = contributionPeriods.find(period => period.id === parseInt(form.contributionPeriodId));
+        return selectedPeriod ? (selectedPeriod.individualAmount || selectedPeriod.amount) : null;
+    };
+
     if (!currentUser) {
         return (
             <div className="container">
@@ -353,6 +379,11 @@ function AddGroupContribution() {
                                     <div className="form-group mb-3">
                                         <label htmlFor="individualAmount" className="form-label">
                                             Montant par membre (FCFA) *
+                                            {getSelectedPeriodAmount() && (
+                                                <span className="text-success ms-2">
+                                                    (Montant automatique: {getSelectedPeriodAmount()} FCFA)
+                                                </span>
+                                            )}
                                         </label>
                                         <input 
                                             type="number" 
@@ -365,7 +396,13 @@ function AddGroupContribution() {
                                             required
                                             min="1"
                                             step="1"
+                                            readOnly={!!getSelectedPeriodAmount()} // Rendre le champ en lecture seule si le montant est automatique
                                         />
+                                        {getSelectedPeriodAmount() && (
+                                            <small className="form-text text-muted">
+                                                Le montant est automatiquement défini selon la période sélectionnée
+                                            </small>
+                                        )}
                                     </div>
                                 </div>
                                 
@@ -468,7 +505,7 @@ function AddGroupContribution() {
                                 
                                 <div className="col-md-6">
                                     <div className="form-group mb-3">
-                                        <label htmlFor="contributionPeriodId" className="form-label">Période *</label>
+                                        <label htmlFor="contributionPeriodId" className="form-label">Campagne de Cotisation *</label>
                                         {loading ? (
                                             <div className="form-control">Chargement...</div>
                                         ) : (
@@ -480,11 +517,12 @@ function AddGroupContribution() {
                                                 onChange={handleChange}
                                                 required
                                             >
-                                                <option value="">Choisir une période</option>
+                                                <option value="">Choisir une campagne de cotisation</option>
                                                 {contributionPeriods.map((period) => (
                                                     <option key={period.id} value={period.id}>
                                                         {period.description} 
                                                         ({new Date(period.startDate).toLocaleDateString()} - {new Date(period.endDate).toLocaleDateString()})
+                                                        - Montant: {period.individualAmount || period.amount} FCFA
                                                     </option>
                                                 ))}
                                             </select>

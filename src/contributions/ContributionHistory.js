@@ -101,7 +101,6 @@ function ContributionHistory() {
             
             if (error.response?.status === 403) {
                 setError('Accès refusé. Votre session a peut-être expiré. Veuillez vous reconnecter.');
-                // Rediriger vers login après 2 secondes
                 setTimeout(() => navigate('/login'), 2000);
             } else if (error.response?.status === 401) {
                 setError('Non authentifié. Veuillez vous reconnecter.');
@@ -128,209 +127,261 @@ function ContributionHistory() {
         }
     };
 
-   
-    const exportPDF = () => {
-    if (contributions.length === 0) {
-        alert('Aucune donnée à exporter');
-        return;
-    }
-
-    try {
-        const doc = new jsPDF();
-        const pageWidth = doc.internal.pageSize.getWidth();
+    const getStatusText = (contribution) => {
+        if (!contribution.paymentDate) return 'en attente';
         
-        // =====================
-        // EN-TÊTE AVEC STYLE
-        // =====================
-        doc.setFillColor(41, 128, 185);
-        doc.rect(0, 0, pageWidth, 40, 'F');
+        const paymentDate = new Date(contribution.paymentDate);
+        const now = new Date();
+        const contributionPeriod = contribution.contributionPeriod;
         
-        // Titre principal
-        doc.setFontSize(20);
-        doc.setTextColor(255, 255, 255);
-        doc.setFont('helvetica', 'bold');
-        doc.text('HISTORIQUE DES COTISATIONS', pageWidth / 2, 25, { align: 'center' });
+        // Si nous avons les informations de période
+        if (contributionPeriod && contributionPeriod.startDate && contributionPeriod.endDate) {
+            const startDate = new Date(contributionPeriod.startDate);
+            const endDate = new Date(contributionPeriod.endDate);
+            
+            // Définir les dates pour comparaison (sans heures)
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const periodStart = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+            const periodEnd = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+            
+            if (today < periodStart) {
+                return 'en attente';
+            } else if (today >= periodStart && today <= periodEnd) {
+                return 'en cours';
+            } else {
+                return 'passé';
+            }
+        }
         
-        // =====================
-        // INFORMATIONS MEMBRE
-        // =====================
-        let yPosition = 55;
+        // Fallback basé sur la date de paiement si pas de période
+        const diffTime = Math.abs(now - paymentDate);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         
-        // Carte d'information membre
-        doc.setFillColor(245, 245, 245);
-        doc.roundedRect(14, yPosition, pageWidth - 28, 35, 3, 3, 'F');
-        
-        doc.setFontSize(12);
-        doc.setTextColor(41, 128, 185);
-        doc.setFont('helvetica', 'bold');
-        doc.text('INFORMATIONS MEMBRE', 20, yPosition + 8);
-        
-        doc.setFontSize(10);
-        doc.setTextColor(80, 80, 80);
-        doc.setFont('helvetica', 'normal');
-        doc.text(`• Nom: ${currentUser.name} ${currentUser.firstName}`, 20, yPosition + 18);
-        doc.text(`• Date d'export: ${new Date().toLocaleDateString('fr-FR')}`, 20, yPosition + 26);
-        doc.text(`• Total cotisations: ${contributions.length}`, 110, yPosition + 18);
-        doc.text(`• Montant total: ${formatAmountNoSlash(getTotalAmount())}`, 110, yPosition + 26);
-        
-        yPosition += 45;
-
-        // =====================
-        // TABLEAU AVEC STYLE AMÉLIORÉ
-        // =====================
-        const tableColumn = [
-            { header: "DATE", dataKey: "date" },
-            { header: "TYPE", dataKey: "type" },
-            { header: "PÉRIODE", dataKey: "period" },
-            { header: "MONTANT", dataKey: "amount" },
-            { header: "PAIEMENT", dataKey: "payment" },
-            { header: "STATUT", dataKey: "status" }
-        ];
-
-        const tableRows = contributions.map(contribution => ({
-            date: formatDate(contribution.paymentDate),
-            type: contribution.contributionType === 'INDIVIDUAL' ? 'Individuelle' : 'Groupée',
-            period: contribution.contributionPeriod?.description || 'N/A',
-            amount: formatAmountNoSlash(contribution.amount),
-            payment: getPaymentModeText(contribution.paymentMode),
-            status: getStatusText(contribution)
-        }));
-
-        doc.autoTable({
-            startY: yPosition,
-            head: [tableColumn.map(col => col.header)],
-            body: tableRows.map(row => tableColumn.map(col => row[col.dataKey])),
-            styles: { 
-                fontSize: 9,
-                cellPadding: 4,
-                lineColor: [200, 200, 200],
-                lineWidth: 0.1
-            },
-            headStyles: {
-                fillColor: [52, 152, 219],
-                textColor: 255,
-                fontStyle: 'bold',
-                fontSize: 10,
-                cellPadding: 5
-            },
-            alternateRowStyles: {
-                fillColor: [248, 248, 248]
-            },
-            columnStyles: {
-                0: { cellWidth: 25, halign: 'center' },
-                1: { cellWidth: 25, halign: 'center' },
-                2: { cellWidth: 45 },
-                3: { cellWidth: 25, halign: 'right', fontStyle: 'bold' },
-                4: { cellWidth: 30, halign: 'center' },
-                5: { cellWidth: 20, halign: 'center' }
-            },
-            didDrawCell: (data) => {
-                // Colorer les montants en vert
-                if (data.column.index === 3 && data.cell.section === 'body') {
-                    doc.setTextColor(39, 174, 96);
-                }
-                // Colorer les statuts
-                if (data.column.index === 5 && data.cell.section === 'body') {
-                    const status = data.cell.raw;
-                    if (status === 'Récent') {
-                        doc.setTextColor(39, 174, 96);
-                    } else {
-                        doc.setTextColor(149, 165, 166);
-                    }
-                }
-            },
-            margin: { top: 10 }
-        });
-
-        // =====================
-        // PIED DE PAGE AVEC TOTAL
-        // =====================
-        const finalY = doc.lastAutoTable.finalY + 15;
-        
-        // Ligne de séparation
-        doc.setDrawColor(200, 200, 200);
-        doc.setLineWidth(0.5);
-        doc.line(14, finalY, pageWidth - 14, finalY);
-        
-        // Total général
-        doc.setFontSize(12);
-        doc.setTextColor(41, 128, 185);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`TOTAL GÉNÉRAL: ${formatAmountNoSlash(getTotalAmount())}`, 14, finalY + 10);
-        
-        // Statistiques résumées
-        const individualCount = contributions.filter(c => c.contributionType === 'INDIVIDUAL').length;
-        const groupCount = contributions.filter(c => c.contributionType === 'GROUP').length;
-        
-        doc.setFontSize(9);
-        doc.setTextColor(100, 100, 100);
-        doc.setFont('helvetica', 'normal');
-        doc.text(
-            `Récapitulatif: ${individualCount} individuelle(s) • ${groupCount} groupée(s)`, 
-            pageWidth - 14, 
-            finalY + 10, 
-            { align: 'right' }
-        );
-
-        // =====================
-        // SIGNATURE ET MENTIONS
-        // =====================
-        const signatureY = finalY + 25;
-        doc.setFontSize(8);
-        doc.setTextColor(150, 150, 150);
-        doc.text('Document généré automatiquement - Mutuelle WBF', pageWidth / 2, signatureY, { align: 'center' });
-        doc.text('© 2024 Tous droits réservés', pageWidth / 2, signatureY + 5, { align: 'center' });
-
-        // =====================
-        // SAUVEGARDE
-        // =====================
-        const fileName = `cotisations_${currentUser.name}_${new Date().toISOString().split('T')[0]}.pdf`;
-        doc.save(fileName);
-        
-        console.log('✅ PDF généré avec style !');
-        
-    } catch (error) {
-        console.error('❌ Erreur génération PDF:', error);
-        alert('Erreur lors de la génération du PDF: ' + error.message);
-    }
-};
-
-// Nouvelle fonction sans séparateurs de milliers
-const formatAmountNoSlash = (amount) => {
-    const numAmount = parseFloat(amount) || 0;
-    // Format sans séparateurs de milliers, seulement 2 décimales
-    return `${numAmount.toFixed(2)} FCFA`;
-};
-
-// Fonction utilitaire pour les modes de paiement
-const getPaymentModeText = (paymentMode) => {
-    const modes = {
-        'ESPECES': 'Espèces',
-        'CHEQUE': 'Chèque',
-        'VIREMENT': 'Virement',
-        'MOBILE_MONEY': ' Mobile',
-        'CARTE': 'Carte'
+        if (diffDays <= 0) return 'en cours';
+        if (diffDays <= 30) return 'en cours';
+        return 'passé';
     };
-    return modes[paymentMode] || paymentMode || 'Non spécifié';
-};
 
-const getStatusText = (contribution) => {
-    if (!contribution.paymentDate) return 'Inconnu';
-    const paymentDate = new Date(contribution.paymentDate);
-    const now = new Date();
-    const diffTime = Math.abs(now - paymentDate);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays <= 7) return 'Récent';
-    if (diffDays <= 30) return 'Récent';
-    return ' Ancien';
-};
+    const getStatusBadge = (contribution) => {
+        const status = getStatusText(contribution);
+        switch (status) {
+            case 'en attente':
+                return <span className="badge bg-warning text-dark">En attente</span>;
+            case 'en cours':
+                return <span className="badge bg-success">En cours</span>;
+            case 'passé':
+                return <span className="badge bg-secondary">Passé</span>;
+            default:
+                return <span className="badge bg-light text-dark">Inconnu</span>;
+        }
+    };
 
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'en attente':
+                return [255, 193, 7]; // Orange
+            case 'en cours':
+                return [40, 167, 69]; // Vert
+            case 'passé':
+                return [108, 117, 125]; // Gris
+            default:
+                return [200, 200, 200]; // Gris clair
+        }
+    };
 
+    const exportPDF = () => {
+        if (contributions.length === 0) {
+            alert('Aucune donnée à exporter');
+            return;
+        }
 
+        try {
+            const doc = new jsPDF();
+            const pageWidth = doc.internal.pageSize.getWidth();
+            
+            // =====================
+            // EN-TÊTE AVEC STYLE
+            // =====================
+            doc.setFillColor(41, 128, 185);
+            doc.rect(0, 0, pageWidth, 40, 'F');
+            
+            // Titre principal
+            doc.setFontSize(20);
+            doc.setTextColor(255, 255, 255);
+            doc.setFont('helvetica', 'bold');
+            doc.text('HISTORIQUE DES COTISATIONS', pageWidth / 2, 25, { align: 'center' });
+            
+            // =====================
+            // INFORMATIONS MEMBRE
+            // =====================
+            let yPosition = 55;
+            
+            // Carte d'information membre
+            doc.setFillColor(245, 245, 245);
+            doc.roundedRect(14, yPosition, pageWidth - 28, 35, 3, 3, 'F');
+            
+            doc.setFontSize(12);
+            doc.setTextColor(41, 128, 185);
+            doc.setFont('helvetica', 'bold');
+            doc.text('INFORMATIONS MEMBRE', 20, yPosition + 8);
+            
+            doc.setFontSize(10);
+            doc.setTextColor(80, 80, 80);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`• Nom: ${currentUser.name} ${currentUser.firstName}`, 20, yPosition + 18);
+            doc.text(`• Date d'export: ${new Date().toLocaleDateString('fr-FR')}`, 20, yPosition + 26);
+            doc.text(`• Total cotisations: ${contributions.length}`, 110, yPosition + 18);
+            doc.text(`• Montant total: ${formatAmountNoSlash(getTotalAmount())}`, 110, yPosition + 26);
+            
+            yPosition += 45;
 
+            // =====================
+            // TABLEAU AVEC STYLE AMÉLIORÉ
+            // =====================
+            const tableColumn = [
+                { header: "DATE", dataKey: "date" },
+                { header: "TYPE", dataKey: "type" },
+                { header: "PÉRIODE", dataKey: "period" },
+                { header: "MONTANT", dataKey: "amount" },
+                { header: "PAIEMENT", dataKey: "payment" },
+                { header: "STATUT", dataKey: "status" }
+            ];
 
-   
+            const tableRows = contributions.map(contribution => ({
+                date: formatDate(contribution.paymentDate),
+                type: contribution.contributionType === 'INDIVIDUAL' ? 'Individuelle' : 'Groupée',
+                period: contribution.contributionPeriod?.description || 'N/A',
+                amount: formatAmountNoSlash(contribution.amount),
+                payment: getPaymentModeText(contribution.paymentMode),
+                status: getStatusText(contribution)
+            }));
+
+            doc.autoTable({
+                startY: yPosition,
+                head: [tableColumn.map(col => col.header)],
+                body: tableRows.map(row => tableColumn.map(col => row[col.dataKey])),
+                styles: { 
+                    fontSize: 9,
+                    cellPadding: 4,
+                    lineColor: [200, 200, 200],
+                    lineWidth: 0.1
+                },
+                headStyles: {
+                    fillColor: [52, 152, 219],
+                    textColor: 255,
+                    fontStyle: 'bold',
+                    fontSize: 10,
+                    cellPadding: 5
+                },
+                alternateRowStyles: {
+                    fillColor: [248, 248, 248]
+                },
+                columnStyles: {
+                    0: { cellWidth: 25, halign: 'center' },
+                    1: { cellWidth: 25, halign: 'center' },
+                    2: { cellWidth: 45 },
+                    3: { cellWidth: 25, halign: 'right', fontStyle: 'bold' },
+                    4: { cellWidth: 30, halign: 'center' },
+                    5: { cellWidth: 20, halign: 'center' }
+                },
+                didDrawCell: (data) => {
+                    // Colorer les montants en vert
+                    if (data.column.index === 3 && data.cell.section === 'body') {
+                        doc.setTextColor(39, 174, 96);
+                    }
+                    // Colorer les statuts selon leur type
+                    if (data.column.index === 5 && data.cell.section === 'body') {
+                        const status = data.cell.raw;
+                        const [r, g, b] = getStatusColor(status);
+                        doc.setTextColor(r, g, b);
+                    }
+                },
+                margin: { top: 10 }
+            });
+
+            // =====================
+            // PIED DE PAGE AVEC TOTAL
+            // =====================
+            const finalY = doc.lastAutoTable.finalY + 15;
+            
+            // Ligne de séparation
+            doc.setDrawColor(200, 200, 200);
+            doc.setLineWidth(0.5);
+            doc.line(14, finalY, pageWidth - 14, finalY);
+            
+            // Total général
+            doc.setFontSize(12);
+            doc.setTextColor(41, 128, 185);
+            doc.setFont('helvetica', 'bold');
+            doc.text(`TOTAL GÉNÉRAL: ${formatAmountNoSlash(getTotalAmount())}`, 14, finalY + 10);
+            
+            // Statistiques résumées
+            const individualCount = contributions.filter(c => c.contributionType === 'INDIVIDUAL').length;
+            const groupCount = contributions.filter(c => c.contributionType === 'GROUP').length;
+            
+            // Statistiques par statut
+            const pendingCount = contributions.filter(c => getStatusText(c) === 'en attente').length;
+            const currentCount = contributions.filter(c => getStatusText(c) === 'en cours').length;
+            const pastCount = contributions.filter(c => getStatusText(c) === 'passé').length;
+            
+            doc.setFontSize(9);
+            doc.setTextColor(100, 100, 100);
+            doc.setFont('helvetica', 'normal');
+            doc.text(
+                `Récapitulatif: ${individualCount} individuelle(s) • ${groupCount} groupée(s)`, 
+                pageWidth - 14, 
+                finalY + 10, 
+                { align: 'right' }
+            );
+
+            // Ligne supplémentaire pour les statuts
+            doc.text(
+                `Statuts: ${pendingCount} en attente • ${currentCount} en cours • ${pastCount} passé(s)`, 
+                pageWidth - 14, 
+                finalY + 16, 
+                { align: 'right' }
+            );
+
+            // =====================
+            // SIGNATURE ET MENTIONS
+            // =====================
+            const signatureY = finalY + 30;
+            doc.setFontSize(8);
+            doc.setTextColor(150, 150, 150);
+            doc.text('Document généré automatiquement - Mutuelle WBF', pageWidth / 2, signatureY, { align: 'center' });
+            doc.text('© 2024 Tous droits réservés', pageWidth / 2, signatureY + 5, { align: 'center' });
+
+            // =====================
+            // SAUVEGARDE
+            // =====================
+            const fileName = `cotisations_${currentUser.name}_${new Date().toISOString().split('T')[0]}.pdf`;
+            doc.save(fileName);
+            
+            console.log('✅ PDF généré avec style !');
+            
+        } catch (error) {
+            console.error('❌ Erreur génération PDF:', error);
+            alert('Erreur lors de la génération du PDF: ' + error.message);
+        }
+    };
+
+    // Nouvelle fonction sans séparateurs de milliers
+    const formatAmountNoSlash = (amount) => {
+        const numAmount = parseFloat(amount) || 0;
+        return `${numAmount.toFixed(2)} FCFA`;
+    };
+
+    // Fonction utilitaire pour les modes de paiement
+    const getPaymentModeText = (paymentMode) => {
+        const modes = {
+            'ESPECES': 'Espèces',
+            'CHEQUE': 'Chèque',
+            'VIREMENT': 'Virement',
+            'MOBILE_MONEY': ' Mobile',
+            'CARTE': 'Carte'
+        };
+        return modes[paymentMode] || paymentMode || 'Non spécifié';
+    };
 
     const getTotalAmount = () => {
         return contributions.reduce((total, contribution) => {
@@ -354,16 +405,6 @@ const getStatusText = (contribution) => {
             style: 'currency',
             currency: 'XOF'
         }).format(numAmount);
-    };
-
-    const getStatusBadge = (contribution) => {
-        const status = getStatusText(contribution);
-        if (status === 'Récent') {
-            return <span className="badge bg-success">Récent</span>;
-        } else if (status === 'Ancien') {
-            return <span className="badge bg-secondary">Ancien</span>;
-        }
-        return <span className="badge bg-warning">Inconnu</span>;
     };
 
     const handleRetry = () => {
@@ -444,9 +485,9 @@ const getStatusText = (contribution) => {
                         </div>
                     )}
 
-                    {/* Le reste du code reste inchangé */}
+                    {/* Statistiques résumées */}
                     <div className="row mb-4">
-                        <div className="col-md-4">
+                        <div className="col-md-3">
                             <div className="card bg-light">
                                 <div className="card-body text-center">
                                     <h5 className="card-title text-primary">{contributions.length}</h5>
@@ -454,7 +495,7 @@ const getStatusText = (contribution) => {
                                 </div>
                             </div>
                         </div>
-                        <div className="col-md-4">
+                        <div className="col-md-3">
                             <div className="card bg-light">
                                 <div className="card-body text-center">
                                     <h5 className="card-title text-success">{formatAmount(getTotalAmount())}</h5>
@@ -462,7 +503,7 @@ const getStatusText = (contribution) => {
                                 </div>
                             </div>
                         </div>
-                        <div className="col-md-4">
+                        <div className="col-md-3">
                             <div className="card bg-light">
                                 <div className="card-body text-center">
                                     <h5 className="card-title text-info">
@@ -472,11 +513,21 @@ const getStatusText = (contribution) => {
                                 </div>
                             </div>
                         </div>
+                        <div className="col-md-3">
+                            <div className="card bg-light">
+                                <div className="card-body text-center">
+                                    <h5 className="card-title text-warning">
+                                        {contributions.filter(c => getStatusText(c) === 'en cours').length}
+                                    </h5>
+                                    <p className="card-text small">En cours</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Filtres */}
                     <div className="row mb-4">
-                        <div className="col-md-6">
+                        <div className="col-md-4">
                             <label className="form-label fw-semibold">Type de cotisation</label>
                             <select 
                                 className="form-select"
@@ -488,20 +539,36 @@ const getStatusText = (contribution) => {
                                 <option value="GROUP">Cotisations groupées</option>
                             </select>
                         </div>
-                        <div className="col-md-6">
-                            <label className="form-label fw-semibold">Période</label>
+                        <div className="col-md-4">
+                            <label className="form-label fw-semibold">Campagne de cotisation</label>
                             <select 
                                 className="form-select"
                                 value={periodFilter}
                                 onChange={(e) => setPeriodFilter(e.target.value)}
                             >
-                                <option value="">Toutes les périodes</option>
+                                <option value="">Toutes les campagnes</option>
                                 {contributionPeriods.map(period => (
                                     <option key={period.id} value={period.id}>
                                         {period.description} 
                                         ({formatDate(period.startDate)} - {formatDate(period.endDate)})
                                     </option>
                                 ))}
+                            </select>
+                        </div>
+                        <div className="col-md-4">
+                            <label className="form-label fw-semibold">Statut</label>
+                            <select 
+                                className="form-select"
+                                onChange={(e) => {
+                                    // Filtrage supplémentaire par statut si nécessaire
+                                    const status = e.target.value;
+                                    // Implémentation du filtrage par statut
+                                }}
+                            >
+                                <option value="">Tous les statuts</option>
+                                <option value="en attente">En attente</option>
+                                <option value="en cours">En cours</option>
+                                <option value="passé">Passé</option>
                             </select>
                         </div>
                     </div>
@@ -562,7 +629,7 @@ const getStatusText = (contribution) => {
                                     <tr>
                                         <th>Date</th>
                                         <th>Type</th>
-                                        <th>Période</th>
+                                        <th>Campagne de cotisation</th>
                                         <th>Montant</th>
                                         <th>Mode de paiement</th>
                                         <th>Statut</th>

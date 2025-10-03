@@ -157,7 +157,7 @@ const AddContributionPeriod = () => {
                 <div className="col-md-8">
                     <div className="card">
                         <div className="card-header bg-primary text-white">
-                            <h3 className="mb-0">Ajouter une Période de Cotisation</h3>
+                            <h3 className="mb-0">Ajouter une campagne de Cotisation</h3>
                         </div>
                         <div className="card-body">
                             {error && (
@@ -204,7 +204,7 @@ const AddContributionPeriod = () => {
 
                                 <div className="form-group mb-3">
                                     <label htmlFor="name" className="form-label">
-                                        Nom de la Période (Optionnel)
+                                        Nom de la campagne
                                     </label>
                                     <input 
                                         type="text" 
@@ -295,7 +295,7 @@ const AddContributionPeriod = () => {
                                                 Ajout en cours...
                                             </>
                                         ) : (
-                                            'Ajouter la Période de Cotisation'
+                                            'Ajouter la campagne de Cotisation'
                                         )}
                                     </button>
                                 </div>

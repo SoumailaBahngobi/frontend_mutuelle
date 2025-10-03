@@ -50,15 +50,33 @@ function AddIndividualContribution() {
             const response = await axios.get('http://localhost:8080/mut/contribution_period');
             setContributionPeriods(response.data);
         } catch (error) {
-            console.error('Erreur lors de la récupération des périodes de cotisation', error);
-            alert('Erreur lors du chargement des périodes de cotisation');
+            console.error('Erreur lors de la récupération des campagnes de cotisation', error);
+            alert('Erreur lors du chargement des campagnes de cotisation');
         } finally {
             setLoading(false);
         }
     };
 
     const handleChange = (e) => {
-        setForm({ ...form, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        
+        if (name === 'contributionPeriodId') {
+            // Trouver la période sélectionnée
+            const selectedPeriod = contributionPeriods.find(period => period.id === parseInt(value));
+            
+            if (selectedPeriod) {
+                // Mettre à jour le montant automatiquement
+                setForm({ 
+                    ...form, 
+                    [name]: value,
+                    amount: selectedPeriod.individualAmount || selectedPeriod.amount || ''
+                });
+            } else {
+                setForm({ ...form, [name]: value });
+            }
+        } else {
+            setForm({ ...form, [name]: value });
+        }
     };
 
     const handleFileChange = (e) => {
@@ -228,6 +246,13 @@ function AddIndividualContribution() {
         if (fileInput) fileInput.value = '';
     };
 
+    // Fonction pour obtenir le montant de la période sélectionnée
+    const getSelectedPeriodAmount = () => {
+        if (!form.contributionPeriodId) return null;
+        const selectedPeriod = contributionPeriods.find(period => period.id === parseInt(form.contributionPeriodId));
+        return selectedPeriod ? (selectedPeriod.individualAmount || selectedPeriod.amount) : null;
+    };
+
     if (!currentUser) {
         return (
             <div className="container">
@@ -263,7 +288,14 @@ function AddIndividualContribution() {
                             <div className="row">
                                 <div className="col-md-6">
                                     <div className="form-group mb-3">
-                                        <label htmlFor="amount" className="form-label">Montant (FCFA) *</label>
+                                        <label htmlFor="amount" className="form-label">
+                                            Montant (FCFA) *
+                                            {getSelectedPeriodAmount() && (
+                                                <span className="text-success ms-2">
+                                                    (Montant automatique: {getSelectedPeriodAmount()} FCFA)
+                                                </span>
+                                            )}
+                                        </label>
                                         <input 
                                             type="number" 
                                             className="form-control" 
@@ -271,11 +303,17 @@ function AddIndividualContribution() {
                                             name="amount" 
                                             value={form.amount} 
                                             onChange={handleChange} 
-                                            placeholder="Ex: 5000" 
+                                            placeholder="Le montant est automaitique selon la période sélectionnée " 
                                             required
                                             min="1"
                                             step="1"
+                                            readOnly={!!getSelectedPeriodAmount()} // Rendre le champ en lecture seule si le montant est automatique
                                         />
+                                        {getSelectedPeriodAmount() && (
+                                            <small className="form-text text-muted">
+                                                Le montant est automatiquement défini selon la période sélectionnée
+                                            </small>
+                                        )}
                                     </div>
                                 </div>
                                 
@@ -356,7 +394,7 @@ function AddIndividualContribution() {
                             </div>
                             
                             <div className="form-group mb-4">
-                                <label htmlFor="contributionPeriodId" className="form-label">Période *</label>
+                                <label htmlFor="contributionPeriodId" className="form-label">Campagne de Cotisation *</label>
                                 {loading ? (
                                     <div className="form-control">Chargement...</div>
                                 ) : (
@@ -368,11 +406,12 @@ function AddIndividualContribution() {
                                         onChange={handleChange}
                                         required
                                     >
-                                        <option value="">Choisir une période</option>
+                                        <option value="">Choisir une campagne de cotisation</option>
                                         {contributionPeriods.map((period) => (
                                             <option key={period.id} value={period.id}>
                                                 {period.description} 
                                                 ({new Date(period.startDate).toLocaleDateString()} - {new Date(period.endDate).toLocaleDateString()})
+                                                - Montant: {period.individualAmount || period.amount} FCFA
                                             </option>
                                         ))}
                                     </select>

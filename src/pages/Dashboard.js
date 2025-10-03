@@ -197,7 +197,7 @@ export default function Dashboard() {
                 </button>
 
                 {/* Options pour les administrateurs */}
-                {(user.role === 'ADMIN' || user.role === 'PRESIDENT' || user.role === 'TREASURER' || user.role === 'SECRETARY') && (
+                {( user.role === 'PRESIDENT' || user.role === 'TREASURER' || user.role === 'SECRETARY') && (
                   <>
                     <hr />
 
@@ -205,7 +205,7 @@ export default function Dashboard() {
                       className="btn btn-outline-secondary btn-sm"
                       onClick={() => navigate('/mut/contribution_period')}
                     >
-                      🗓️ Gérer les périodes de cotisation
+                      🗓️ Créer périodes de cotisation
                     </button>
 
                     <button
@@ -221,7 +221,7 @@ export default function Dashboard() {
                     >
                       ➕ Créer un prêt
                     </button>
-                    {/* mut/contribution_period/add */}
+                   
                     <button
                       className="btn btn-outline-info btn-sm"
                       onClick={() => navigate('/loans/repayment')}
@@ -320,7 +320,7 @@ export default function Dashboard() {
                         <div className="col-md-4 mb-2">
                           <div className="card border-primary">
                             <div className="card-body text-center">
-                              <h6>👑 Président</h6>
+                              <h6> Président</h6>
                               <small className="text-muted">Validation stratégique</small>
                             </div>
                           </div>
@@ -330,7 +330,7 @@ export default function Dashboard() {
                         <div className="col-md-4 mb-2">
                           <div className="card border-info">
                             <div className="card-body text-center">
-                              <h6>📝 Secrétaire</h6>
+                              <h6> Secrétaire</h6>
                               <small className="text-muted">Vérification administrative</small>
                             </div>
                           </div>
@@ -340,7 +340,7 @@ export default function Dashboard() {
                         <div className="col-md-4 mb-2">
                           <div className="card border-success">
                             <div className="card-body text-center">
-                              <h6>💰 Trésorier</h6>
+                              <h6>Trésorier</h6>
                               <small className="text-muted">Analyse financière</small>
                             </div>
                           </div>
@@ -353,7 +353,7 @@ export default function Dashboard() {
                       className="btn btn-warning w-100"
                       onClick={() => navigate('/loans/approval')}
                     >
-                      📋 Accéder aux validations
+                    Accéder aux validations
                     </button>
                   </div>
                 </div>
@@ -367,7 +367,7 @@ export default function Dashboard() {
         <div className="col-md-6 mb-3">
           <div className="card">
             <div className="card-body">
-              <h5 className="card-title">📋 Cotisations</h5>
+              <h5 className="card-title">Cotisations</h5>
 
               <button
                 className="btn btn-primary w-100 mb-2"
@@ -389,12 +389,12 @@ export default function Dashboard() {
         <div className="col-md-6 mb-3">
           <div className="card">
             <div className="card-body">
-              <h5 className="card-title">🔔 Notifications</h5>
+              <h5 className="card-title">Notifications</h5>
               <ul className="list-group">
                 {/* Notifications de prêt */}
                 {myLoanRequests.some(req => req.status === 'APPROVED') && (
                   <li className="list-group-item list-group-item-success">
-                    ✅ Vous avez des demandes de prêt approuvées !
+                    Vous avez des demandes de prêt approuvées !
                   </li>
                 )}
 
