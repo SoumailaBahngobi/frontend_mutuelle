@@ -1,0 +1,28 @@
+.bg-login-image {
+  background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+  background-size: cover;
+}
+
+.navbar-dark.bg-gradient-primary {
+  background: linear-gradient(87deg, #4e73df 0, #224abe 100%) !important;
+}
+
+/* Animation pour les boutons */
+.btn {
+  transition: all 0.3s ease;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+/* Cards animations */
+.card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
