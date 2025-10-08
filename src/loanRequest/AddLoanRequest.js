@@ -38,13 +38,15 @@ const AddLoanRequest = () => {
         try {
             const token = localStorage.getItem('token');
             if (!token) {
-                console.log('Aucun token trouvé');
+                // console.log('Aucun token trouvé');
+                toast.warning('Aucun token trouvé, utilisateur non connecté', { autoClose: 3000 });
                 return null;
             }
             
             // Décoder le token JWT (partie payload)
             const payload = JSON.parse(atob(token.split('.')[1]));
-            console.log('Token décodé:', payload);
+            // console.log('Token décodé:', payload);
+            toast.info('Token décodé avec succès', { autoClose: 2000 });
             
             return {
                 id: payload.id || payload.userId || payload.sub,
@@ -53,7 +55,8 @@ const AddLoanRequest = () => {
                 email: payload.email || payload.sub
             };
         } catch (error) {
-            console.error('Erreur lors du décodage du token:', error);
+            // console.error('Erreur lors du décodage du token:', error);
+            toast.error('Erreur lors du décodage du token', { autoClose: 5000 });
             return null;
         }
     }, []);
@@ -116,7 +119,8 @@ const AddLoanRequest = () => {
                 }
             }
         } catch (error) {
-            console.error('Erreur lors du chargement des informations:', error);
+            // console.error('Erreur lors du chargement des informations:', error);
+            toast.error('Erreur lors du chargement de vos informations', { autoClose: 5000 });
             // Fallback: récupérer depuis le token
             const userFromToken = getCurrentUserFromToken();
             if (userFromToken) {
@@ -178,7 +182,8 @@ const AddLoanRequest = () => {
 
         // Vérifier que l'utilisateur est connecté
         if (!currentUser) {
-            alert('Erreur: Utilisateur non connecté. Veuillez vous reconnecter.');
+            // alert('Erreur: Utilisateur non connecté. Veuillez vous reconnecter.');
+            toast.error('Erreur: Utilisateur non connecté. Veuillez vous reconnecter.', { autoClose: 5000 });
             return;
         }
 
@@ -212,7 +217,9 @@ const AddLoanRequest = () => {
 
             // Vérifier d'abord si la réponse a du contenu
             const responseText = await response.text();
-            console.log('Réponse brute:', responseText);
+            // console.log('Réponse brute:', responseText);
+            toast.dismiss();
+            toast.info('Traitement de la réponse du serveur...', { autoClose: 2000 });
 
             if (response.ok) {
                 let result;
@@ -227,7 +234,9 @@ const AddLoanRequest = () => {
                     result = { message: 'Demande créée avec succès' };
                 }
                 
-                console.log('Demande créée:', result);
+                // console.log('Demande créée:', result);
+                toast.dismiss();
+                toast.success('Demande de prêt soumise avec succès !', { autoClose: 3000 });
                 
                 setSuccess(true);
                 setFormData({

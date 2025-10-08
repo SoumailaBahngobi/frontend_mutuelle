@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { toast } from 'react-toastify';
 
 const LoanApproval = () => {
     const navigate = useNavigate();
@@ -8,7 +9,7 @@ const LoanApproval = () => {
     const [currentUser, setCurrentUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(null);
-    const [filter, setFilter] = useState('ALL'); // ALL, PENDING, IN_REVIEW, APPROVED, REJECTED
+    const [filter, setFilter] = useState('ALL');
 
     useEffect(() => {
         fetchData();
@@ -23,16 +24,29 @@ const LoanApproval = () => {
                 headers: { Authorization: `Bearer ${token}` }
             });
             
-            // Récupérer le profil utilisateur
-            const profileResponse = await axios.get('http://localhost:8080/mut/member/profile', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            // Récupérer le profil utilisateur - CORRECTION ICI
+            try {
+                const profileResponse = await axios.get('http://localhost:8080/mut/members/current', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                setCurrentUser(profileResponse.data);
+            } catch (profileError) {
+                console.warn('Impossible de récupérer le profil, utilisation du token');
+                // Récupérer les infos du token JWT
+                const tokenData = JSON.parse(atob(token.split('.')[1]));
+                setCurrentUser({
+                    id: tokenData.id,
+                    firstName: tokenData.firstName,
+                    lastName: tokenData.lastName,
+                    email: tokenData.email,
+                    role: tokenData.role || 'MEMBER'
+                });
+            }
 
             setLoanRequests(requestsResponse.data);
-            setCurrentUser(profileResponse.data);
         } catch (error) {
             console.error('Erreur:', error);
-            alert('Erreur lors du chargement des données');
+            toast.error('Erreur lors du chargement des données');
         } finally {
             setLoading(false);
         }
@@ -58,10 +72,16 @@ const LoanApproval = () => {
                     return;
             }
 
+            // CORRECTION : Envoyer un objet vide dans le body
             const response = await axios.post(
                 `http://localhost:8080/mut/loan_request/${requestId}/approve/${endpoint}`, 
-                {},
-                { headers: { Authorization: `Bearer ${token}` } }
+                {}, // Body vide car votre backend n'attend pas de données
+                { 
+                    headers: { 
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    } 
+                }
             );
 
             // Mettre à jour la liste
@@ -70,39 +90,94 @@ const LoanApproval = () => {
             );
             setLoanRequests(updatedRequests);
             
-            alert(`✅ Validation ${role.toLowerCase()} effectuée avec succès !`);
+            toast.success(`Validation ${role.toLowerCase()} effectuée avec succès !`);
         } catch (error) {
             console.error('Erreur approbation:', error);
-            alert(error.response?.data || 'Erreur lors de l\'approbation');
+            const errorMessage = error.response?.data || error.message || 'Erreur lors de l\'approbation';
+            toast.error(errorMessage);
         } finally {
             setActionLoading(null);
         }
     };
 
     const handleReject = async (requestId) => {
-        if (!window.confirm('Êtes-vous sûr de vouloir rejeter cette demande ? Cette action est irréversible.')) {
+        const rejectionReason = window.prompt('Veuillez saisir la raison du rejet:');
+        if (!rejectionReason) {
+            toast.warning('Le rejet a été annulé');
+            return;
+        }
+
+        if (!window.confirm('Êtes-vous sûr de vouloir rejeter cette demande ?')) {
             return;
         }
 
         setActionLoading(requestId);
         try {
             const token = localStorage.getItem('token');
-            await axios.post(
+            
+            // CORRECTION : Envoyer les données dans le format attendu
+            const response = await axios.post(
                 `http://localhost:8080/mut/loan_request/${requestId}/reject`,
-                {},
-                { headers: { Authorization: `Bearer ${token}` } }
+                {
+                    rejectionReason: rejectionReason,
+                    rejectedByRole: getCurrentUserRole() // Déterminer le rôle actuel
+                },
+                { 
+                    headers: { 
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    } 
+                }
             );
 
-            // Retirer la demande rejetée de la liste
-            const updatedRequests = loanRequests.filter(req => req.id !== requestId);
+            // Mettre à jour la demande rejetée
+            const updatedRequests = loanRequests.map(req => 
+                req.id === requestId ? response.data : req
+            );
             setLoanRequests(updatedRequests);
             
-            alert('✅ Demande rejetée avec succès !');
+            toast.success('Demande rejetée avec succès !');
         } catch (error) {
             console.error('Erreur rejet:', error);
-            alert(error.response?.data || 'Erreur lors du rejet');
+            const errorMessage = error.response?.data || error.message || 'Erreur lors du rejet';
+            toast.error(errorMessage);
         } finally {
             setActionLoading(null);
+        }
+    };
+
+    // Déterminer le rôle de l'utilisateur actuel
+    const getCurrentUserRole = () => {
+        if (!currentUser) return 'MEMBER';
+        
+        if (currentUser.president || currentUser.role === 'PRESIDENT') return 'PRESIDENT';
+        if (currentUser.secretary || currentUser.role === 'SECRETARY') return 'SECRETARY';
+        if (currentUser.treasurer || currentUser.role === 'TREASURER') return 'TREASURER';
+        if (currentUser.admin || currentUser.role === 'ADMIN') return 'ADMIN';
+        
+        return 'MEMBER';
+    };
+
+    // Vérifier les permissions - CORRECTION ICI
+    const userRole = getCurrentUserRole();
+    const canApproveAsPresident = (userRole === 'PRESIDENT' || userRole === 'ADMIN');
+    const canApproveAsSecretary = (userRole === 'SECRETARY' || userRole === 'ADMIN');
+    const canApproveAsTreasurer = (userRole === 'TREASURER' || userRole === 'ADMIN');
+    const canReject = (userRole === 'PRESIDENT' || userRole === 'SECRETARY' || userRole === 'TREASURER' || userRole === 'ADMIN');
+
+    // Vérifier si l'utilisateur peut approuver une demande spécifique
+    const canUserApproveRequest = (request, role) => {
+        if (request.status === 'REJECTED' || request.status === 'APPROVED') return false;
+        
+        switch (role) {
+            case 'PRESIDENT':
+                return canApproveAsPresident && !request.presidentApproved;
+            case 'SECRETARY':
+                return canApproveAsSecretary && !request.secretaryApproved;
+            case 'TREASURER':
+                return canApproveAsTreasurer && !request.treasurerApproved;
+            default:
+                return false;
         }
     };
 
@@ -111,12 +186,6 @@ const LoanApproval = () => {
         if (filter === 'ALL') return true;
         return request.status === filter;
     });
-
-    // Vérifier les permissions
-    const canApproveAsPresident = currentUser?.role === 'PRESIDENT' || currentUser?.role === 'ADMIN';
-    const canApproveAsSecretary = currentUser?.role === 'SECRETARY' || currentUser?.role === 'ADMIN';
-    const canApproveAsTreasurer = currentUser?.role === 'TREASURER' || currentUser?.role === 'ADMIN';
-    const canReject = currentUser?.role === 'PRESIDENT' || currentUser?.role === 'ADMIN';
 
     const getStatusBadge = (status) => {
         const statusConfig = {
@@ -130,13 +199,25 @@ const LoanApproval = () => {
     };
 
     const getApprovalBadge = (approved) => {
-        return approved ? '✅' : '❌';
+        return approved ? 
+            <span className="badge bg-success">✅</span> : 
+            <span className="badge bg-secondary">❌</span>;
+    };
+
+    const getApprovalProgress = (request) => {
+        const approvals = [
+            request.presidentApproved,
+            request.secretaryApproved, 
+            request.treasurerApproved
+        ];
+        const approvedCount = approvals.filter(Boolean).length;
+        return `${approvedCount}/3`;
     };
 
     if (loading) {
         return (
             <div className="container mt-4">
-                <div className="d-flex justify-content-center">
+                <div className="d-flex justify-content-center align-items-center" style={{ height: '400px' }}>
                     <div className="spinner-border text-primary" role="status">
                         <span className="visually-hidden">Chargement...</span>
                     </div>
@@ -152,7 +233,8 @@ const LoanApproval = () => {
                 <div>
                     <h2>📋 Validation des Demandes de Prêt</h2>
                     <p className="text-muted">
-                        Gérer les validations des demandes de prêt par le comité
+                        Rôle actuel: <strong>{userRole}</strong> | 
+                        Connecté en tant que: <strong>{currentUser?.firstName} {currentUser?.lastName}</strong>
                     </p>
                 </div>
                 <button 
@@ -251,13 +333,18 @@ const LoanApproval = () => {
                                         <tr key={request.id}>
                                             <td>
                                                 <div>
-                                                    <strong>{request.member?.name} {request.member?.firstName}</strong>
+                                                    <strong>{request.member?.firstName} {request.member?.lastName}</strong>
                                                     <br />
                                                     <small className="text-muted">{request.member?.email}</small>
                                                 </div>
                                             </td>
                                             <td>
-                                                <strong className="text-primary">{request.requestAmount} €</strong>
+                                                <strong className="text-primary">
+                                                    {new Intl.NumberFormat('fr-FR', {
+                                                        style: 'currency',
+                                                        currency: 'XOF'
+                                                    }).format(request.requestAmount)}
+                                                </strong>
                                             </td>
                                             <td>{request.duration} mois</td>
                                             <td>
@@ -266,10 +353,14 @@ const LoanApproval = () => {
                                                 </div>
                                             </td>
                                             <td>
-                                                {new Date(request.requestDate).toLocaleDateString()}
+                                                {new Date(request.requestDate).toLocaleDateString('fr-FR')}
                                             </td>
                                             <td>
                                                 {getStatusBadge(request.status)}
+                                                <br />
+                                                <small className="text-muted">
+                                                    {getApprovalProgress(request)}
+                                                </small>
                                             </td>
                                             <td>
                                                 <div className="small">
@@ -281,48 +372,64 @@ const LoanApproval = () => {
                                             <td>
                                                 <div className="btn-group-vertical btn-group-sm">
                                                     {/* Boutons d'approbation */}
-                                                    {canApproveAsPresident && !request.presidentApproved && request.status !== 'REJECTED' && (
+                                                    {canUserApproveRequest(request, 'PRESIDENT') && (
                                                         <button
                                                             className="btn btn-outline-success btn-sm mb-1"
                                                             onClick={() => handleApprove(request.id, 'PRESIDENT')}
                                                             disabled={actionLoading === request.id}
                                                             title="Approuver en tant que Président"
                                                         >
-                                                            {actionLoading === request.id ? '...' : '✅ Président'}
+                                                            {actionLoading === request.id ? (
+                                                                <span className="spinner-border spinner-border-sm" />
+                                                            ) : (
+                                                                '✅ Président'
+                                                            )}
                                                         </button>
                                                     )}
                                                     
-                                                    {canApproveAsSecretary && !request.secretaryApproved && request.status !== 'REJECTED' && (
+                                                    {canUserApproveRequest(request, 'SECRETARY') && (
                                                         <button
                                                             className="btn btn-outline-info btn-sm mb-1"
                                                             onClick={() => handleApprove(request.id, 'SECRETARY')}
                                                             disabled={actionLoading === request.id}
                                                             title="Approuver en tant que Secrétaire"
                                                         >
-                                                            {actionLoading === request.id ? '...' : '📝 Secrétaire'}
+                                                            {actionLoading === request.id ? (
+                                                                <span className="spinner-border spinner-border-sm" />
+                                                            ) : (
+                                                                '📝 Secrétaire'
+                                                            )}
                                                         </button>
                                                     )}
                                                     
-                                                    {canApproveAsTreasurer && !request.treasurerApproved && request.status !== 'REJECTED' && (
+                                                    {canUserApproveRequest(request, 'TREASURER') && (
                                                         <button
                                                             className="btn btn-outline-warning btn-sm mb-1"
                                                             onClick={() => handleApprove(request.id, 'TREASURER')}
                                                             disabled={actionLoading === request.id}
                                                             title="Approuver en tant que Trésorier"
                                                         >
-                                                            {actionLoading === request.id ? '...' : '💰 Trésorier'}
+                                                            {actionLoading === request.id ? (
+                                                                <span className="spinner-border spinner-border-sm" />
+                                                            ) : (
+                                                                '💰 Trésorier'
+                                                            )}
                                                         </button>
                                                     )}
                                                     
                                                     {/* Bouton de rejet */}
-                                                    {canReject && request.status !== 'REJECTED' && (
+                                                    {canReject && request.status !== 'REJECTED' && request.status !== 'APPROVED' && (
                                                         <button
                                                             className="btn btn-outline-danger btn-sm"
                                                             onClick={() => handleReject(request.id)}
                                                             disabled={actionLoading === request.id}
                                                             title="Rejeter la demande"
                                                         >
-                                                            {actionLoading === request.id ? '...' : '❌ Rejeter'}
+                                                            {actionLoading === request.id ? (
+                                                                <span className="spinner-border spinner-border-sm" />
+                                                            ) : (
+                                                                '❌ Rejeter'
+                                                            )}
                                                         </button>
                                                     )}
                                                     
@@ -348,17 +455,22 @@ const LoanApproval = () => {
             <div className="mt-4">
                 <div className="card">
                     <div className="card-body">
-                        <h6>📋 Légende des validations:</h6>
+                        <h6>📋 Légende:</h6>
                         <div className="row">
                             <div className="col-md-4">
-                                <strong>Président:</strong> Validation stratégique et approbation finale
+                                <strong>Président:</strong> Validation stratégique
                             </div>
                             <div className="col-md-4">
-                                <strong>Secrétaire:</strong> Vérification administrative et documentation
+                                <strong>Secrétaire:</strong> Vérification administrative
                             </div>
                             <div className="col-md-4">
-                                <strong>Trésorier:</strong> Analyse financière et capacité de remboursement
+                                <strong>Trésorier:</strong> Analyse financière
                             </div>
+                        </div>
+                        <div className="mt-2 text-muted">
+                            <small>
+                                <strong>Note:</strong> Les 3 validations sont nécessaires pour l'approbation finale.
+                            </small>
                         </div>
                     </div>
                 </div>
