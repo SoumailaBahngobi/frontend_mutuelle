@@ -119,50 +119,55 @@ const LoanApprovalDashboard = () => {
     };
 
     const handleApprove = async (requestId, roleType) => {
-        setActionLoading(`${requestId}-${roleType}`);
-        try {
-            const token = localStorage.getItem('token');
-            let endpoint = '';
-            
-            switch(roleType) {
-                case 'PRESIDENT':
-                    endpoint = `president`;
-                    break;
-                case 'SECRETARY':
-                    endpoint = `secretary`;
-                    break;
-                case 'TREASURER':
-                    endpoint = `treasurer`;
-                    break;
-                default:
-                    return;
-            }
-
-            const response = await axios.post(
-                `http://localhost:8080/mut/loan_request/${requestId}/approve/${endpoint}`, 
-                {},
-                {
-                    headers: { 
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                }
-            );
-            
-            // Mettre à jour la demande spécifique
-            setLoanRequests(prev => 
-                prev.map(req => req.id === requestId ? response.data : req)
-            );
-            
-            toast.success(`✅ Validation ${roleType.toLowerCase()} effectuée !`);
-        } catch (error) {
-            console.error('Erreur approbation:', error);
-            const errorMessage = error.response?.data || error.message || 'Erreur lors de l\'approbation';
-            toast.error(errorMessage);
-        } finally {
-            setActionLoading(null);
+    setActionLoading(`${requestId}-${roleType}`);
+    try {
+        const token = localStorage.getItem('token');
+        let endpoint = '';
+        
+        switch(roleType) {
+            case 'PRESIDENT':
+                endpoint = `president`;
+                break;
+            case 'SECRETARY':
+                endpoint = `secretary`;
+                break;
+            case 'TREASURER':
+                endpoint = `treasurer`;
+                break;
+            default:
+                return;
         }
-    };
+
+        // CORRECTION: Envoyer un objet vide ou avec commentaire si nécessaire
+        const approvalData = {
+            comment: "" // ou laisser vide si pas de commentaire
+        };
+
+        const response = await axios.post(
+            `http://localhost:8080/mut/loan_request/${requestId}/approve/${endpoint}`, 
+            approvalData, // CORRECTION: envoyer un objet
+            {
+                headers: { 
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+        
+        // Mettre à jour la demande spécifique
+        setLoanRequests(prev => 
+            prev.map(req => req.id === requestId ? response.data : req)
+        );
+        
+        toast.success(`✅ Validation ${roleType.toLowerCase()} effectuée !`);
+    } catch (error) {
+        console.error('Erreur approbation:', error);
+        const errorMessage = error.response?.data || error.message || 'Erreur lors de l\'approbation';
+        toast.error(errorMessage);
+    } finally {
+        setActionLoading(null);
+    }
+};
 
     const handleReject = async (requestId) => {
         const rejectionReason = window.prompt('Veuillez saisir la raison du rejet:');

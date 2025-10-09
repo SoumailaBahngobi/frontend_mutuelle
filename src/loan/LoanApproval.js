@@ -24,9 +24,9 @@ const LoanApproval = () => {
                 headers: { Authorization: `Bearer ${token}` }
             });
             
-            // Récupérer le profil utilisateur - CORRECTION ICI
+            // Récupérer le profil utilisateur
             try {
-                const profileResponse = await axios.get('http://localhost:8080/mut/members/current', {
+                const profileResponse = await axios.get('http://localhost:8080/mut/member/profile', {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 setCurrentUser(profileResponse.data);
@@ -72,10 +72,11 @@ const LoanApproval = () => {
                     return;
             }
 
-            // CORRECTION : Envoyer un objet vide dans le body
+            const comment = prompt(`Commentaire pour l'approbation ${role.toLowerCase()} (optionnel):`);
+            
             const response = await axios.post(
                 `http://localhost:8080/mut/loan_request/${requestId}/approve/${endpoint}`, 
-                {}, // Body vide car votre backend n'attend pas de données
+                comment ? { comment } : {},
                 { 
                     headers: { 
                         Authorization: `Bearer ${token}`,
@@ -115,12 +116,10 @@ const LoanApproval = () => {
         try {
             const token = localStorage.getItem('token');
             
-            // CORRECTION : Envoyer les données dans le format attendu
             const response = await axios.post(
                 `http://localhost:8080/mut/loan_request/${requestId}/reject`,
                 {
-                    rejectionReason: rejectionReason,
-                    rejectedByRole: getCurrentUserRole() // Déterminer le rôle actuel
+                    rejectionReason: rejectionReason
                 },
                 { 
                     headers: { 
@@ -146,20 +145,8 @@ const LoanApproval = () => {
         }
     };
 
-    // Déterminer le rôle de l'utilisateur actuel
-    const getCurrentUserRole = () => {
-        if (!currentUser) return 'MEMBER';
-        
-        if (currentUser.president || currentUser.role === 'PRESIDENT') return 'PRESIDENT';
-        if (currentUser.secretary || currentUser.role === 'SECRETARY') return 'SECRETARY';
-        if (currentUser.treasurer || currentUser.role === 'TREASURER') return 'TREASURER';
-        if (currentUser.admin || currentUser.role === 'ADMIN') return 'ADMIN';
-        
-        return 'MEMBER';
-    };
-
-    // Vérifier les permissions - CORRECTION ICI
-    const userRole = getCurrentUserRole();
+    // Vérifier les permissions
+    const userRole = currentUser?.role || 'MEMBER';
     const canApproveAsPresident = (userRole === 'PRESIDENT' || userRole === 'ADMIN');
     const canApproveAsSecretary = (userRole === 'SECRETARY' || userRole === 'ADMIN');
     const canApproveAsTreasurer = (userRole === 'TREASURER' || userRole === 'ADMIN');

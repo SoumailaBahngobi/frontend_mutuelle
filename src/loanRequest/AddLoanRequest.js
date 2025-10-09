@@ -14,6 +14,8 @@ const AddLoanRequest = () => {
     const [success, setSuccess] = useState(false);
     const [loading, setLoading] = useState(false);
     const [currentUser, setCurrentUser] = useState(null);
+    const [eligibilityChecked, setEligibilityChecked] = useState(false);
+    const [isEligible, setIsEligible] = useState(false);
 
     const reasons = [
         'Achat immobilier',
@@ -33,20 +35,43 @@ const AddLoanRequest = () => {
         { value: 6, label: '6 mois' }
     ];
 
+    // Fonction pour vérifier l'éligibilité
+    const checkEligibility = useCallback(async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch('http://localhost:8080/mut/member', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                const canRequest = await response.json();
+                setIsEligible(canRequest);
+                setEligibilityChecked(true);
+                return canRequest;
+            }
+            setIsEligible(false);
+            setEligibilityChecked(true);
+            return false;
+        } catch (error) {
+            console.error('Erreur vérification éligibilité:', error);
+            setIsEligible(false);
+            setEligibilityChecked(true);
+            return false;
+        }
+    }, []);
+
     // Fonction pour extraire les infos utilisateur du token JWT
     const getCurrentUserFromToken = useCallback(() => {
         try {
             const token = localStorage.getItem('token');
             if (!token) {
-                // console.log('Aucun token trouvé');
-                toast.warning('Aucun token trouvé, utilisateur non connecté', { autoClose: 3000 });
                 return null;
             }
             
-            // Décoder le token JWT (partie payload)
             const payload = JSON.parse(atob(token.split('.')[1]));
-            // console.log('Token décodé:', payload);
-            toast.info('Token décodé avec succès', { autoClose: 2000 });
             
             return {
                 id: payload.id || payload.userId || payload.sub,
@@ -55,8 +80,6 @@ const AddLoanRequest = () => {
                 email: payload.email || payload.sub
             };
         } catch (error) {
-            // console.error('Erreur lors du décodage du token:', error);
-            toast.error('Erreur lors du décodage du token', { autoClose: 5000 });
             return null;
         }
     }, []);
@@ -66,7 +89,6 @@ const AddLoanRequest = () => {
         try {
             const token = localStorage.getItem('token');
             if (!token) {
-                console.log('Token non disponible');
                 const userFromToken = getCurrentUserFromToken();
                 if (userFromToken) {
                     setCurrentUser(userFromToken);
@@ -74,62 +96,34 @@ const AddLoanRequest = () => {
                 return;
             }
 
-            // console.log('Tentative de récupération des infos utilisateur...');
-            toast.info('Chargement de vos informations...', { autoClose: 2000 });
-            
-            // Essayer l'endpoint /current
-            let response = await fetch('http://localhost:8080/mut/members/current', {
+            let response = await fetch('http://localhost:8080/mut/member/profile', {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 }
             });
 
-            // Si l'endpoint /current ne fonctionne pas, essayer /me ou autre
-            if (!response.ok) {
-                // console.log('Endpoint /current non disponible, tentative avec /me...');
-                toast.info('Tentative de récupération alternative de vos informations...', { autoClose: 2000 });
-                response = await fetch('http://localhost:8080/mut/members/me', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-            }
-
             if (response.ok) {
-                const text = await response.text();
-                // console.log('Réponse brute:', text);
-                toast.dismiss();
-                toast.success('Informations utilisateur chargées avec succès', { autoClose: 2000 });
+                const userData = await response.json();
+                setCurrentUser(userData);
                 
-                if (text) {
-                    const userData = JSON.parse(text);
-                    // console.log('Données utilisateur:', userData);
-                    toast.success(`Bienvenue ${userData.firstName} ${userData.lastName}`, { autoClose: 3000 });
-                    setCurrentUser(userData);
-                } else {
-                    throw new Error('Réponse vide');
-                }
+                // Vérifier l'éligibilité après avoir récupéré l'utilisateur
+                await checkEligibility();
             } else {
-                console.warn('Endpoints API non disponibles, utilisation du token');
                 const userFromToken = getCurrentUserFromToken();
                 if (userFromToken) {
                     setCurrentUser(userFromToken);
+                    await checkEligibility();
                 }
             }
         } catch (error) {
-            // console.error('Erreur lors du chargement des informations:', error);
-            toast.error('Erreur lors du chargement de vos informations', { autoClose: 5000 });
-            // Fallback: récupérer depuis le token
             const userFromToken = getCurrentUserFromToken();
             if (userFromToken) {
-                // console.log('Utilisation des informations du token comme fallback');
-                toast.warning('Utilisation des informations du token', { autoClose: 3000 });
                 setCurrentUser(userFromToken);
+                await checkEligibility();
             }
         }
-    }, [getCurrentUserFromToken]);
+    }, [getCurrentUserFromToken, checkEligibility]);
 
     // Récupérer les informations du membre connecté au chargement du composant
     useEffect(() => {
@@ -166,7 +160,6 @@ const AddLoanRequest = () => {
             [field]: value
         }));
 
-        // Effacer l'erreur du champ modifié
         if (errors[field]) {
             setErrors(prev => ({
                 ...prev,
@@ -180,28 +173,29 @@ const AddLoanRequest = () => {
         
         if (!validateForm()) return;
 
-        // Vérifier que l'utilisateur est connecté
         if (!currentUser) {
-            // alert('Erreur: Utilisateur non connecté. Veuillez vous reconnecter.');
             toast.error('Erreur: Utilisateur non connecté. Veuillez vous reconnecter.', { autoClose: 5000 });
+            return;
+        }
+
+        // Vérifier l'éligibilité avant soumission
+        if (!isEligible) {
+            toast.error('Vous n\'êtes pas éligible pour un prêt. Vérifiez votre statut d\'adhésion.', { autoClose: 7000 });
             return;
         }
 
         setLoading(true);
         try {
             const token = localStorage.getItem('token');
+            
             const loanRequestData = {
                 requestAmount: parseFloat(formData.requestAmount),
                 duration: parseInt(formData.duration),
                 reason: formData.reason,
-                acceptTerms: formData.acceptTerms,
-                memberId: currentUser.id,
-                status: "PENDING",
-                requestDate: new Date().toISOString().split('T')[0]
+                acceptTerms: formData.acceptTerms
             };
 
-            // console.log('Données envoyées:', loanRequestData);
-            toast.info('Soumission de votre demande...', { autoClose: 2000 });
+            console.log('Données envoyées:', loanRequestData);
 
             const response = await fetch('http://localhost:8080/mut/loan_request', {
                 method: 'POST',
@@ -212,30 +206,9 @@ const AddLoanRequest = () => {
                 body: JSON.stringify(loanRequestData)
             });
 
-            console.log('Statut de la réponse:', response.status);
-            console.log('Headers de la réponse:', response.headers);
-
-            // Vérifier d'abord si la réponse a du contenu
             const responseText = await response.text();
-            // console.log('Réponse brute:', responseText);
-            toast.dismiss();
-            toast.info('Traitement de la réponse du serveur...', { autoClose: 2000 });
 
             if (response.ok) {
-                let result;
-                if (responseText) {
-                    try {
-                        result = JSON.parse(responseText);
-                    } catch (parseError) {
-                        console.warn('La réponse n\'est pas du JSON valide, utilisation de la réponse texte');
-                        result = { message: responseText };
-                    }
-                } else {
-                    result = { message: 'Demande créée avec succès' };
-                }
-                
-                // console.log('Demande créée:', result);
-                toast.dismiss();
                 toast.success('Demande de prêt soumise avec succès !', { autoClose: 3000 });
                 
                 setSuccess(true);
@@ -260,14 +233,13 @@ const AddLoanRequest = () => {
                 throw new Error(errorMessage);
             }
         } catch (error) {
-            console.error('Erreur complète:', error);
-            alert(`Erreur: ${error.message}`);
+            console.error('Erreur détaillée:', error);
+            toast.error(`Erreur: ${error.message}`);
         } finally {
             setLoading(false);
         }
     };
 
-    // Fonction pour annuler et réinitialiser le formulaire
     const handleCancel = () => {
         if (window.confirm('Êtes-vous sûr de vouloir annuler ? Toutes les données saisies seront perdues.')) {
             setFormData({
@@ -277,15 +249,8 @@ const AddLoanRequest = () => {
                 acceptTerms: false
             });
             setErrors({});
-            // console.log('Formulaire annulé et réinitialisé');
-            toast.info('Formulaire réinitialisé', { autoClose: 2000 });
-            handleBack();
+            window.history.back();
         }
-    };
-
-    // Fonction pour retourner à la page précédente
-    const handleBack = () => {
-        window.history.back();
     };
 
     const calculateLoanDetails = () => {
@@ -293,10 +258,9 @@ const AddLoanRequest = () => {
 
         const amount = parseFloat(formData.requestAmount);
         const duration = parseInt(formData.duration);
-        const interestRate = 0.0;
+        const interestRate = 5.0;
         
-        const monthlyInterest = (amount * interestRate) / 100 / 12;
-        const totalInterest = monthlyInterest * duration;
+        const totalInterest = (amount * interestRate * duration) / 100 / 12;
         const totalRepayment = amount + totalInterest;
         const monthlyPayment = totalRepayment / duration;
 
@@ -326,41 +290,45 @@ const AddLoanRequest = () => {
                     <div className="card shadow-lg border-0">
                         <div className="card-header bg-primary text-white text-center py-4">
                             <h1 className="h3 mb-0">Nouvelle Demande de Prêt</h1>
-                            <p className="mb-0 opacity-75">
-                                Remplissez le formulaire ci-dessous pour soumettre votre demande de prêt
-                            </p>
                         </div>
 
                         <div className="card-body p-4">
                             {/* Affichage du membre connecté */}
                             {currentUser ? (
-                                <div className="alert alert-info d-flex align-items-center" role="alert">
-                                    <i className="fas fa-user me-2"></i>
-                                    <div>
-                                        <strong>Membre connecté:</strong> {currentUser.firstName} {currentUser.lastName} 
-                                        {currentUser.email && ` - ${currentUser.email}`}
-                                    </div>
+                                <div className="alert alert-info">
+                                    <strong>Membre connecté:</strong> {currentUser.firstName} {currentUser.lastName}
                                 </div>
                             ) : (
-                                <div className="alert alert-warning d-flex align-items-center" role="alert">
-                                    <i className="fas fa-exclamation-triangle me-2"></i>
-                                    <div>
-                                        <strong>Attention:</strong> Impossible de récupérer vos informations. 
-                                        Vérifiez que vous êtes connecté.
-                                    </div>
+                                <div className="alert alert-warning">
+                                    <strong>Attention:</strong> Impossible de récupérer vos informations.
+                                </div>
+                            )}
+
+                            {/* Statut d'éligibilité */}
+                            {eligibilityChecked && (
+                                <div className={`alert ${isEligible ? 'alert-success' : 'alert-danger'}`}>
+                                    <strong>
+                                        {isEligible ? '✅ Vous êtes éligible pour un prêt' : '❌ Vous n\'êtes pas éligible pour un prêt'}
+                                    </strong>
+                                    {!isEligible && (
+                                        <div className="mt-2">
+                                            <small>
+                                                Raisons possibles :
+                                                <ul className="mb-0">
+                                                    <li>Adhésion non active ou non à jour</li>
+                                                    <li>Dettes précédentes</li>
+                                                    <li>Prêt en cours non remboursé</li>
+                                                    <li>Statut de membre non régulier</li>
+                                                </ul>
+                                            </small>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
                             {success && (
-                                <div className="alert alert-success alert-dismissible fade show" role="alert">
-                                    <i className="fas fa-check-circle me-2"></i>
-                                    Votre demande de prêt a été soumise avec succès ! 
-                                    Vous serez notifié dès qu'elle sera traitée par les responsables.
-                                    <button 
-                                        type="button" 
-                                        className="btn-close" 
-                                        onClick={() => setSuccess(false)}
-                                    ></button>
+                                <div className="alert alert-success">
+                                    ✅ Votre demande de prêt a été soumise avec succès !
                                 </div>
                             )}
 
@@ -370,21 +338,17 @@ const AddLoanRequest = () => {
                                         <label htmlFor="requestAmount" className="form-label fw-semibold">
                                             Montant demandé en FCFA *
                                         </label>
-                                        <div className="input-group">
-                                            <span className="input-group-text bg-light">
-                                                <i className="fas fa-money-bill-wave text-muted"></i>
-                                            </span>
-                                            <input
-                                                id="requestAmount"
-                                                type="number"
-                                                className={`form-control ${errors.requestAmount ? 'is-invalid' : ''}`}
-                                                value={formData.requestAmount}
-                                                onChange={handleInputChange('requestAmount')}
-                                                min="1000"
-                                                step="1000"
-                                                placeholder="Entrez le montant"
-                                            />
-                                        </div>
+                                        <input
+                                            id="requestAmount"
+                                            type="number"
+                                            className={`form-control ${errors.requestAmount ? 'is-invalid' : ''}`}
+                                            value={formData.requestAmount}
+                                            onChange={handleInputChange('requestAmount')}
+                                            min="1000"
+                                            step="1000"
+                                            placeholder="Entrez le montant"
+                                            disabled={!isEligible}
+                                        />
                                         {errors.requestAmount && (
                                             <div className="invalid-feedback d-block">
                                                 {errors.requestAmount}
@@ -401,6 +365,7 @@ const AddLoanRequest = () => {
                                             className={`form-select ${errors.duration ? 'is-invalid' : ''}`}
                                             value={formData.duration}
                                             onChange={handleInputChange('duration')}
+                                            disabled={!isEligible}
                                         >
                                             <option value="">Sélectionnez une durée</option>
                                             {durationOptions.map((option) => (
@@ -417,51 +382,6 @@ const AddLoanRequest = () => {
                                     </div>
                                 </div>
 
-                                {loanDetails && (
-                                    <div className="card border-primary mb-4">
-                                        <div className="card-header bg-light">
-                                            <h5 className="card-title mb-0">
-                                                <i className="fas fa-calculator text-primary me-2"></i>
-                                                Simulation du prêt
-                                            </h5>
-                                        </div>
-                                        <div className="card-body">
-                                            <div className="row text-center">
-                                                <div className="col-6 col-md-3 mb-3">
-                                                    <div className="border-end border-secondary">
-                                                        <small className="text-muted d-block">Montant emprunté</small>
-                                                        <strong className="text-primary h6">
-                                                            {formatCurrency(loanDetails.amount)}
-                                                        </strong>
-                                                    </div>
-                                                </div>
-                                                <div className="col-6 col-md-3 mb-3">
-                                                    <div className="border-end border-secondary">
-                                                        <small className="text-muted d-block">Intérêts totaux</small>
-                                                        <strong className="text-success h6">
-                                                            {formatCurrency(loanDetails.totalInterest)}
-                                                        </strong>
-                                                    </div>
-                                                </div>
-                                                <div className="col-6 col-md-3 mb-3">
-                                                    <div className="border-end border-secondary">
-                                                        <small className="text-muted d-block">Mensualité</small>
-                                                        <strong className="text-info h6">
-                                                            {formatCurrency(loanDetails.monthlyPayment)}
-                                                        </strong>
-                                                    </div>
-                                                </div>
-                                                <div className="col-6 col-md-3 mb-3">
-                                                    <small className="text-muted d-block">Total à rembourser</small>
-                                                    <strong className="text-dark h6">
-                                                        {formatCurrency(loanDetails.totalRepayment)}
-                                                    </strong>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
                                 <div className="mb-3">
                                     <label htmlFor="reason" className="form-label fw-semibold">
                                         Raison du prêt *
@@ -471,6 +391,7 @@ const AddLoanRequest = () => {
                                         className={`form-select ${errors.reason ? 'is-invalid' : ''}`}
                                         value={formData.reason}
                                         onChange={handleInputChange('reason')}
+                                        disabled={!isEligible}
                                     >
                                         <option value="">Sélectionnez une raison</option>
                                         {reasons.map((reason) => (
@@ -486,36 +407,6 @@ const AddLoanRequest = () => {
                                     )}
                                 </div>
 
-                                {formData.reason === 'Autres dépenses personnelles' && (
-                                    <div className="mb-3">
-                                        <label htmlFor="detailedReason" className="form-label fw-semibold">
-                                            Précisez la raison
-                                        </label>
-                                        <textarea
-                                            id="detailedReason"
-                                            className="form-control"
-                                            rows="3"
-                                            placeholder="Décrivez en détail l'utilisation prévue du prêt..."
-                                        />
-                                    </div>
-                                )}
-
-                                <div className="mb-3">
-                                    <label htmlFor="detailedDescription" className="form-label fw-semibold">
-                                        Description détaillée
-                                    </label>
-                                    <textarea
-                                        id="detailedDescription"
-                                        className="form-control"
-                                        rows="4"
-                                        placeholder="Fournissez plus de détails sur votre projet et votre situation..."
-                                        onChange={handleInputChange('detailedDescription')}
-                                    />
-                                    <div className="form-text">
-                                        Cette information aidera les responsables à mieux comprendre votre demande.
-                                    </div>
-                                </div>
-
                                 <div className="mb-4">
                                     <div className="form-check">
                                         <input
@@ -524,10 +415,10 @@ const AddLoanRequest = () => {
                                             id="acceptTerms"
                                             checked={formData.acceptTerms}
                                             onChange={handleInputChange('acceptTerms')}
+                                            disabled={!isEligible}
                                         />
                                         <label className="form-check-label" htmlFor="acceptTerms">
-                                            J'accepte les conditions générales du prêt et m'engage à rembourser 
-                                            selon les échéances convenues. *
+                                            J'accepte les conditions générales du prêt *
                                         </label>
                                         {errors.acceptTerms && (
                                             <div className="invalid-feedback d-block">
@@ -537,7 +428,6 @@ const AddLoanRequest = () => {
                                     </div>
                                 </div>
 
-                                {/* Boutons Soumettre et Annuler */}
                                 <div className="d-grid gap-2 d-md-flex justify-content-md-end">
                                     <button 
                                         type="button"
@@ -545,30 +435,24 @@ const AddLoanRequest = () => {
                                         onClick={handleCancel}
                                         disabled={loading}
                                     >
-                                        <i className="fas fa-times me-2"></i>
                                         Annuler
                                     </button>
                                     <button 
                                         type="submit" 
-                                        className={`btn btn-primary btn-lg ${loading ? 'disabled' : ''}`}
-                                        disabled={loading || !currentUser}
+                                        className="btn btn-primary btn-lg"
+                                        disabled={loading || !currentUser || !isEligible}
                                     >
                                         {loading ? (
                                             <>
-                                                <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                                                Soumission en cours...
+                                                <span className="spinner-border spinner-border-sm me-2" />
+                                                Soumission...
                                             </>
                                         ) : (
-                                            <>
-                                                <i className="fas fa-paper-plane me-2"></i>
-                                                Soumettre la demande
-                                            </>
+                                            'Soumettre la demande'
                                         )}
                                     </button>
                                 </div>
                             </form>
-
-                            
                         </div>
                     </div>
                 </div>
