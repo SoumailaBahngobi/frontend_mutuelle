@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { toast } from 'react-toastify';
 
@@ -16,6 +17,8 @@ const AddLoanRequest = () => {
     const [currentUser, setCurrentUser] = useState(null);
     const [eligibilityChecked, setEligibilityChecked] = useState(false);
     const [isEligible, setIsEligible] = useState(false);
+
+    const navigate = useNavigate();
 
     const reasons = [
         'Achat immobilier',
@@ -39,7 +42,41 @@ const AddLoanRequest = () => {
     const checkEligibility = useCallback(async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch('http://localhost:8080/mut/member', {
+            console.log('🔐 Token:', token ? 'Present' : 'Missing');
+            
+            const response = await fetch('http://localhost:8080/mut/member/current/can-request-loan', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            console.log('📡 Response status:', response.status);
+            
+            if (response.ok) {
+                const canRequest = await response.json();
+                console.log(' Eligibility result:', canRequest);
+                setIsEligible(canRequest);
+                setEligibilityChecked(true);
+                return canRequest;
+            } else {
+                console.error(' Error response:', response.status, response.statusText);
+                // Essayer l'endpoint alternatif
+                return await tryAlternativeEligibilityCheck(token);
+            }
+        } catch (error) {
+            console.error(' Erreur vérification éligibilité:', error);
+            setIsEligible(true); // Par défaut, autoriser à soumettre
+            setEligibilityChecked(true);
+            return true;
+        }
+    }, []);
+
+    // Méthode alternative si le premier endpoint échoue
+    const tryAlternativeEligibilityCheck = async (token) => {
+        try {
+            // Essayer de récupérer les demandes en cours
+            const response = await fetch('http://localhost:8080/mut/loan_request/my-requests', {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
@@ -47,21 +84,32 @@ const AddLoanRequest = () => {
             });
             
             if (response.ok) {
-                const canRequest = await response.json();
-                setIsEligible(canRequest);
+                const myRequests = await response.json();
+                console.log('📋 Mes demandes:', myRequests);
+                
+                // Vérifier s'il y a des demandes PENDING ou IN_REVIEW
+                const pendingRequests = myRequests.filter(request => 
+                    request.status === 'PENDING' || request.status === 'IN_REVIEW'
+                );
+                
+                const isEligible = pendingRequests.length === 0;
+                console.log('📊 Calcul éligibilité:', { pending: pendingRequests.length, isEligible });
+                
+                setIsEligible(isEligible);
                 setEligibilityChecked(true);
-                return canRequest;
+                return isEligible;
             }
-            setIsEligible(false);
+            
+            setIsEligible(true);
             setEligibilityChecked(true);
-            return false;
+            return true;
         } catch (error) {
-            console.error('Erreur vérification éligibilité:', error);
-            setIsEligible(false);
+            console.error('Erreur méthode alternative:', error);
+            setIsEligible(true);
             setEligibilityChecked(true);
-            return false;
+            return true;
         }
-    }, []);
+    };
 
     // Fonction pour extraire les infos utilisateur du token JWT
     const getCurrentUserFromToken = useCallback(() => {
@@ -72,6 +120,7 @@ const AddLoanRequest = () => {
             }
             
             const payload = JSON.parse(atob(token.split('.')[1]));
+            console.log('👤 Token payload:', payload);
             
             return {
                 id: payload.id || payload.userId || payload.sub,
@@ -80,6 +129,7 @@ const AddLoanRequest = () => {
                 email: payload.email || payload.sub
             };
         } catch (error) {
+            console.error('Erreur décodage token:', error);
             return null;
         }
     }, []);
@@ -89,6 +139,7 @@ const AddLoanRequest = () => {
         try {
             const token = localStorage.getItem('token');
             if (!token) {
+                console.warn('Aucun token trouvé');
                 const userFromToken = getCurrentUserFromToken();
                 if (userFromToken) {
                     setCurrentUser(userFromToken);
@@ -105,11 +156,13 @@ const AddLoanRequest = () => {
 
             if (response.ok) {
                 const userData = await response.json();
+                console.log('👤 User data:', userData);
                 setCurrentUser(userData);
                 
                 // Vérifier l'éligibilité après avoir récupéré l'utilisateur
                 await checkEligibility();
             } else {
+                console.warn(' Impossible de récupérer le profil, utilisation du token');
                 const userFromToken = getCurrentUserFromToken();
                 if (userFromToken) {
                     setCurrentUser(userFromToken);
@@ -117,6 +170,7 @@ const AddLoanRequest = () => {
                 }
             }
         } catch (error) {
+            console.error(' Erreur récupération utilisateur:', error);
             const userFromToken = getCurrentUserFromToken();
             if (userFromToken) {
                 setCurrentUser(userFromToken);
@@ -127,6 +181,7 @@ const AddLoanRequest = () => {
 
     // Récupérer les informations du membre connecté au chargement du composant
     useEffect(() => {
+        console.log('🚀 Initialisation AddLoanRequest');
         fetchCurrentUser();
     }, [fetchCurrentUser]);
 
@@ -180,7 +235,7 @@ const AddLoanRequest = () => {
 
         // Vérifier l'éligibilité avant soumission
         if (!isEligible) {
-            toast.error('Vous n\'êtes pas éligible pour un prêt. Vérifiez votre statut d\'adhésion.', { autoClose: 7000 });
+            toast.error('Vous n\'êtes pas éligible pour un nouveau prêt. Vous avez déjà des demandes en attente de validation.', { autoClose: 7000 });
             return;
         }
 
@@ -191,11 +246,11 @@ const AddLoanRequest = () => {
             const loanRequestData = {
                 requestAmount: parseFloat(formData.requestAmount),
                 duration: parseInt(formData.duration),
-                reason: formData.reason,
-                acceptTerms: formData.acceptTerms
+                reason: formData.reason
+                // acceptTerms n'est pas envoyé au backend
             };
 
-            console.log('Données envoyées:', loanRequestData);
+            console.log('📤 Données envoyées:', loanRequestData);
 
             const response = await fetch('http://localhost:8080/mut/loan_request', {
                 method: 'POST',
@@ -207,9 +262,10 @@ const AddLoanRequest = () => {
             });
 
             const responseText = await response.text();
+            console.log('📥 Response:', response.status, responseText);
 
             if (response.ok) {
-                toast.success('Demande de prêt soumise avec succès !', { autoClose: 3000 });
+                toast.success('✅ Demande de prêt soumise avec succès !', { autoClose: 3000 });
                 
                 setSuccess(true);
                 setFormData({
@@ -219,7 +275,13 @@ const AddLoanRequest = () => {
                     acceptTerms: false
                 });
                 
-                setTimeout(() => setSuccess(false), 5000);
+                // Re-vérifier l'éligibilité après soumission
+                await checkEligibility();
+                
+                // Redirection après succès
+                setTimeout(() => {
+                    navigate('/loans/requests');
+                }, 2000);
             } else {
                 let errorMessage = 'Erreur lors de la création de la demande';
                 if (responseText) {
@@ -233,8 +295,8 @@ const AddLoanRequest = () => {
                 throw new Error(errorMessage);
             }
         } catch (error) {
-            console.error('Erreur détaillée:', error);
-            toast.error(`Erreur: ${error.message}`);
+            console.error('🚨 Erreur détaillée:', error);
+            toast.error(`❌ Erreur: ${error.message}`);
         } finally {
             setLoading(false);
         }
@@ -249,8 +311,12 @@ const AddLoanRequest = () => {
                 acceptTerms: false
             });
             setErrors({});
-            window.history.back();
+            navigate('/dashboard');
         }
+    };
+
+    const viewMyRequests = () => {
+        navigate('/loans/requests');
     };
 
     const calculateLoanDetails = () => {
@@ -296,39 +362,67 @@ const AddLoanRequest = () => {
                             {/* Affichage du membre connecté */}
                             {currentUser ? (
                                 <div className="alert alert-info">
-                                    <strong>Membre connecté:</strong> {currentUser.firstName} {currentUser.lastName}
+                                    <strong>👤 Membre connecté:</strong> {currentUser.firstName} {currentUser.lastName} 
+                                    {currentUser.email && ` (${currentUser.email})`}
                                 </div>
                             ) : (
                                 <div className="alert alert-warning">
-                                    <strong>Attention:</strong> Impossible de récupérer vos informations.
+                                    <strong>⚠️ Attention:</strong> Impossible de récupérer vos informations.
                                 </div>
                             )}
 
                             {/* Statut d'éligibilité */}
                             {eligibilityChecked && (
                                 <div className={`alert ${isEligible ? 'alert-success' : 'alert-danger'}`}>
-                                    <strong>
-                                        {isEligible ? '✅ Vous êtes éligible pour un prêt' : '❌ Vous n\'êtes pas éligible pour un prêt'}
-                                    </strong>
+                                    <div className="d-flex align-items-center">
+                                        <span className="me-2">
+                                            {isEligible ? '✅' : '❌'}
+                                        </span>
+                                        <strong>
+                                            {isEligible ? 'Vous êtes éligible pour un prêt' : 'Vous n\'êtes pas éligible pour un prêt'}
+                                        </strong>
+                                    </div>
+                                    
                                     {!isEligible && (
                                         <div className="mt-2">
-                                            <small>
-                                                Raisons possibles :
-                                                <ul className="mb-0">
-                                                    <li>Adhésion non active ou non à jour</li>
-                                                    <li>Dettes précédentes</li>
-                                                    <li>Prêt en cours non remboursé</li>
-                                                    <li>Statut de membre non régulier</li>
-                                                </ul>
-                                            </small>
+                                            <div className="small">
+                                                <strong>📋 Raison :</strong> Vous avez déjà une ou plusieurs demandes de prêt en attente de validation.
+                                                <br />
+                                                <strong>🚀 Action requise :</strong> Veuillez attendre la validation de vos demandes en cours avant d'en soumettre une nouvelle.
+                                            </div>
+                                            <button 
+                                                className="btn btn-outline-primary btn-sm mt-2"
+                                                onClick={viewMyRequests}
+                                                type="button"
+                                            >
+                                                📋 Voir mes demandes en cours
+                                            </button>
                                         </div>
                                     )}
                                 </div>
                             )}
 
+                            {!eligibilityChecked && (
+                                <div className="alert alert-info">
+                                    <div className="d-flex align-items-center">
+                                        <div className="spinner-border spinner-border-sm me-2" role="status">
+                                            <span className="visually-hidden">Chargement...</span>
+                                        </div>
+                                        Vérification de votre éligibilité...
+                                    </div>
+                                </div>
+                            )}
+
                             {success && (
                                 <div className="alert alert-success">
-                                    ✅ Votre demande de prêt a été soumise avec succès !
+                                    <div className="d-flex align-items-center">
+                                        <span className="me-2">✅</span>
+                                        <div>
+                                            <strong>Votre demande de prêt a été soumise avec succès !</strong>
+                                            <br />
+                                            <small>Redirection vers la liste de vos demandes...</small>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
 
@@ -336,7 +430,7 @@ const AddLoanRequest = () => {
                                 <div className="row">
                                     <div className="col-md-6 mb-3">
                                         <label htmlFor="requestAmount" className="form-label fw-semibold">
-                                            Montant demandé en FCFA *
+                                            💰 Montant demandé en FCFA *
                                         </label>
                                         <input
                                             id="requestAmount"
@@ -347,7 +441,7 @@ const AddLoanRequest = () => {
                                             min="1000"
                                             step="1000"
                                             placeholder="Entrez le montant"
-                                            disabled={!isEligible}
+                                            disabled={!isEligible || loading}
                                         />
                                         {errors.requestAmount && (
                                             <div className="invalid-feedback d-block">
@@ -358,14 +452,14 @@ const AddLoanRequest = () => {
 
                                     <div className="col-md-6 mb-3">
                                         <label htmlFor="duration" className="form-label fw-semibold">
-                                            Durée du prêt *
+                                            📅 Durée du prêt *
                                         </label>
                                         <select
                                             id="duration"
                                             className={`form-select ${errors.duration ? 'is-invalid' : ''}`}
                                             value={formData.duration}
                                             onChange={handleInputChange('duration')}
-                                            disabled={!isEligible}
+                                            disabled={!isEligible || loading}
                                         >
                                             <option value="">Sélectionnez une durée</option>
                                             {durationOptions.map((option) => (
@@ -384,14 +478,14 @@ const AddLoanRequest = () => {
 
                                 <div className="mb-3">
                                     <label htmlFor="reason" className="form-label fw-semibold">
-                                        Raison du prêt *
+                                        🎯 Raison du prêt *
                                     </label>
                                     <select
                                         id="reason"
                                         className={`form-select ${errors.reason ? 'is-invalid' : ''}`}
                                         value={formData.reason}
                                         onChange={handleInputChange('reason')}
-                                        disabled={!isEligible}
+                                        disabled={!isEligible || loading}
                                     >
                                         <option value="">Sélectionnez une raison</option>
                                         {reasons.map((reason) => (
@@ -407,6 +501,27 @@ const AddLoanRequest = () => {
                                     )}
                                 </div>
 
+                                {/* Détails du prêt calculés */}
+                                {loanDetails && isEligible && (
+                                    <div className="card bg-light mb-4">
+                                        <div className="card-body">
+                                            <h6 className="card-title text-primary">📊 Détails du prêt calculés</h6>
+                                            <div className="row small">
+                                                <div className="col-md-6">
+                                                    <p><strong>Montant:</strong> {formatCurrency(loanDetails.amount)}</p>
+                                                    <p><strong>Durée:</strong> {loanDetails.duration} mois</p>
+                                                    <p><strong>Taux d'intérêt:</strong> {loanDetails.interestRate}%</p>
+                                                </div>
+                                                <div className="col-md-6">
+                                                    <p><strong>Intérêt total:</strong> {formatCurrency(loanDetails.totalInterest)}</p>
+                                                    <p><strong>Montant total à rembourser:</strong> {formatCurrency(loanDetails.totalRepayment)}</p>
+                                                    <p><strong>Mensualité:</strong> {formatCurrency(loanDetails.monthlyPayment)}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="mb-4">
                                     <div className="form-check">
                                         <input
@@ -415,7 +530,7 @@ const AddLoanRequest = () => {
                                             id="acceptTerms"
                                             checked={formData.acceptTerms}
                                             onChange={handleInputChange('acceptTerms')}
-                                            disabled={!isEligible}
+                                            disabled={!isEligible || loading}
                                         />
                                         <label className="form-check-label" htmlFor="acceptTerms">
                                             J'accepte les conditions générales du prêt *
@@ -435,20 +550,20 @@ const AddLoanRequest = () => {
                                         onClick={handleCancel}
                                         disabled={loading}
                                     >
-                                        Annuler
+                                        ❌ Annuler
                                     </button>
                                     <button 
                                         type="submit" 
                                         className="btn btn-primary btn-lg"
-                                        disabled={loading || !currentUser || !isEligible}
+                                        disabled={loading || !currentUser || !isEligible || !formData.acceptTerms}
                                     >
                                         {loading ? (
                                             <>
                                                 <span className="spinner-border spinner-border-sm me-2" />
-                                                Soumission...
+                                                📤 Soumission...
                                             </>
                                         ) : (
-                                            'Soumettre la demande'
+                                            '✅ Soumettre la demande'
                                         )}
                                     </button>
                                 </div>
