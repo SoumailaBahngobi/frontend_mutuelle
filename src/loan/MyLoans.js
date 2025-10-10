@@ -1,195 +1,249 @@
-// src/components/MyLoans.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
-const MyLoans = () => {
-    const [loans, setLoans] = useState([]);
-    const [loading, setLoading] = useState(true);
+export default function MyLoans() {
+  const [loans, setLoans] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
-    useEffect(() => {
-        fetchMyLoans();
-    }, []);
+  useEffect(() => {
+    fetchMyLoans();
+  }, []);
 
-    const fetchMyLoans = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            const response = await axios.get('http://localhost:8080/mut/loan', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            
-            // Filtrer seulement les prêts de l'utilisateur connecté
-            const userLoans = response.data.filter(loan => 
-                loan.member && loan.member.id === JSON.parse(localStorage.getItem('currentUser'))?.id
-            );
-            setLoans(userLoans);
-        } catch (error) {
-            console.error('Erreur:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
+  const fetchMyLoans = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get('http://localhost:8080/mut/loan', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Filtrer les prêts de l'utilisateur connecté
+      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      const userLoans = res.data.filter(loan => 
+        loan.member && loan.member.id === currentUser.id
+      );
+      
+      setLoans(userLoans);
+    } catch (error) {
+      console.error('Erreur chargement prêts:', error);
+      alert('Erreur lors du chargement de vos prêts');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const calculateRemainingTime = (endDate) => {
-        const end = new Date(endDate);
-        const now = new Date();
-        const diffTime = end - now;
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        return diffDays > 0 ? `${diffDays} jours` : 'Échu';
-    };
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: 'XOF'
+    }).format(amount || 0);
+  };
 
-    const getStatusBadge = (loan) => {
-        if (loan.isRepaid) {
-            return <span className="badge bg-success">Remboursé</span>;
-        }
-        
-        const endDate = new Date(loan.endDate);
-        const now = new Date();
-        
-        if (endDate < now) {
-            return <span className="badge bg-danger">En retard</span>;
-        }
-        
-        return <span className="badge bg-warning">En cours</span>;
-    };
+  const getStatusBadge = (isRepaid) => {
+    return isRepaid ? 
+      <span className="badge bg-success">Remboursé</span> : 
+      <span className="badge bg-warning text-dark">En cours</span>;
+  };
 
-    if (loading) return <div className="container mt-4 text-center">Chargement...</div>;
+  const calculateRemainingAmount = (loan) => {
+    const totalRepaid = loan.repayments?.reduce((sum, repayment) => sum + repayment.amount, 0) || 0;
+    return loan.amount - totalRepaid;
+  };
 
-    const activeLoans = loans.filter(loan => !loan.isRepaid);
-    const repaidLoans = loans.filter(loan => loan.isRepaid);
+  const calculateProgress = (loan) => {
+    const totalRepaid = loan.repayments?.reduce((sum, repayment) => sum + repayment.amount, 0) || 0;
+    return (totalRepaid / loan.amount) * 100;
+  };
 
+  if (loading) {
     return (
-        <div className="container mt-4">
-            <h3 className="mb-4">💰 Mes Prêts</h3>
-
-            {/* Prêts actifs */}
-            <div className="card mb-4">
-                <div className="card-header bg-warning text-white">
-                    <h5 className="mb-0">⏳ Prêts en Cours ({activeLoans.length})</h5>
-                </div>
-                <div className="card-body">
-                    {activeLoans.length === 0 ? (
-                        <p className="text-muted mb-0">Aucun prêt en cours</p>
-                    ) : (
-                        <div className="table-responsive">
-                            <table className="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>Montant</th>
-                                        <th>À rembourser</th>
-                                        <th>Durée</th>
-                                        <th>Date fin</th>
-                                        <th>Temps restant</th>
-                                        <th>Statut</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {activeLoans.map(loan => (
-                                        <tr key={loan.id}>
-                                            <td>
-                                                <strong>{loan.amount} FCFA</strong>
-                                            </td>
-                                            <td>
-                                                {loan.repaymentAmount} FCFA
-                                                <br/>
-                                                <small className="text-muted">
-                                                    (Intérêt: {loan.interestRate}%)
-                                                </small>
-                                            </td>
-                                            <td>{loan.duration} mois</td>
-                                            <td>{new Date(loan.endDate).toLocaleDateString()}</td>
-                                            <td>
-                                                <span className={
-                                                    calculateRemainingTime(loan.endDate) === 'Échu' 
-                                                        ? 'text-danger' 
-                                                        : 'text-warning'
-                                                }>
-                                                    <strong>{calculateRemainingTime(loan.endDate)}</strong>
-                                                </span>
-                                            </td>
-                                            <td>{getStatusBadge(loan)}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Prêts remboursés */}
-            <div className="card">
-                <div className="card-header bg-success text-white">
-                    <h5 className="mb-0">✅ Prêts Remboursés ({repaidLoans.length})</h5>
-                </div>
-                <div className="card-body">
-                    {repaidLoans.length === 0 ? (
-                        <p className="text-muted mb-0">Aucun prêt remboursé</p>
-                    ) : (
-                        <div className="table-responsive">
-                            <table className="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>Montant</th>
-                                        <th>Montant remboursé</th>
-                                        <th>Durée</th>
-                                        <th>Date fin</th>
-                                        <th>Statut</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {repaidLoans.map(loan => (
-                                        <tr key={loan.id}>
-                                            <td>{loan.amount} FCFA</td>
-                                            <td>
-                                                <strong>{loan.repaymentAmount} FCFA</strong>
-                                            </td>
-                                            <td>{loan.duration} mois</td>
-                                            <td>{new Date(loan.endDate).toLocaleDateString()}</td>
-                                            <td>{getStatusBadge(loan)}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Résumé financier */}
-            <div className="row mt-4">
-                <div className="col-md-4">
-                    <div className="card text-white bg-info">
-                        <div className="card-body text-center">
-                            <h6>Total Emprunté</h6>
-                            <h4>
-                                {loans.reduce((sum, loan) => sum + parseFloat(loan.amount), 0)} FCFA
-                            </h4>
-                        </div>
-                    </div>
-                </div>
-                <div className="col-md-4">
-                    <div className="card text-white bg-warning">
-                        <div className="card-body text-center">
-                            <h6>Intérêts Payés</h6>
-                            <h4>
-                                {loans.reduce((sum, loan) => 
-                                    sum + (parseFloat(loan.repaymentAmount) - parseFloat(loan.amount)), 0
-                                )} FCFA
-                            </h4>
-                        </div>
-                    </div>
-                </div>
-                <div className="col-md-4">
-                    <div className="card text-white bg-success">
-                        <div className="card-body text-center">
-                            <h6>Prêts Clôturés</h6>
-                            <h4>{repaidLoans.length}</h4>
-                        </div>
-                    </div>
-                </div>
-            </div>
+      <div className="container mt-4 d-flex justify-content-center align-items-center" style={{ minHeight: '60vh' }}>
+        <div className="text-center">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Chargement...</span>
+          </div>
+          <p className="mt-2 text-muted">Chargement de vos prêts...</p>
         </div>
+      </div>
     );
-};
+  }
 
-export default MyLoans;
+  return (
+    <div className="container-fluid">
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+          <i className="fas fa-hand-holding-usd me-2 text-primary"></i>
+          Mes Prêts
+        </h2>
+        <div>
+          <button className="btn btn-outline-secondary me-2" onClick={() => navigate('/dashboard')}>
+            <i className="fas fa-arrow-left me-2"></i>
+            Retour au tableau de bord
+          </button>
+          <button className="btn btn-primary" onClick={fetchMyLoans}>
+            <i className="fas fa-refresh me-2"></i>
+            Actualiser
+          </button>
+        </div>
+      </div>
+
+      <div className="row">
+        <div className="col-12">
+          <div className="card shadow">
+            <div className="card-header bg-white border-bottom">
+              <h5 className="mb-0">
+                <i className="fas fa-list me-2"></i>
+                Liste de mes prêts
+              </h5>
+            </div>
+            <div className="card-body p-0">
+              {loans.length === 0 ? (
+                <div className="text-center py-5">
+                  <i className="fas fa-money-bill-wave fa-3x text-muted mb-3"></i>
+                  <h4 className="text-muted">Aucun prêt trouvé</h4>
+                  <p className="text-muted mb-4">
+                    Vous n'avez aucun prêt en cours ou historique.
+                  </p>
+                  <button 
+                    className="btn btn-primary"
+                    onClick={() => navigate('/loans/request')}
+                  >
+                    <i className="fas fa-plus me-2"></i>
+                    Demander un prêt
+                  </button>
+                </div>
+              ) : (
+                <div className="table-responsive">
+                  <table className="table table-striped table-hover mb-0">
+                    <thead className="table-light">
+                      <tr>
+                        <th>Montant</th>
+                        <th>Montant remboursé</th>
+                        <th>Reste à payer</th>
+                        <th>Date de début</th>
+                        <th>Date d'échéance</th>
+                        <th>Progression</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {loans.map(loan => {
+                        const remainingAmount = calculateRemainingAmount(loan);
+                        const progress = calculateProgress(loan);
+                        
+                        return (
+                          <tr key={loan.id}>
+                            <td className="fw-bold text-primary">
+                              {formatCurrency(loan.amount)}
+                            </td>
+                            <td className="text-success">
+                              {formatCurrency(loan.amount - remainingAmount)}
+                            </td>
+                            <td className="fw-bold text-danger">
+                              {formatCurrency(remainingAmount)}
+                            </td>
+                            <td>
+                              {loan.startDate ? new Date(loan.startDate).toLocaleDateString() : 'N/A'}
+                            </td>
+                            <td>
+                              {loan.endDate ? new Date(loan.endDate).toLocaleDateString() : 'N/A'}
+                            </td>
+                            <td>
+                              <div className="d-flex align-items-center">
+                                <div className="progress flex-grow-1 me-2" style={{ height: '8px' }}>
+                                  <div 
+                                    className="progress-bar" 
+                                    style={{ width: `${progress}%` }}
+                                  ></div>
+                                </div>
+                                <small className="text-muted">
+                                  {progress.toFixed(1)}%
+                                </small>
+                              </div>
+                            </td>
+                            <td>
+                              {getStatusBadge(loan.isRepaid)}
+                            </td>
+                            <td>
+                              <div className="btn-group btn-group-sm">
+                                <button 
+                                  className="btn btn-outline-primary"
+                                  onClick={() => navigate('/loans/repayment', { state: { loan } })}
+                                  disabled={loan.isRepaid}
+                                >
+                                  <i className="fas fa-credit-card me-1"></i>
+                                  Rembourser
+                                </button>
+                                <button 
+                                  className="btn btn-outline-info"
+                                  onClick={() => {
+                                    // Voir les détails du remboursement
+                                    alert(`Détails du prêt:\nMontant: ${formatCurrency(loan.amount)}\nReste: ${formatCurrency(remainingAmount)}\nProgression: ${progress.toFixed(1)}%`);
+                                  }}
+                                >
+                                  <i className="fas fa-info-circle"></i>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Cartes de résumé */}
+      {loans.length > 0 && (
+        <div className="row mt-4">
+          <div className="col-md-3 mb-3">
+            <div className="card border-primary">
+              <div className="card-body text-center">
+                <h4 className="text-primary">
+                  {formatCurrency(loans.reduce((sum, loan) => sum + loan.amount, 0))}
+                </h4>
+                <p className="mb-0 text-muted">Total des prêts</p>
+              </div>
+            </div>
+          </div>
+          <div className="col-md-3 mb-3">
+            <div className="card border-success">
+              <div className="card-body text-center">
+                <h4 className="text-success">
+                  {formatCurrency(loans.reduce((sum, loan) => sum + (loan.amount - calculateRemainingAmount(loan)), 0))}
+                </h4>
+                <p className="mb-0 text-muted">Total remboursé</p>
+              </div>
+            </div>
+          </div>
+          <div className="col-md-3 mb-3">
+            <div className="card border-warning">
+              <div className="card-body text-center">
+                <h4 className="text-warning">
+                  {formatCurrency(loans.reduce((sum, loan) => sum + calculateRemainingAmount(loan), 0))}
+                </h4>
+                <p className="mb-0 text-muted">Reste à payer</p>
+              </div>
+            </div>
+          </div>
+          <div className="col-md-3 mb-3">
+            <div className="card border-info">
+              <div className="card-body text-center">
+                <h4 className="text-info">
+                  {loans.filter(loan => !loan.isRepaid).length}
+                </h4>
+                <p className="mb-0 text-muted">Prêts en cours</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

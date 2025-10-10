@@ -525,6 +525,20 @@ export default function Dashboard() {
                   <i className="fas fa-user-shield me-2"></i>
                   Panel Administration
                 </h5>
+                <div className="col-md-4 mb-3">
+  <div className="card border-primary h-100">
+    <div className="card-body text-center">
+      <i className="fas fa-list-check fa-2x text-primary mb-2"></i>
+      <h6>Approbation Prêts</h6>
+      <button
+        className="btn btn-primary btn-sm mt-2"
+        onClick={() => navigate('/loans/approval-dashboard')}
+      >
+        Tableau d'approbation
+      </button>
+    </div>
+  </div>
+</div>
               </div>
               <div className="card-body">
                 <div className="row">
@@ -541,6 +555,8 @@ export default function Dashboard() {
                         </button>
                       </div>
                     </div>
+
+
                   </div>
 
                   <div className="col-md-4 mb-3">
