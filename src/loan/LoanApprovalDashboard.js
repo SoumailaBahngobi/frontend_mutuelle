@@ -128,6 +128,41 @@ export default function LoanApprovalDashboard() {
     );
   }
 
+  const fetchDetailedStats = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    const res = await axios.get('http://localhost:8080/mut/loan-validator/dashboard', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return res.data;
+  } catch (error) {
+    console.error('Erreur stats détaillées:', error);
+    return null;
+  }
+};
+
+const filterRequestsByStatus = (requests, status) => {
+  if (status === 'ALL') return requests;
+  return requests.filter(request => request.status === status);
+};
+
+const sortRequests = (requests, sortBy) => {
+  return [...requests].sort((a, b) => {
+    switch (sortBy) {
+      case 'date-desc':
+        return new Date(b.requestDate) - new Date(a.requestDate);
+      case 'date-asc':
+        return new Date(a.requestDate) - new Date(b.requestDate);
+      case 'amount-desc':
+        return b.requestAmount - a.requestAmount;
+      case 'amount-asc':
+        return a.requestAmount - b.requestAmount;
+      default:
+        return 0;
+    }
+  });
+};
+
   return (
     <div className="container-fluid">
       <div className="d-flex justify-content-between align-items-center mb-4">

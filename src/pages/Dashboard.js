@@ -25,13 +25,13 @@ export default function Dashboard() {
   const handlePhotoChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
+
     // Validation du fichier
     if (!file.type.startsWith('image/')) {
       alert('Veuillez sélectionner une image valide');
       return;
     }
-    
+
     if (file.size > 5 * 1024 * 1024) { // 5MB max
       alert('La taille de l\'image ne doit pas dépasser 5MB');
       return;
@@ -42,24 +42,24 @@ export default function Dashboard() {
       const token = localStorage.getItem('token');
       const formData = new FormData();
       formData.append('file', file);
-      
+
       const res = await axios.post('http://localhost:8080/mut/member/profile/photo', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           ...(token ? { Authorization: `Bearer ${token}` } : {})
         }
       });
-      
+
       const newPhotoUrl = res.data + '?t=' + Date.now();
       setUser((prev) => ({ ...prev, photo: newPhotoUrl }));
-      
+
       // Mettre à jour le localStorage si nécessaire
       const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
       localStorage.setItem('currentUser', JSON.stringify({
         ...currentUser,
         photo: newPhotoUrl
       }));
-      
+
     } catch (err) {
       console.error('Erreur upload:', err);
       alert("Erreur lors de l'upload de la photo. Veuillez réessayer.");
@@ -81,10 +81,10 @@ export default function Dashboard() {
         const res = await axios.get('http://localhost:8080/mut/member/profile', {
           headers: { Authorization: `Bearer ${token}` }
         });
-        
+
         setUser(res.data);
         await fetchLoanData(token, res.data.id);
-        
+
       } catch (err) {
         console.error('Erreur chargement profil:', err);
         let backendMsg = '';
@@ -92,7 +92,7 @@ export default function Dashboard() {
           backendMsg = ` (Code: ${err.response.status})`;
         }
         setError("Impossible de charger le profil utilisateur." + backendMsg);
-        
+
         // Redirection si token invalide
         if (err.response?.status === 401) {
           localStorage.removeItem('token');
@@ -102,7 +102,7 @@ export default function Dashboard() {
         setLoading(false);
       }
     };
-    
+
     fetchProfile();
   }, [navigate]);
 
@@ -118,9 +118,9 @@ export default function Dashboard() {
       const loansRes = await axios.get('http://localhost:8080/mut/loan', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       // Filtrer seulement les prêts de l'utilisateur connecté
-      const userLoans = loansRes.data.filter(loan => 
+      const userLoans = loansRes.data.filter(loan =>
         loan.member && loan.member.id === userId
       );
       setMyLoans(userLoans);
@@ -160,7 +160,7 @@ export default function Dashboard() {
       APPROVED: { class: 'bg-success text-white', label: 'Approuvé' },
       REJECTED: { class: 'bg-danger text-white', label: 'Rejeté' }
     };
-    
+
     const config = statusConfig[status] || { class: 'bg-secondary text-white', label: status };
     return (
       <span className={`badge ${config.class}`}>
@@ -170,8 +170,8 @@ export default function Dashboard() {
   };
 
   const getLoanStatusBadge = (isRepaid) => {
-    return isRepaid ? 
-      <span className="badge bg-success">Remboursé</span> : 
+    return isRepaid ?
+      <span className="badge bg-success">Remboursé</span> :
       <span className="badge bg-warning text-dark">En cours</span>;
   };
 
@@ -225,7 +225,7 @@ export default function Dashboard() {
                   <div className="position-relative">
                     <img
                       src={user.photo || '/default-avatar.png'}
-                      alt="Photo de profil"
+                      alt={`Profil de ${user.firstName} ${user.name}`}
                       className="rounded-circle shadow"
                       width={120}
                       height={120}
@@ -240,7 +240,7 @@ export default function Dashboard() {
                     />
                     <button
                       className="btn btn-primary btn-sm position-absolute bottom-0 end-0 rounded-circle"
-                      style={{ width: '36px', height: '36px' }}
+                      style={{ width: '36px', height:'36px' }}
                       onClick={() => fileInputRef.current?.click()}
                       disabled={uploading}
                       title="Changer la photo"
@@ -249,7 +249,7 @@ export default function Dashboard() {
                     </button>
                   </div>
                 </div>
-                
+
                 <div className="col">
                   <h2 className="h4 mb-2">Bienvenue, {user.firstName} {user.name}!</h2>
                   <div className="row text-muted">
@@ -275,7 +275,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="col-auto">
                   <button
                     className="btn btn-outline-danger"
@@ -523,67 +523,54 @@ export default function Dashboard() {
               <div className="card-header bg-warning text-white py-3">
                 <h5 className="m-0 font-weight-bold">
                   <i className="fas fa-user-shield me-2"></i>
-                  Panel Administration
+                  Panel Validation des Prêts
                 </h5>
-                <div className="col-md-4 mb-3">
-  <div className="card border-primary h-100">
-    <div className="card-body text-center">
-      <i className="fas fa-list-check fa-2x text-primary mb-2"></i>
-      <h6>Approbation Prêts</h6>
-      <button
-        className="btn btn-primary btn-sm mt-2"
-        onClick={() => navigate('/loans/approval-dashboard')}
-      >
-        Tableau d'approbation
-      </button>
-    </div>
-  </div>
-</div>
               </div>
               <div className="card-body">
                 <div className="row">
                   <div className="col-md-4 mb-3">
-                    <div className="card border-warning h-100">
+                    <div className="card border-primary h-100">
                       <div className="card-body text-center">
-                        <i className="fas fa-check-circle fa-2x text-warning mb-2"></i>
-                        <h6>Validation des Prêts</h6>
+                        <i className="fas fa-list-check fa-2x text-primary mb-2"></i>
+                        <h6>Tableau d'approbation</h6>
+                        <p className="small text-muted">Vue complète avec statistiques</p>
                         <button
-                          className="btn btn-warning btn-sm mt-2"
-                          onClick={() => navigate('/loans/approval')}
+                          className="btn btn-primary btn-sm mt-2"
+                          onClick={() => navigate('/loans/approval-dashboard')}
                         >
                           Accéder
                         </button>
                       </div>
                     </div>
-
-
                   </div>
 
                   <div className="col-md-4 mb-3">
-                    <div className="card border-info h-100">
+                    <div className="card border-warning h-100">
                       <div className="card-body text-center">
-                        <i className="fas fa-calendar-alt fa-2x text-info mb-2"></i>
-                        <h6>Périodes Cotisation</h6>
+                        <i className="fas fa-check-circle fa-2x text-warning mb-2"></i>
+                        <h6>Validation rapide</h6>
+                        <p className="small text-muted">Approbations en attente</p>
                         <button
-                          className="btn btn-info btn-sm mt-2 text-white"
-                          onClick={() => navigate('/mut/contribution_period')}
+                          className="btn btn-warning btn-sm mt-2"
+                          onClick={() => navigate('/loans/approval')}
                         >
-                          Gérer
+                          Valider
                         </button>
                       </div>
                     </div>
                   </div>
 
                   <div className="col-md-4 mb-3">
-                    <div className="card border-success h-100">
+                    <div className="card border-info h-100">
                       <div className="card-body text-center">
-                        <i className="fas fa-plus-circle fa-2x text-success mb-2"></i>
-                        <h6>Créer Prêt</h6>
+                        <i className="fas fa-chart-bar fa-2x text-info mb-2"></i>
+                        <h6>Rapports validation</h6>
+                        <p className="small text-muted">Statistiques et historique</p>
                         <button
-                          className="btn btn-success btn-sm mt-2"
-                          onClick={() => navigate('/loans/create')}
+                          className="btn btn-info btn-sm mt-2 text-white"
+                          onClick={() => navigate('/loans/validation-reports')}
                         >
-                          Créer
+                          Voir rapports
                         </button>
                       </div>
                     </div>
@@ -635,14 +622,14 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {!myLoanRequests.some(req => req.status === 'APPROVED') && 
-               !myLoanRequests.some(req => req.status === 'REJECTED') && 
-               !myLoans.some(loan => !loan.isRepaid && new Date(loan.endDate) < new Date()) && (
-                <div className="text-center text-muted py-3">
-                  <i className="fas fa-check-circle fa-2x mb-2"></i>
-                  <div>Aucune notification</div>
-                </div>
-              )}
+              {!myLoanRequests.some(req => req.status === 'APPROVED') &&
+                !myLoanRequests.some(req => req.status === 'REJECTED') &&
+                !myLoans.some(loan => !loan.isRepaid && new Date(loan.endDate) < new Date()) && (
+                  <div className="text-center text-muted py-3">
+                    <i className="fas fa-check-circle fa-2x mb-2"></i>
+                    <div>Aucune notification</div>
+                  </div>
+                )}
             </div>
           </div>
 

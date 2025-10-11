@@ -1,6 +1,6 @@
 import './App.css';
 import { Routes, Route } from 'react-router-dom';
-import Navbar from './layout/NavBar.js';
+import Navbar from './layout/Navbar.js';
 import AddMember from './members/AddMember.js';
 import Login from './pages/Login.js';
 import Dashboard from './pages/Dashboard.js';
@@ -15,6 +15,9 @@ import MyLoanRequests from './loanRequest/MyLoanRequest.js';
 import AddContributionPeriod from './contributionPeriod/AddContributionPeriod.js';
 import LoanApprovalDashboard from './loan/LoanApprovalDashboard.js';
 import MyLoans from './loan/MyLoans.js';
+import LoanValidationReports from './loan/LoanValidationReports.js';
+import Home from './pages/Home.js';
+
 
 function App() {
   return (
@@ -22,7 +25,8 @@ function App() {
       <Navbar />
       <Routes>
         {/* Routes d'authentification et accueil */}
-        <Route path="/" element={<Login />} />
+       <Route path="/" element={<Home />} />
+        {/* <Route path="/" element={<Login />} /> */}
         <Route path="/register" element={<AddMember />} />
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<Dashboard />} />
@@ -56,6 +60,8 @@ function App() {
         {/* Routes pour les périodes de cotisation */}
         <Route path="/contribution-period" element={<AddContributionPeriod />} />
         <Route path="/admin/contribution-period" element={<AddContributionPeriod />} />
+
+        <Route path="/loans/validation-reports" element={<LoanValidationReports />} />
         
         {/* Routes fallback et erreur 404 */}
         <Route path="*" element={
