@@ -240,7 +240,7 @@ export default function Dashboard() {
                     />
                     <button
                       className="btn btn-primary btn-sm position-absolute bottom-0 end-0 rounded-circle"
-                      style={{ width: '36px', height:'36px' }}
+                      style={{ width: '36px', height: '36px' }}
                       onClick={() => fileInputRef.current?.click()}
                       disabled={uploading}
                       title="Changer la photo"
@@ -419,7 +419,7 @@ export default function Dashboard() {
                       </p>
                       <button
                         className="btn btn-info btn-sm w-100 text-white"
-                        onClick={() => navigate('/loans/requests')}
+                        onClick={() => navigate('/mut/loans')}
                       >
                         Voir mes demandes
                       </button>
@@ -536,7 +536,7 @@ export default function Dashboard() {
                         <p className="small text-muted">Vue complète avec statistiques</p>
                         <button
                           className="btn btn-primary btn-sm mt-2"
-                          onClick={() => navigate('/loans/approval-dashboard')}
+                          onClick={() => navigate('/loans/approval-list')}
                         >
                           Accéder
                         </button>
@@ -552,7 +552,8 @@ export default function Dashboard() {
                         <p className="small text-muted">Approbations en attente</p>
                         <button
                           className="btn btn-warning btn-sm mt-2"
-                          onClick={() => navigate('/loans/approval')}
+                          // onClick={() => navigate('/loans/approval')}
+                          onClick={() => navigate('/loans/approval-list')}
                         >
                           Valider
                         </button>

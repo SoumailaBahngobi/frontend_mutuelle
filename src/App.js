@@ -17,6 +17,7 @@ import LoanApprovalDashboard from './loan/LoanApprovalDashboard.js';
 import MyLoans from './loan/MyLoans.js';
 import LoanValidationReports from './loan/LoanValidationReports.js';
 import Home from './pages/Home.js';
+import LoanApprovalList from './loan/LoanApprovalList.js';
 
 
 function App() {
@@ -44,9 +45,10 @@ function App() {
         <Route path="/loans/repayment" element={<AddRepayment />} />
         <Route path="/loans/approval" element={<LoanApproval />} />
         <Route path="/loans/approval-dashboard" element={<LoanApprovalDashboard />} />
-        <Route path="/loans/requests" element={<MyLoanRequests />} />
-        <Route path="/loans/list" element={<MyLoans />} />
-        <Route path="/loans/my-loans" element={<MyLoans />} />
+        {/* <Route path="/loan_request/my-requests" element={<MyLoanRequests />} /> */}
+        <Route path="/mut/loan_request/my-requests" element={<MyLoanRequests />} />
+        {/* <Route path="/loans/list" element={<MyLoans />} /> */}
+        <Route path="/mut/loans" element={<MyLoans />} />
         
         {/* Routes pour les membres (administration) */}
         <Route path="/members" element={<AddMember />} />
@@ -62,6 +64,8 @@ function App() {
         <Route path="/admin/contribution-period" element={<AddContributionPeriod />} />
 
         <Route path="/loans/validation-reports" element={<LoanValidationReports />} />
+        <Route path="/loans/approval-list" element={<LoanApprovalList />} />
+        <Route path="/loans/approval" element={<LoanApproval />} />
         
         {/* Routes fallback et erreur 404 */}
         <Route path="*" element={
