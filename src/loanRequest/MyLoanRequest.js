@@ -15,7 +15,7 @@ const MyLoanRequests = () => {
     const fetchMyLoanRequests = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await axios.get('http://localhost:8080/mut/loan_request', {
+                const response = await axios.get('http://localhost:8080/mut/loan_request', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setLoanRequests(response.data);

@@ -10,6 +10,8 @@ export default function Dashboard() {
   const [uploading, setUploading] = useState(false);
   const [myLoanRequests, setMyLoanRequests] = useState([]);
   const [myLoans, setMyLoans] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [showNotificationsPanel, setShowNotificationsPanel] = useState(false);
   const [stats, setStats] = useState({
     totalRequests: 0,
     activeLoans: 0,
@@ -84,6 +86,7 @@ export default function Dashboard() {
 
         setUser(res.data);
         await fetchLoanData(token, res.data.id);
+        await fetchNotifications(token);
 
       } catch (err) {
         console.error('Erreur chargement profil:', err);
@@ -105,6 +108,83 @@ export default function Dashboard() {
 
     fetchProfile();
   }, [navigate]);
+
+  // Fonction pour récupérer les notifications
+  const fetchNotifications = async (token) => {
+    try {
+      const response = await axios.get('http://localhost:8080/mut/notification', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setNotifications(response.data);
+    } catch (error) {
+      console.error('Erreur lors du chargement des notifications:', error);
+      // Notifications simulées en cas d'erreur
+      setNotifications([
+        {
+          id: 1,
+          title: 'Bienvenue sur votre dashboard',
+          message: 'Vous pouvez consulter ici toutes vos activités récentes',
+          type: 'INFO',
+          read: false,
+          createdDate: new Date()
+        }
+      ]);
+    }
+  };
+
+  // Fonction pour marquer une notification comme lue
+  const markAsRead = async (notificationId) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`http://localhost:8080/mut/notification/${notificationId}/read`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setNotifications(prev => 
+        prev.map(notif => 
+          notif.id === notificationId ? { ...notif, read: true } : notif
+        )
+      );
+    } catch (error) {
+      console.error('Erreur:', error);
+      // Mettre à jour localement même en cas d'erreur
+      setNotifications(prev => 
+        prev.map(notif => 
+          notif.id === notificationId ? { ...notif, read: true } : notif
+        )
+      );
+    }
+  };
+
+  // Fonction pour marquer toutes les notifications comme lues
+  const markAllAsRead = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put('http://localhost:8080/mut/notification/mark-all-read', {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setNotifications(prev => prev.map(notif => ({ ...notif, read: true })));
+    } catch (error) {
+      console.error('Erreur:', error);
+      setNotifications(prev => prev.map(notif => ({ ...notif, read: true })));
+    }
+  };
+
+  // Fonction pour supprimer une notification
+  const deleteNotification = async (notificationId) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`http://localhost:8080/mut/notification/${notificationId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
+    } catch (error) {
+      console.error('Erreur:', error);
+      setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
+    }
+  };
 
   const fetchLoanData = async (token, userId) => {
     try {
@@ -182,6 +262,19 @@ export default function Dashboard() {
     }).format(amount);
   };
 
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case 'SUCCESS': return '✅';
+      case 'WARNING': return '⚠️';
+      case 'ERROR': return '❌';
+      case 'INFO': return 'ℹ️';
+      default: return '🔔';
+    }
+  };
+
+  // Calculer le nombre de notifications non lues
+  const unreadCount = notifications.filter(notif => !notif.read).length;
+
   const isAdmin = user && (user.role === 'ADMIN' || user.role === 'PRESIDENT' || user.role === 'SECRETARY' || user.role === 'TREASURER');
 
   if (loading) {
@@ -225,7 +318,7 @@ export default function Dashboard() {
                   <div className="position-relative">
                     <img
                       src={user.photo || '/default-avatar.png'}
-                      alt="Photo de profil"
+                      alt="Profil"
                       className="rounded-circle shadow"
                       width={120}
                       height={120}
@@ -277,6 +370,20 @@ export default function Dashboard() {
                 </div>
 
                 <div className="col-auto">
+                  {/* Bouton Notifications */}
+                  <button 
+                    className="btn btn-warning position-relative me-2"
+                    onClick={() => setShowNotificationsPanel(!showNotificationsPanel)}
+                  >
+                    <i className="fas fa-bell me-2"></i>
+                    Notifications
+                    {unreadCount > 0 && (
+                      <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </button>
+
                   <button
                     className="btn btn-outline-danger"
                     onClick={handleLogout}
@@ -290,6 +397,85 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Panel des notifications */}
+      {showNotificationsPanel && (
+        <div className="card mb-4">
+          <div className="card-header d-flex justify-content-between align-items-center">
+            <h5 className="mb-0">
+              <i className="fas fa-bell me-2"></i>
+              Mes Notifications ({notifications.length})
+            </h5>
+            <div>
+              {unreadCount > 0 && (
+                <button 
+                  className="btn btn-sm btn-outline-info me-2"
+                  onClick={markAllAsRead}
+                >
+                  <i className="fas fa-check-double me-1"></i>
+                  Tout marquer comme lu
+                </button>
+              )}
+              <button 
+                className="btn btn-sm btn-outline-primary"
+                onClick={() => fetchNotifications(localStorage.getItem('token'))}
+              >
+                <i className="fas fa-sync-alt me-1"></i>
+                Actualiser
+              </button>
+            </div>
+          </div>
+          <div className="card-body">
+            {notifications.length === 0 ? (
+              <p className="text-muted text-center py-3">
+                <i className="fas fa-bell-slash fa-2x mb-2"></i>
+                <br />
+                Aucune notification
+              </p>
+            ) : (
+              <div className="list-group">
+                {notifications.map(notification => (
+                  <div 
+                    key={notification.id} 
+                    className={`list-group-item ${notification.read ? '' : 'list-group-item-warning'}`}
+                  >
+                    <div className="d-flex justify-content-between align-items-start">
+                      <div className="flex-grow-1">
+                        <h6 className="mb-1">
+                          {getNotificationIcon(notification.type)}
+                          {notification.title}
+                        </h6>
+                        <p className="mb-1">{notification.message}</p>
+                        <small className="text-muted">
+                          {new Date(notification.createdDate).toLocaleString()}
+                        </small>
+                      </div>
+                      <div className="btn-group ms-2">
+                        {!notification.read && (
+                          <button 
+                            className="btn btn-sm btn-success"
+                            onClick={() => markAsRead(notification.id)}
+                            title="Marquer comme lu"
+                          >
+                            <i className="fas fa-check"></i>
+                          </button>
+                        )}
+                        <button 
+                          className="btn btn-sm btn-outline-danger"
+                          onClick={() => deleteNotification(notification.id)}
+                          title="Supprimer"
+                        >
+                          <i className="fas fa-trash"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Cartes de statistiques */}
       <div className="row mb-4">
@@ -421,7 +607,7 @@ export default function Dashboard() {
                         className="btn btn-info btn-sm w-50 text-white"
                         onClick={() => navigate('/loans/requests')}
                       >
-                        Voir toutes les demandes de prêt
+                      Toutes les demandes de prêt
                       </button>
                     </div>
                   </div>
@@ -544,7 +730,6 @@ export default function Dashboard() {
                 <div className="row">
                   <div className="col-md-2 mb-2">
                     <div className="card border-warning h-10">
-                      {/* <div className="card-body text-center"> */}
                       <div className="card-body text-center">
                         <i className="fas fa-check-circle fa-2x text-warning mb-2"></i>
                         <h6>Validation des Prêts</h6>
@@ -595,53 +780,53 @@ export default function Dashboard() {
 
         {/* Sidebar - Notifications et Actions rapides */}
         <div className="col-lg-4 mb-4">
-          {/* Notifications */}
+          {/* Notifications résumées */}
           <div className="card shadow mb-4">
             <div className="card-header bg-white py-3">
               <h5 className="m-0 font-weight-bold text-primary">
                 <i className="fas fa-bell me-2"></i>
-                Notifications
+                Alertes Récentes
               </h5>
             </div>
             <div className="card-body">
-              {myLoanRequests.some(req => req.status === 'APPROVED') && (
-                <div className="alert alert-success d-flex align-items-center mb-3">
-                  <i className="fas fa-check-circle me-2"></i>
-                  <div>
-                    <strong>Félicitations!</strong>
-                    <div className="small">Vous avez des demandes de prêt approuvées</div>
+              {notifications.slice(0, 3).map(notification => (
+                <div key={notification.id} className={`alert ${notification.read ? 'alert-light' : 'alert-warning'} d-flex align-items-center mb-3`}>
+                  <div className="me-2">
+                    {getNotificationIcon(notification.type)}
                   </div>
+                  <div className="flex-grow-1">
+                    <strong className="small">{notification.title}</strong>
+                    <div className="small text-muted">{notification.message}</div>
+                  </div>
+                  {!notification.read && (
+                    <button 
+                      className="btn btn-sm btn-success"
+                      onClick={() => markAsRead(notification.id)}
+                      title="Marquer comme lu"
+                    >
+                      <i className="fas fa-check"></i>
+                    </button>
+                  )}
+                </div>
+              ))}
+
+              {notifications.length === 0 && (
+                <div className="text-center text-muted py-3">
+                  <i className="fas fa-bell-slash fa-2x mb-2"></i>
+                  <div>Aucune notification</div>
                 </div>
               )}
 
-              {myLoanRequests.some(req => req.status === 'REJECTED') && (
-                <div className="alert alert-danger d-flex align-items-center mb-3">
-                  <i className="fas fa-times-circle me-2"></i>
-                  <div>
-                    <strong>Demandes rejetées</strong>
-                    <div className="small">Certaines demandes ont été rejetées</div>
-                  </div>
+              {notifications.length > 3 && (
+                <div className="text-center">
+                  <button 
+                    className="btn btn-outline-primary btn-sm"
+                    onClick={() => setShowNotificationsPanel(true)}
+                  >
+                    Voir toutes les notifications ({notifications.length})
+                  </button>
                 </div>
               )}
-
-              {myLoans.some(loan => !loan.isRepaid && new Date(loan.endDate) < new Date()) && (
-                <div className="alert alert-warning d-flex align-items-center mb-3">
-                  <i className="fas fa-exclamation-triangle me-2"></i>
-                  <div>
-                    <strong>Retard de remboursement</strong>
-                    <div className="small">Vous avez des prêts en retard</div>
-                  </div>
-                </div>
-              )}
-
-              {!myLoanRequests.some(req => req.status === 'APPROVED') &&
-                !myLoanRequests.some(req => req.status === 'REJECTED') &&
-                !myLoans.some(loan => !loan.isRepaid && new Date(loan.endDate) < new Date()) && (
-                  <div className="text-center text-muted py-3">
-                    <i className="fas fa-check-circle fa-2x mb-2"></i>
-                    <div>Aucune notification</div>
-                  </div>
-                )}
             </div>
           </div>
 
