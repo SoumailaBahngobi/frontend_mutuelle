@@ -162,7 +162,8 @@ const AddLoanRequest = () => {
                 // Vérifier l'éligibilité après avoir récupéré l'utilisateur
                 await checkEligibility();
             } else {
-                console.warn(' Impossible de récupérer le profil, utilisation du token');
+              //  console.warn(' Impossible de récupérer le profil, utilisation du token');
+              toast.warn('⚠️ Impossible de récupérer le profil complet. Certaines fonctionnalités peuvent être limitées.', { autoClose: 7000 });    
                 const userFromToken = getCurrentUserFromToken();
                 if (userFromToken) {
                     setCurrentUser(userFromToken);
@@ -170,7 +171,8 @@ const AddLoanRequest = () => {
                 }
             }
         } catch (error) {
-            console.error(' Erreur récupération utilisateur:', error);
+           // console.error(' Erreur récupération utilisateur:', error);
+              toast.error('❌ Erreur lors de la récupération des informations utilisateur. Certaines fonctionnalités peuvent être limitées.', { autoClose: 7000 }); 
             const userFromToken = getCurrentUserFromToken();
             if (userFromToken) {
                 setCurrentUser(userFromToken);
@@ -181,7 +183,8 @@ const AddLoanRequest = () => {
 
     // Récupérer les informations du membre connecté au chargement du composant
     useEffect(() => {
-        console.log('🚀 Initialisation AddLoanRequest');
+        // console.log(' Initialisation AddLoanRequest');
+        toast.info('ℹ️ Chargement des informations utilisateur...', { autoClose: 3000 });
         fetchCurrentUser();
     }, [fetchCurrentUser]);
 
@@ -295,7 +298,7 @@ const AddLoanRequest = () => {
                 throw new Error(errorMessage);
             }
         } catch (error) {
-            console.error('🚨 Erreur détaillée:', error);
+            // console.error('🚨 Erreur détaillée:', error);
             toast.error(`❌ Erreur: ${error.message}`);
         } finally {
             setLoading(false);
