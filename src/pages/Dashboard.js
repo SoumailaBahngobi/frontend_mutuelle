@@ -45,9 +45,9 @@ export default function Dashboard() {
       const formData = new FormData();
       formData.append('file', file);
 
+      // Ne pas définir explicitement Content-Type; axios / le navigateur définira le boundary automatiquement
       const res = await axios.post('http://localhost:8080/mut/member/profile/photo', formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
           ...(token ? { Authorization: `Bearer ${token}` } : {})
         }
       });
@@ -64,7 +64,24 @@ export default function Dashboard() {
 
     } catch (err) {
       console.error('Erreur upload:', err);
-      alert("Erreur lors de l'upload de la photo. Veuillez réessayer.");
+      // Afficher détails si disponibles
+      const status = err.response?.status;
+      const data = err.response?.data;
+      console.error('[handlePhotoChange] response status:', status, 'data:', data);
+
+      // Message utilisateur plus informatif
+      if (status === 413) {
+        alert("Image trop volumineuse (413). Réduisez la taille et réessayez.");
+      } else if (status === 401) {
+        alert("Non authentifié. Veuillez vous reconnecter.");
+        localStorage.removeItem('token');
+        localStorage.removeItem('currentUser');
+        navigate('/login');
+      } else if (status === 403) {
+        alert("Accès refusé (403) — vous n'avez pas la permission d'uploader une photo.");
+      } else {
+        alert("Erreur lors de l'upload de la photo. Voir console pour détails.");
+      }
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -188,6 +205,11 @@ export default function Dashboard() {
 
   const fetchLoanData = async (token, userId) => {
     try {
+      console.log('[fetchLoanData] token present?', !!token);
+      // helpful debug: show token (trimmed) in dev only
+      if (token && process.env.NODE_ENV !== 'production') {
+        console.log('[fetchLoanData] token (start):', token.substring(0, 20) + '...');
+      }
       // Charger mes demandes de prêt
       const requestsRes = await axios.get('http://localhost:8080/mut/loan_request/my-requests', {
         headers: { Authorization: `Bearer ${token}` }
@@ -195,7 +217,7 @@ export default function Dashboard() {
       setMyLoanRequests(requestsRes.data);
 
       // Charger mes prêts
-      const loansRes = await axios.get('http://localhost:8080/mut/loan', {
+      const loansRes = await axios.get('http://localhost:8080/mut/loans', {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -215,6 +237,25 @@ export default function Dashboard() {
 
     } catch (error) {
       console.error('Erreur lors du chargement des données de prêt:', error);
+      // Afficher informations de réponse si disponibles (status, data)
+      const status = error.response?.status;
+      const respData = error.response?.data;
+      console.error('[fetchLoanData] response status:', status, 'data:', respData);
+
+      if (status === 401) {
+        setError('Accès non autorisé (401). Veuillez vous reconnecter.');
+        localStorage.removeItem('token');
+        localStorage.removeItem('currentUser');
+        navigate('/login');
+        return;
+      }
+
+      if (status === 403) {
+        setError('Accès refusé (403). Votre compte n\'a pas les droits nécessaires pour accéder à ces données.');
+        return;
+      }
+
+      setError('Erreur lors du chargement des données de prêt. Voir la console pour détails.');
     }
   };
 

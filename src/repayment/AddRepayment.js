@@ -7,6 +7,8 @@ const AddRepayment = () => {
     const [activeLoans, setActiveLoans] = useState([]);
     const [selectedLoan, setSelectedLoan] = useState('');
     const [repaymentAmount, setRepaymentAmount] = useState('');
+    const [paymentMode, setPaymentMode] = useState('single'); // 'single' or 'installments'
+    const [installments, setInstallments] = useState([]); // generated installments
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
@@ -19,6 +21,8 @@ const AddRepayment = () => {
         try {
             setLoading(true);
             const token = localStorage.getItem('token');
+            console.log('[fetchActiveLoans] token present?', !!token);
+            if (token && process.env.NODE_ENV !== 'production') console.log('[fetchActiveLoans] token:', token.substring(0,20) + '...');
             const response = await axios.get('http://localhost:8080/mut/loan-requests/approved', {
                 headers: { 
                     Authorization: `Bearer ${token}`,
@@ -34,7 +38,28 @@ const AddRepayment = () => {
             setActiveLoans(activeLoans);
         } catch (error) {
             console.error('Erreur lors du chargement des prêts:', error);
-            setError('Erreur lors du chargement des prêts actifs');
+            const status = error.response?.status;
+            const resp = error.response?.data;
+            console.error('[fetchActiveLoans] response status:', status, 'data:', resp);
+            // Erreur réseau (backend inaccessible)
+            if (error.code === 'ERR_NETWORK' || (error.message && error.message.toLowerCase().includes('network error')) || (!error.response && error.request)) {
+                setError('Impossible de joindre le serveur backend (http://localhost:8080). Vérifiez que le serveur est démarré.');
+                return;
+            }
+
+            if (status === 401) {
+                setError('Accès non autorisé (401) — reconnectez-vous.');
+                localStorage.removeItem('token');
+                localStorage.removeItem('currentUser');
+                navigate('/login');
+                return;
+            }
+            if (status === 403) {
+                setError('Accès refusé (403) — vous n\'avez pas la permission d\'accéder à ces prêts.');
+                return;
+            }
+
+            setError('Erreur lors du chargement des prêts actifs. Voir la console pour plus de détails.');
         } finally {
             setLoading(false);
         }
@@ -43,8 +68,13 @@ const AddRepayment = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         
-        if (!selectedLoan || !repaymentAmount) {
-            setError('Veuillez remplir tous les champs');
+        if (!selectedLoan) {
+            setError('Veuillez sélectionner un prêt');
+            return;
+        }
+
+        if (paymentMode === 'single' && !repaymentAmount) {
+            setError('Veuillez renseigner le montant pour un paiement en une seule fois');
             return;
         }
 
@@ -60,30 +90,40 @@ const AddRepayment = () => {
 
         try {
             const token = localStorage.getItem('token');
-            const repaymentData = {
-                amount: amount,
-                repaymentDate: new Date().toISOString().split('T')[0],
-                status: 'PAID',
-                loanRequest: { id: parseInt(selectedLoan) }
-            };
-
-            console.log('Données envoyées:', repaymentData);
-
-            const response = await axios.post('http://localhost:8080/mut/repayment', repaymentData, {
-                headers: { 
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json'
+            if (paymentMode === 'single') {
+                // Confirmation avant paiement unique
+                const ok = window.confirm(`Confirmer le paiement unique de ${amount} € pour ce prêt ?`);
+                if (!ok) {
+                    setLoading(false);
+                    return;
                 }
-            });
+                const repaymentData = {
+                    amount: amount,
+                    repaymentDate: new Date().toISOString().split('T')[0],
+                    status: 'PAID',
+                    loanRequest: { id: parseInt(selectedLoan) }
+                };
 
-            setSuccess('Remboursement enregistré avec succès !');
-            setSelectedLoan('');
-            setRepaymentAmount('');
-            
-            // Recharger la liste des prêts actifs
-            setTimeout(() => {
-                fetchActiveLoans();
-            }, 1000);
+                console.log('Données envoyées (single):', repaymentData);
+
+                const response = await axios.post('http://localhost:8080/mut/repayment', repaymentData, {
+                    headers: { 
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                setSuccess('Remboursement enregistré avec succès !');
+                setSelectedLoan('');
+                setRepaymentAmount('');
+
+                // Recharger la liste des prêts actifs
+                setTimeout(() => {
+                    fetchActiveLoans();
+                }, 1000);
+            } else {
+                setError('Utilisez le bouton de paiement sur une échéance pour les paiements échelonnés.');
+            }
             
         } catch (error) {
             console.error('Erreur détaillée:', error);
@@ -117,13 +157,81 @@ const AddRepayment = () => {
     // Calculer le montant restant (vous devrez adapter cette logique)
     const calculateRemainingAmount = (loan) => {
         if (!loan) return 0;
-        
-        // Si vous avez un système pour suivre les remboursements déjà effectués
-        // Vous devrez peut-être appeler une API pour obtenir le montant déjà remboursé
+
         const totalAmount = parseFloat(calculateTotalAmount(loan));
-        
-        // Pour l'instant, on retourne le montant total si le prêt n'est pas marqué comme remboursé
-        return loan.isRepaid ? 0 : totalAmount;
+        // Somme des remboursements déjà effectués si fournie
+        const totalRepaid = loan.repayments?.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0) || 0;
+
+        const remaining = totalAmount - totalRepaid;
+        return remaining > 0 ? remaining.toFixed(2) : '0.00';
+    };
+
+    // Générer des échéances basées sur la durée restante du prêt
+    const generateInstallments = (loan) => {
+        if (!loan) return [];
+        const remaining = parseFloat(calculateRemainingAmount(loan)) || 0;
+        const months = parseInt(loan.duration) || 1;
+        const per = +(remaining / months).toFixed(2);
+        const arr = [];
+        const today = new Date();
+        for (let i = 0; i < months; i++) {
+            const due = new Date(today.getFullYear(), today.getMonth() + i + 1, today.getDate());
+            arr.push({
+                index: i,
+                dueDate: due.toISOString().split('T')[0],
+                suggestedAmount: per,
+                amount: per,
+                paid: false
+            });
+        }
+        return arr;
+    };
+
+    const handleGenerateInstallments = (loan) => {
+        const inst = generateInstallments(loan);
+        setInstallments(inst);
+    };
+
+    // Payer une échéance spécifique (paiement immédiat d'une tranche)
+    const handlePayInstallment = async (index) => {
+        const inst = installments[index];
+        if (!inst) return;
+        const amountToPay = parseFloat(inst.amount);
+        if (!amountToPay || amountToPay <= 0) {
+            setError('Le montant de l\'échéance doit être supérieur à 0');
+            return;
+        }
+        // Confirmation avant paiement d'une échéance
+        const ok = window.confirm(`Confirmer le paiement de l\'échéance #${index + 1} pour ${amountToPay} € ?`);
+        if (!ok) return;
+        setLoading(true);
+        setError('');
+        setSuccess('');
+        try {
+            const token = localStorage.getItem('token');
+            const repaymentData = {
+                amount: amountToPay,
+                repaymentDate: new Date().toISOString().split('T')[0],
+                status: 'PAID',
+                loanRequest: { id: parseInt(selectedLoan) }
+            };
+            console.log('Paiement échéance:', repaymentData);
+            const response = await axios.post('http://localhost:8080/mut/repayment', repaymentData, {
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+            });
+            // Marquer échéance comme payée localement
+            const updated = installments.map((it, idx) => idx === index ? { ...it, paid: true } : it);
+            setInstallments(updated);
+            setSuccess(`Échéance #${index + 1} payée (${amountToPay} €)`);
+            // Recharger prêts
+            setTimeout(() => fetchActiveLoans(), 1000);
+        } catch (error) {
+            console.error('Erreur paiement échéance:', error);
+            const errorMessage = error.response?.data?.message || error.message || 'Erreur lors du paiement de l\'échéance';
+            setError(errorMessage);
+        } finally {
+            setLoading(false);
+        }
     };
 
     // Formater les dates
@@ -192,7 +300,7 @@ const AddRepayment = () => {
                                             {activeLoans.map(loan => (
                                                 <option key={loan.id} value={loan.id}>
                                                     {loan.member?.name || 'N/A'} {loan.member?.firstName || ''} - 
-                                                    Montant: {loan.requestAmount?.toFixed(2) || '0.00'}€ - 
+                                                    Montant: {loan.requestAmount?.toFixed(2) || ''}FCFA - 
                                                     Durée: {loan.duration} mois
                                                 </option>
                                             ))}
@@ -216,7 +324,7 @@ const AddRepayment = () => {
                                                         </div>
                                                         <div className="col-md-6">
                                                             <strong>Montant demandé:</strong><br/>
-                                                            {loanDetails.requestAmount?.toFixed(2) || '0.00'} €
+                                                            {loanDetails.requestAmount?.toFixed(2) || '0000'} FCFA
                                                         </div>
                                                     </div>
                                                     <hr/>
@@ -224,7 +332,7 @@ const AddRepayment = () => {
                                                         <div className="col-md-6">
                                                             <strong>Montant total à rembourser:</strong><br/>
                                                             <span className="text-success fw-bold">
-                                                                {calculateTotalAmount(loanDetails)} €
+                                                                {calculateTotalAmount(loanDetails)} FCFA
                                                             </span>
                                                         </div>
                                                         <div className="col-md-6">
@@ -240,7 +348,7 @@ const AddRepayment = () => {
                                                         </div>
                                                         <div className="col-md-6">
                                                             <strong>Taux d'intérêt:</strong><br/>
-                                                            {loanDetails.interestRate?.toFixed(1) || '0.0'}%
+                                                            {loanDetails.interestRate?.toFixed(1) || '00'}%
                                                         </div>
                                                     </div>
                                                     <hr/>
@@ -270,17 +378,17 @@ const AddRepayment = () => {
 
                                     <div className="mb-3">
                                         <label className="form-label">
-                                            <strong>Montant du remboursement (€) *</strong>
+                                            <strong>Montant du remboursement FCFA</strong>
                                         </label>
                                         <input
                                             type="number"
                                             className="form-control"
                                             value={repaymentAmount}
                                             onChange={(e) => setRepaymentAmount(e.target.value)}
-                                            min="0.01"
-                                            step="0.01"
+                                            min="500"
+                                            step="500"
                                             required
-                                            placeholder="Ex: 500.50"
+                                            placeholder="Montant a rembourser"
                                             disabled={!selectedLoan}
                                         />
                                         <div className="form-text">
@@ -288,10 +396,63 @@ const AddRepayment = () => {
                                         </div>
                                         {selectedLoan && loanDetails && (
                                             <div className="form-text text-info">
-                                                Montant total du prêt: {calculateTotalAmount(loanDetails)} €
+                                                Montant total du prêt: {calculateTotalAmount(loanDetails)} FCFA
                                             </div>
                                         )}
                                     </div>
+
+                                    {selectedLoan && loanDetails && (
+                                        <div className="mb-3">
+                                            <label className="form-label"><strong>Mode de paiement</strong></label>
+                                            <div>
+                                                <div className="form-check form-check-inline">
+                                                    <input className="form-check-input" type="radio" name="paymentMode" id="single" value="single" checked={paymentMode === 'single'} onChange={() => setPaymentMode('single')} />
+                                                    <label className="form-check-label" htmlFor="single">En une fois</label>
+                                                </div>
+                                                <div className="form-check form-check-inline">
+                                                    <input className="form-check-input" type="radio" name="paymentMode" id="installments" value="installments" checked={paymentMode === 'installments'} onChange={() => setPaymentMode('installments')} />
+                                                    <label className="form-check-label" htmlFor="installments">Échelonné</label>
+                                                </div>
+                                            </div>
+
+                                            {paymentMode === 'installments' && (
+                                                <div className="mt-3">
+                                                    <div className="d-flex justify-content-between align-items-center mb-2">
+                                                        <strong>Échéances suggérées</strong>
+                                                        <div>
+                                                            <button type="button" className="btn btn-sm btn-outline-primary me-2" onClick={() => handleGenerateInstallments(loanDetails)}>Générer échéances</button>
+                                                            <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => setInstallments([])}>Réinitialiser</button>
+                                                        </div>
+                                                    </div>
+
+                                                    {installments.length === 0 ? (
+                                                        <div className="text-muted">Aucune échéance générée</div>
+                                                    ) : (
+                                                        <div className="list-group">
+                                                            {installments.map((it, idx) => (
+                                                                <div key={idx} className="list-group-item d-flex justify-content-between align-items-center">
+                                                                    <div>
+                                                                        <div><strong>Échéance #{idx + 1}</strong></div>
+                                                                        <div className="small text-muted">Date due: {formatDate(it.dueDate)}</div>
+                                                                        <div className="small">Montant suggéré: {it.suggestedAmount} FCFA</div>
+                                                                    </div>
+                                                                    <div className="text-end">
+                                                                        <input type="number" className="form-control form-control-sm mb-2" value={it.amount} onChange={(e) => {
+                                                                            const updated = installments.map((el, i) => i === idx ? { ...el, amount: e.target.value } : el);
+                                                                            setInstallments(updated);
+                                                                        }} />
+                                                                        <div>
+                                                                            <button className="btn btn-sm btn-success me-2" disabled={it.paid || loading} onClick={() => handlePayInstallment(idx)}>{it.paid ? 'Payée' : 'Payer cette échéance'}</button>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
 
                                     <div className="mb-3">
                                         <div className="card border-secondary">

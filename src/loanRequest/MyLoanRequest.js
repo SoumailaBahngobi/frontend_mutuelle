@@ -14,13 +14,44 @@ const MyLoanRequests = () => {
 
     const fetchMyLoanRequests = async () => {
         try {
+            setLoading(true);
             const token = localStorage.getItem('token');
-                const response = await axios.get('http://localhost:8080/mut/loan_request', {
+            console.log('[fetchMyLoanRequests] token present?', !!token);
+            if (!token) {
+                alert('Vous devez être connecté pour voir vos demandes');
+                navigate('/login');
+                return;
+            }
+
+            // Endpoint qui retourne les demandes du membre connecté
+            const response = await axios.get('http://localhost:8080/mut/loan_request/my-requests', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setLoanRequests(response.data);
         } catch (error) {
-            console.error('Erreur:', error);
+            console.error('Erreur fetching my loan requests:', error);
+            const status = error.response?.status;
+            const data = error.response?.data;
+            console.error('[fetchMyLoanRequests] status:', status, 'data:', data);
+
+            if (error.code === 'ERR_NETWORK' || (!error.response && error.request)) {
+                alert('Impossible de joindre le serveur backend. Vérifiez qu\'il est démarré.');
+                return;
+            }
+
+            if (status === 401) {
+                alert('Non authentifié. Veuillez vous reconnecter.');
+                localStorage.removeItem('token');
+                localStorage.removeItem('currentUser');
+                navigate('/login');
+                return;
+            }
+
+            if (status === 403) {
+                alert('Accès refusé (403). Vous ne pouvez pas voir ces demandes.');
+                return;
+            }
+
             alert('Erreur lors du chargement des demandes');
         } finally {
             setLoading(false);
