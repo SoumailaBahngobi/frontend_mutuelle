@@ -26,6 +26,10 @@ const AddLoanRequest = () => {
         'Frais médicaux',
         'Éducation',
         'Projet professionnel',
+        'funerailles',
+        'bapteme',
+        'Mariage',
+        'Vacances',
         'Autres dépenses personnelles'
     ];
 
@@ -327,7 +331,7 @@ const AddLoanRequest = () => {
 
         const amount = parseFloat(formData.requestAmount);
         const duration = parseInt(formData.duration);
-        const interestRate = 5.0;
+        const interestRate = 0; // Taux d'intérêt mensuel de 0%
         
         const totalInterest = (amount * interestRate * duration) / 100 / 12;
         const totalRepayment = amount + totalInterest;
@@ -442,7 +446,7 @@ const AddLoanRequest = () => {
                                             value={formData.requestAmount}
                                             onChange={handleInputChange('requestAmount')}
                                             min="1000"
-                                            step="1000"
+                                            step="500"
                                             placeholder="Entrez le montant"
                                             disabled={!isEligible || loading}
                                         />
