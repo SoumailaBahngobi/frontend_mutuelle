@@ -128,7 +128,7 @@ const AddLoan = () => {
                                             {approvedRequests.map(request => (
                                                 <option key={request.id} value={request.id}>
                                                     {request.member.name} {request.member.firstName} - 
-                                                    {request.requestAmount}€ - 
+                                                    {request.requestAmount}FCFA - 
                                                     {request.duration} mois - 
                                                     {request.reason.substring(0, 50)}...
                                                 </option>
