@@ -15,10 +15,14 @@ import MyLoanRequests from './loanRequest/MyLoanRequest.js';
 import AddContributionPeriod from './contributionPeriod/AddContributionPeriod.js';
 import LoanApprovalDashboard from './loan/LoanApprovalDashboard.js';
 import MyLoans from './loan/MyLoans.js';
+<<<<<<< HEAD
 import LoanValidationReports from './loan/LoanValidationReports.js';
 import Home from './pages/Home.js';
 import LoanApprovalList from './loan/LoanApprovalList.js';
 
+=======
+import Home from './pages/Home.js';
+>>>>>>> c6a83a6f783ecac3e1e35768905f9bd3c47f8dc5
 
 function App() {
   return (
@@ -26,8 +30,13 @@ function App() {
       <Navbar />
       <Routes>
         {/* Routes d'authentification et accueil */}
+<<<<<<< HEAD
        <Route path="/" element={<Home />} />
         {/* <Route path="/" element={<Login />} /> */}
+=======
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+>>>>>>> c6a83a6f783ecac3e1e35768905f9bd3c47f8dc5
         <Route path="/register" element={<AddMember />} />
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<Dashboard />} />

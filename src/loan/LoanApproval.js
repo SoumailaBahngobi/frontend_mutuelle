@@ -4,466 +4,462 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 
 const LoanApproval = () => {
-    const navigate = useNavigate();
     const [loanRequests, setLoanRequests] = useState([]);
-    const [currentUser, setCurrentUser] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [actionLoading, setActionLoading] = useState(null);
-    const [filter, setFilter] = useState('ALL');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [filter, setFilter] = useState('all'); // all, pending, in_review, approved, rejected
+  const [userRole, setUserRole] = useState('');
+  const navigate = useNavigate();
 
-    useEffect(() => {
-        fetchData();
-    }, []);
+  useEffect(() => {
+    fetchLoanRequests();
+    fetchUserProfile();
+  }, []);
 
-    const fetchData = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            
-            // Récupérer les demandes de prêt
-            const requestsResponse = await axios.get('http://localhost:8080/mut/loan_request', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            
-            // Récupérer le profil utilisateur
-            try {
-                const profileResponse = await axios.get('http://localhost:8080/mut/member/profile', {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                setCurrentUser(profileResponse.data);
-            } catch (profileError) {
-                console.warn('Impossible de récupérer le profil, utilisation du token');
-                // Récupérer les infos du token JWT
-                const tokenData = JSON.parse(atob(token.split('.')[1]));
-                setCurrentUser({
-                    id: tokenData.id,
-                    firstName: tokenData.firstName,
-                    lastName: tokenData.lastName,
-                    email: tokenData.email,
-                    role: tokenData.role || 'MEMBER'
-                });
-            }
-
-            setLoanRequests(requestsResponse.data);
-        } catch (error) {
-            console.error('Erreur:', error);
-            toast.error('Erreur lors du chargement des données');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleApprove = async (requestId, role) => {
-        setActionLoading(requestId);
-        try {
-            const token = localStorage.getItem('token');
-            let endpoint = '';
-
-            switch (role) {
-                case 'PRESIDENT':
-                    endpoint = `president`;
-                    break;
-                case 'SECRETARY':
-                    endpoint = `secretary`;
-                    break;
-                case 'TREASURER':
-                    endpoint = `treasurer`;
-                    break;
-                default:
-                    return;
-            }
-
-            const comment = prompt(`Commentaire pour l'approbation ${role.toLowerCase()} (optionnel):`);
-            
-            const response = await axios.post(
-                `http://localhost:8080/mut/loan_request/${requestId}/approve/${endpoint}`, 
-                comment ? { comment } : {},
-                { 
-                    headers: { 
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    } 
-                }
-            );
-
-            // Mettre à jour la liste
-            const updatedRequests = loanRequests.map(req => 
-                req.id === requestId ? response.data : req
-            );
-            setLoanRequests(updatedRequests);
-            
-            toast.success(`Validation ${role.toLowerCase()} effectuée avec succès !`);
-        } catch (error) {
-            console.error('Erreur approbation:', error);
-            const errorMessage = error.response?.data || error.message || 'Erreur lors de l\'approbation';
-            toast.error(errorMessage);
-        } finally {
-            setActionLoading(null);
-        }
-    };
-
-    const handleReject = async (requestId) => {
-        const rejectionReason = window.prompt('Veuillez saisir la raison du rejet:');
-        if (!rejectionReason) {
-            toast.warning('Le rejet a été annulé');
-            return;
-        }
-
-        if (!window.confirm('Êtes-vous sûr de vouloir rejeter cette demande ?')) {
-            return;
-        }
-
-        setActionLoading(requestId);
-        try {
-            const token = localStorage.getItem('token');
-            
-            const response = await axios.post(
-                `http://localhost:8080/mut/loan_request/${requestId}/reject`,
-                {
-                    rejectionReason: rejectionReason
-                },
-                { 
-                    headers: { 
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    } 
-                }
-            );
-
-            // Mettre à jour la demande rejetée
-            const updatedRequests = loanRequests.map(req => 
-                req.id === requestId ? response.data : req
-            );
-            setLoanRequests(updatedRequests);
-            
-            toast.success('Demande rejetée avec succès !');
-        } catch (error) {
-            console.error('Erreur rejet:', error);
-            const errorMessage = error.response?.data || error.message || 'Erreur lors du rejet';
-            toast.error(errorMessage);
-        } finally {
-            setActionLoading(null);
-        }
-    };
-
-    // Vérifier les permissions
-    const userRole = currentUser?.role || 'MEMBER';
-    const canApproveAsPresident = (userRole === 'PRESIDENT' || userRole === 'ADMIN');
-    const canApproveAsSecretary = (userRole === 'SECRETARY' || userRole === 'ADMIN');
-    const canApproveAsTreasurer = (userRole === 'TREASURER' || userRole === 'ADMIN');
-    const canReject = (userRole === 'PRESIDENT' || userRole === 'SECRETARY' || userRole === 'TREASURER' || userRole === 'ADMIN');
-
-    // Vérifier si l'utilisateur peut approuver une demande spécifique
-    const canUserApproveRequest = (request, role) => {
-        if (request.status === 'REJECTED' || request.status === 'APPROVED') return false;
-        
-        switch (role) {
-            case 'PRESIDENT':
-                return canApproveAsPresident && !request.presidentApproved;
-            case 'SECRETARY':
-                return canApproveAsSecretary && !request.secretaryApproved;
-            case 'TREASURER':
-                return canApproveAsTreasurer && !request.treasurerApproved;
-            default:
-                return false;
-        }
-    };
-
-    // Filtrer les demandes selon le statut
-    const filteredRequests = loanRequests.filter(request => {
-        if (filter === 'ALL') return true;
-        return request.status === filter;
-    });
-
-    const getStatusBadge = (status) => {
-        const statusConfig = {
-            PENDING: { class: 'bg-warning', text: '⏳ En attente' },
-            IN_REVIEW: { class: 'bg-info', text: '📋 En examen' },
-            APPROVED: { class: 'bg-success', text: '✅ Approuvé' },
-            REJECTED: { class: 'bg-danger', text: '❌ Rejeté' }
-        };
-        const config = statusConfig[status] || { class: 'bg-secondary', text: status };
-        return <span className={`badge ${config.class}`}>{config.text}</span>;
-    };
-
-    const getApprovalBadge = (approved) => {
-        return approved ? 
-            <span className="badge bg-success">✅</span> : 
-            <span className="badge bg-secondary">❌</span>;
-    };
-
-    const getApprovalProgress = (request) => {
-        const approvals = [
-            request.presidentApproved,
-            request.secretaryApproved, 
-            request.treasurerApproved
-        ];
-        const approvedCount = approvals.filter(Boolean).length;
-        return `${approvedCount}/3`;
-    };
-
-    if (loading) {
-        return (
-            <div className="container mt-4">
-                <div className="d-flex justify-content-center align-items-center" style={{ height: '400px' }}>
-                    <div className="spinner-border text-primary" role="status">
-                        <span className="visually-hidden">Chargement...</span>
-                    </div>
-                </div>
-            </div>
-        );
+  const fetchUserProfile = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get('http://localhost:8080/mut/member/profile', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUserRole(res.data.role);
+    } catch (err) {
+      console.error('Erreur chargement profil:', err);
     }
+  };
 
+  const fetchLoanRequests = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      
+      const res = await axios.get('http://localhost:8080/mut/loan_request', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setLoanRequests(res.data);
+    } catch (err) {
+      console.error('Erreur chargement demandes:', err);
+      setError('Impossible de charger les demandes de prêt');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStatusBadge = (status) => {
+    const statusConfig = {
+      PENDING: { class: 'bg-warning text-dark', label: 'En attente' },
+      IN_REVIEW: { class: 'bg-info text-white', label: 'En examen' },
+      APPROVED: { class: 'bg-success text-white', label: 'Approuvé' },
+      REJECTED: { class: 'bg-danger text-white', label: 'Rejeté' }
+    };
+
+    const config = statusConfig[status] || { class: 'bg-secondary text-white', label: status };
     return (
-        <div className="container mt-4">
-            {/* En-tête */}
-            <div className="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h2>📋 Validation des Demandes de Prêt</h2>
-                    <p className="text-muted">
-                        Rôle actuel: <strong>{userRole}</strong> | 
-                        Connecté en tant que: <strong>{currentUser?.firstName} {currentUser?.lastName}</strong>
-                    </p>
+      <span className={`badge ${config.class}`}>
+        {config.label}
+      </span>
+    );
+  };
+
+  const getApprovalBadge = (approved) => {
+    return approved ? 
+      <span className="badge bg-success">✓</span> : 
+      <span className="badge bg-secondary">✗</span>;
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: 'XOF'
+    }).format(amount);
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString('fr-FR');
+  };
+
+  const getApprovalProgress = (loanRequest) => {
+    if (!loanRequest.approvalProgress) return null;
+    
+    const progress = loanRequest.approvalProgress;
+    return (
+      <div className="d-flex align-items-center">
+        <div className="progress flex-grow-1 me-2" style={{ height: '8px' }}>
+          <div 
+            className="progress-bar" 
+            style={{ width: `${progress.approvalPercentage}%` }}
+            title={`${progress.approvalPercentage}% approuvé`}
+          ></div>
+        </div>
+        <small className="text-muted">
+          {progress.approvedCount}/{progress.totalApprovers}
+        </small>
+      </div>
+    );
+  };
+
+  const getApprovalDetails = (loanRequest) => {
+    return (
+      <div className="row small text-muted mt-2">
+        <div className="col-md-4">
+          <strong>Président:</strong><br />
+          {getApprovalBadge(loanRequest.presidentApproved)}
+          {loanRequest.presidentApprovalDate && 
+            ` le ${formatDate(loanRequest.presidentApprovalDate)}`
+          }
+          {loanRequest.presidentComment && 
+            <div className="fst-italic">"{loanRequest.presidentComment}"</div>
+          }
+        </div>
+        <div className="col-md-4">
+          <strong>Secrétaire:</strong><br />
+          {getApprovalBadge(loanRequest.secretaryApproved)}
+          {loanRequest.secretaryApprovalDate && 
+            ` le ${formatDate(loanRequest.secretaryApprovalDate)}`
+          }
+          {loanRequest.secretaryComment && 
+            <div className="fst-italic">"{loanRequest.secretaryComment}"</div>
+          }
+        </div>
+        <div className="col-md-4">
+          <strong>Trésorier:</strong><br />
+          {getApprovalBadge(loanRequest.treasurerApproved)}
+          {loanRequest.treasurerApprovalDate && 
+            ` le ${formatDate(loanRequest.treasurerApprovalDate)}`
+          }
+          {loanRequest.treasurerComment && 
+            <div className="fst-italic">"{loanRequest.treasurerComment}"</div>
+          }
+        </div>
+      </div>
+    );
+  };
+
+  const canApprove = (loanRequest) => {
+    if (!userRole) return false;
+    
+    const userRoles = {
+      'PRESIDENT': !loanRequest.presidentApproved,
+      'SECRETARY': !loanRequest.secretaryApproved,
+      'TREASURER': !loanRequest.treasurerApproved
+    };
+
+    return userRoles[userRole] && 
+           (loanRequest.status === 'PENDING' || loanRequest.status === 'IN_REVIEW');
+  };
+
+  const handleApprove = async (loanRequestId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const endpoint = `http://localhost:8080/mut/loan_request/${loanRequestId}/approve/${userRole.toLowerCase()}`;
+      
+      const comment = prompt('Ajouter un commentaire (optionnel):');
+      
+      await axios.post(endpoint, 
+        { comment: comment || '' },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      alert('Demande approuvée avec succès!');
+      fetchLoanRequests(); // Rafraîchir la liste
+    } catch (err) {
+      console.error('Erreur approbation:', err);
+      alert('Erreur lors de l\'approbation: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  const handleReject = async (loanRequestId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const reason = prompt('Raison du rejet:');
+      
+      if (!reason) {
+        alert('Veuillez saisir une raison de rejet');
+        return;
+      }
+      
+      await axios.post(`http://localhost:8080/mut/loan_request/${loanRequestId}/reject`, 
+        { 
+          rejectionReason: reason,
+          rejectedByRole: userRole
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      alert('Demande rejetée avec succès!');
+      fetchLoanRequests(); // Rafraîchir la liste
+    } catch (err) {
+      console.error('Erreur rejet:', err);
+      alert('Erreur lors du rejet: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  const filteredRequests = loanRequests.filter(request => {
+    if (filter === 'all') return true;
+    return request.status === filter.toUpperCase();
+  });
+
+  if (loading) {
+    return (
+      <div className="container mt-4 d-flex justify-content-center align-items-center" style={{ minHeight: '60vh' }}>
+        <div className="text-center">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Chargement...</span>
+          </div>
+          <p className="mt-2 text-muted">Chargement des demandes de prêt...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mt-4">
+        <div className="alert alert-danger d-flex align-items-center" role="alert">
+          <i className="fas fa-exclamation-triangle me-2"></i>
+          <div>{error}</div>
+        </div>
+        <button className="btn btn-primary" onClick={fetchLoanRequests}>
+          Réessayer
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container-fluid py-4">
+      {/* En-tête */}
+      <div className="row mb-4">
+        <div className="col-12">
+          <div className="card shadow-sm border-0">
+            <div className="card-body">
+              <div className="row align-items-center">
+                <div className="col">
+                  <h2 className="h4 mb-2">
+                    <i className="fas fa-list-check me-2 text-primary"></i>
+                    Liste des Demandes de Prêt
+                  </h2>
+                  <p className="text-muted mb-0">
+                    Gestion et suivi des approbations de prêt
+                  </p>
                 </div>
-                <button 
+                <div className="col-auto">
+                  <button
                     className="btn btn-outline-secondary"
                     onClick={() => navigate('/dashboard')}
-                >
-                    ↩️ Retour
-                </button>
+                  >
+                    <i className="fas fa-arrow-left me-2"></i>
+                    Retour
+                  </button>
+                </div>
+              </div>
             </div>
-
-            {/* Filtres */}
-            <div className="card mb-4">
-                <div className="card-body">
-                    <div className="row align-items-center">
-                        <div className="col-md-6">
-                            <h6 className="mb-0">Filtrer par statut:</h6>
-                        </div>
-                        <div className="col-md-6">
-                            <select 
-                                className="form-select"
-                                value={filter}
-                                onChange={(e) => setFilter(e.target.value)}
-                            >
-                                <option value="ALL">📁 Toutes les demandes</option>
-                                <option value="PENDING">⏳ En attente</option>
-                                <option value="IN_REVIEW">📋 En examen</option>
-                                <option value="APPROVED">✅ Approuvées</option>
-                                <option value="REJECTED">❌ Rejetées</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Statistiques */}
-            <div className="row mb-4">
-                <div className="col-md-3">
-                    <div className="card text-white bg-primary">
-                        <div className="card-body text-center">
-                            <h4>{loanRequests.length}</h4>
-                            <small>Total demandes</small>
-                        </div>
-                    </div>
-                </div>
-                <div className="col-md-3">
-                    <div className="card text-white bg-warning">
-                        <div className="card-body text-center">
-                            <h4>{loanRequests.filter(r => r.status === 'PENDING').length}</h4>
-                            <small>En attente</small>
-                        </div>
-                    </div>
-                </div>
-                <div className="col-md-3">
-                    <div className="card text-white bg-info">
-                        <div className="card-body text-center">
-                            <h4>{loanRequests.filter(r => r.status === 'IN_REVIEW').length}</h4>
-                            <small>En examen</small>
-                        </div>
-                    </div>
-                </div>
-                <div className="col-md-3">
-                    <div className="card text-white bg-success">
-                        <div className="card-body text-center">
-                            <h4>{loanRequests.filter(r => r.status === 'APPROVED').length}</h4>
-                            <small>Approuvées</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Tableau des demandes */}
-            {filteredRequests.length === 0 ? (
-                <div className="alert alert-info text-center">
-                    <h5>📭 Aucune demande trouvée</h5>
-                    <p className="mb-0">Aucune demande de prêt ne correspond aux critères sélectionnés.</p>
-                </div>
-            ) : (
-                <div className="card">
-                    <div className="card-body p-0">
-                        <div className="table-responsive">
-                            <table className="table table-hover mb-0">
-                                <thead className="table-light">
-                                    <tr>
-                                        <th>Membre</th>
-                                        <th>Montant</th>
-                                        <th>Durée</th>
-                                        <th>Motif</th>
-                                        <th>Date</th>
-                                        <th>Statut</th>
-                                        <th>Validations</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredRequests.map(request => (
-                                        <tr key={request.id}>
-                                            <td>
-                                                <div>
-                                                    <strong>{request.member?.firstName} {request.member?.lastName}</strong>
-                                                    <br />
-                                                    <small className="text-muted">{request.member?.email}</small>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <strong className="text-primary">
-                                                    {new Intl.NumberFormat('fr-FR', {
-                                                        style: 'currency',
-                                                        currency: 'XOF'
-                                                    }).format(request.requestAmount)}
-                                                </strong>
-                                            </td>
-                                            <td>{request.duration} mois</td>
-                                            <td>
-                                                <div style={{ maxWidth: '200px' }}>
-                                                    <small>{request.reason}</small>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                {new Date(request.requestDate).toLocaleDateString('fr-FR')}
-                                            </td>
-                                            <td>
-                                                {getStatusBadge(request.status)}
-                                                <br />
-                                                <small className="text-muted">
-                                                    {getApprovalProgress(request)}
-                                                </small>
-                                            </td>
-                                            <td>
-                                                <div className="small">
-                                                    <div>Président: {getApprovalBadge(request.presidentApproved)}</div>
-                                                    <div>Secrétaire: {getApprovalBadge(request.secretaryApproved)}</div>
-                                                    <div>Trésorier: {getApprovalBadge(request.treasurerApproved)}</div>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <div className="btn-group-vertical btn-group-sm">
-                                                    {/* Boutons d'approbation */}
-                                                    {canUserApproveRequest(request, 'PRESIDENT') && (
-                                                        <button
-                                                            className="btn btn-outline-success btn-sm mb-1"
-                                                            onClick={() => handleApprove(request.id, 'PRESIDENT')}
-                                                            disabled={actionLoading === request.id}
-                                                            title="Approuver en tant que Président"
-                                                        >
-                                                            {actionLoading === request.id ? (
-                                                                <span className="spinner-border spinner-border-sm" />
-                                                            ) : (
-                                                                '✅ Président'
-                                                            )}
-                                                        </button>
-                                                    )}
-                                                    
-                                                    {canUserApproveRequest(request, 'SECRETARY') && (
-                                                        <button
-                                                            className="btn btn-outline-info btn-sm mb-1"
-                                                            onClick={() => handleApprove(request.id, 'SECRETARY')}
-                                                            disabled={actionLoading === request.id}
-                                                            title="Approuver en tant que Secrétaire"
-                                                        >
-                                                            {actionLoading === request.id ? (
-                                                                <span className="spinner-border spinner-border-sm" />
-                                                            ) : (
-                                                                '📝 Secrétaire'
-                                                            )}
-                                                        </button>
-                                                    )}
-                                                    
-                                                    {canUserApproveRequest(request, 'TREASURER') && (
-                                                        <button
-                                                            className="btn btn-outline-warning btn-sm mb-1"
-                                                            onClick={() => handleApprove(request.id, 'TREASURER')}
-                                                            disabled={actionLoading === request.id}
-                                                            title="Approuver en tant que Trésorier"
-                                                        >
-                                                            {actionLoading === request.id ? (
-                                                                <span className="spinner-border spinner-border-sm" />
-                                                            ) : (
-                                                                '💰 Trésorier'
-                                                            )}
-                                                        </button>
-                                                    )}
-                                                    
-                                                    {/* Bouton de rejet */}
-                                                    {canReject && request.status !== 'REJECTED' && request.status !== 'APPROVED' && (
-                                                        <button
-                                                            className="btn btn-outline-danger btn-sm"
-                                                            onClick={() => handleReject(request.id)}
-                                                            disabled={actionLoading === request.id}
-                                                            title="Rejeter la demande"
-                                                        >
-                                                            {actionLoading === request.id ? (
-                                                                <span className="spinner-border spinner-border-sm" />
-                                                            ) : (
-                                                                '❌ Rejeter'
-                                                            )}
-                                                        </button>
-                                                    )}
-                                                    
-                                                    {request.status === 'REJECTED' && (
-                                                        <span className="badge bg-danger">Rejetée</span>
-                                                    )}
-                                                    
-                                                    {request.status === 'APPROVED' && (
-                                                        <span className="badge bg-success">✓ Terminé</span>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Légende */}
-            <div className="mt-4">
-                <div className="card">
-                    <div className="card-body">
-                        <h6>📋 Légende:</h6>
-                        <div className="row">
-                            <div className="col-md-4">
-                                <strong>Président:</strong> Validation stratégique
-                            </div>
-                            <div className="col-md-4">
-                                <strong>Secrétaire:</strong> Vérification administrative
-                            </div>
-                            <div className="col-md-4">
-                                <strong>Trésorier:</strong> Analyse financière
-                            </div>
-                        </div>
-                        <div className="mt-2 text-muted">
-                            <small>
-                                <strong>Note:</strong> Les 3 validations sont nécessaires pour l'approbation finale.
-                            </small>
-                        </div>
-                    </div>
-                </div>
-            </div>
+          </div>
         </div>
-    );
-};
+      </div>
+
+      {/* Filtres et statistiques */}
+      <div className="row mb-4">
+        <div className="col-md-8">
+          <div className="card shadow-sm">
+            <div className="card-body">
+              <div className="btn-group" role="group">
+                <button
+                  type="button"
+                  className={`btn ${filter === 'all' ? 'btn-primary' : 'btn-outline-primary'}`}
+                  onClick={() => setFilter('all')}
+                >
+                  Toutes ({loanRequests.length})
+                </button>
+                <button
+                  type="button"
+                  className={`btn ${filter === 'pending' ? 'btn-warning' : 'btn-outline-warning'}`}
+                  onClick={() => setFilter('pending')}
+                >
+                  En attente ({loanRequests.filter(r => r.status === 'PENDING').length})
+                </button>
+                <button
+                  type="button"
+                  className={`btn ${filter === 'in_review' ? 'btn-info' : 'btn-outline-info'}`}
+                  onClick={() => setFilter('in_review')}
+                >
+                  En examen ({loanRequests.filter(r => r.status === 'IN_REVIEW').length})
+                </button>
+                <button
+                  type="button"
+                  className={`btn ${filter === 'approved' ? 'btn-success' : 'btn-outline-success'}`}
+                  onClick={() => setFilter('approved')}
+                >
+                  Approuvées ({loanRequests.filter(r => r.status === 'APPROVED').length})
+                </button>
+                <button
+                  type="button"
+                  className={`btn ${filter === 'rejected' ? 'btn-danger' : 'btn-outline-danger'}`}
+                  onClick={() => setFilter('rejected')}
+                >
+                  Rejetées ({loanRequests.filter(r => r.status === 'REJECTED').length})
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="col-md-4">
+          <div className="card shadow-sm bg-light">
+            <div className="card-body text-center">
+              <h6 className="card-title">Rôle actuel</h6>
+              <span className="badge bg-primary fs-6">{userRole || 'Membre'}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Liste des demandes */}
+      <div className="row">
+        <div className="col-12">
+          <div className="card shadow">
+            <div className="card-header bg-white py-3">
+              <h5 className="m-0 font-weight-bold text-primary">
+                <i className="fas fa-file-alt me-2"></i>
+                Demandes de Prêt ({filteredRequests.length})
+              </h5>
+            </div>
+            <div className="card-body">
+              {filteredRequests.length === 0 ? (
+                <div className="text-center py-5">
+                  <i className="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                  <h5 className="text-muted">Aucune demande trouvée</h5>
+                  <p className="text-muted">
+                    {filter === 'all' 
+                      ? "Aucune demande de prêt n'a été soumise pour le moment."
+                      : `Aucune demande avec le statut "${filter}" n'a été trouvée.`
+                    }
+                  </p>
+                </div>
+              ) : (
+                <div className="table-responsive">
+                  <table className="table table-hover">
+                    <thead className="table-light">
+                      <tr>
+                        <th>ID</th>
+                        <th>Membre</th>
+                        <th>Montant</th>
+                        <th>Motif</th>
+                        <th>Date demande</th>
+                        <th>Statut</th>
+                        <th>Progression</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredRequests.map(request => (
+                        <tr key={request.id}>
+                          <td>
+                            <strong>#{request.id}</strong>
+                          </td>
+                          <td>
+                            {request.member ? (
+                              <div>
+                                <div className="fw-medium">
+                                  {request.member.firstName} {request.member.name}
+                                </div>
+                                <small className="text-muted">{request.member.email}</small>
+                              </div>
+                            ) : (
+                              <span className="text-muted">Membre inconnu</span>
+                            )}
+                          </td>
+                          <td className="fw-bold text-primary">
+                            {formatCurrency(request.requestAmount)}
+                          </td>
+                          <td>
+                            <div className="text-truncate" style={{ maxWidth: '200px' }} 
+                                 title={request.reason}>
+                              {request.reason}
+                            </div>
+                          </td>
+                          <td>
+                            {formatDate(request.requestDate)}
+                          </td>
+                          <td>
+                            {getStatusBadge(request.status)}
+                          </td>
+                          <td style={{ minWidth: '120px' }}>
+                            {getApprovalProgress(request)}
+                          </td>
+                          <td>
+                            <div className="btn-group btn-group-sm">
+                              <button
+                                className="btn btn-outline-info"
+                                onClick={() => navigate(`/loans/request-details/${request.id}`)}
+                                title="Voir détails"
+                              >
+                                <i className="fas fa-eye"></i>
+                              </button>
+                              
+                              {canApprove(request) && (
+                                <>
+                                  <button
+                                    className="btn btn-outline-success"
+                                    onClick={() => handleApprove(request.id)}
+                                    title="Approuver"
+                                  >
+                                    <i className="fas fa-check"></i>
+                                  </button>
+                                  <button
+                                    className="btn btn-outline-danger"
+                                    onClick={() => handleReject(request.id)}
+                                    title="Rejeter"
+                                  >
+                                    <i className="fas fa-times"></i>
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Légende */}
+      <div className="row mt-4">
+        <div className="col-12">
+          <div className="card shadow-sm">
+            <div className="card-body">
+              <h6 className="card-title">Légende des statuts d'approbation:</h6>
+              <div className="row">
+                <div className="col-md-3">
+                  <span className="badge bg-success me-2">✓</span>
+                  <small>Approuvé</small>
+                </div>
+                <div className="col-md-3">
+                  <span className="badge bg-secondary me-2">✗</span>
+                  <small>En attente</small>
+                </div>
+                <div className="col-md-3">
+                  <span className="badge bg-warning me-2"></span>
+                  <small>En attente globale</small>
+                </div>
+                <div className="col-md-3">
+                  <span className="badge bg-info me-2"></span>
+                  <small>En examen</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default LoanApproval;

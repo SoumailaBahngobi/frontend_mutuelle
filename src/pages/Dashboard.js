@@ -10,6 +10,8 @@ export default function Dashboard() {
   const [uploading, setUploading] = useState(false);
   const [myLoanRequests, setMyLoanRequests] = useState([]);
   const [myLoans, setMyLoans] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [showNotificationsPanel, setShowNotificationsPanel] = useState(false);
   const [stats, setStats] = useState({
     totalRequests: 0,
     activeLoans: 0,
@@ -43,9 +45,12 @@ export default function Dashboard() {
       const formData = new FormData();
       formData.append('file', file);
 
+<<<<<<< HEAD
+=======
+      // Ne pas définir explicitement Content-Type; axios / le navigateur définira le boundary automatiquement
+>>>>>>> c6a83a6f783ecac3e1e35768905f9bd3c47f8dc5
       const res = await axios.post('http://localhost:8080/mut/member/profile/photo', formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
           ...(token ? { Authorization: `Bearer ${token}` } : {})
         }
       });
@@ -62,7 +67,24 @@ export default function Dashboard() {
 
     } catch (err) {
       console.error('Erreur upload:', err);
-      alert("Erreur lors de l'upload de la photo. Veuillez réessayer.");
+      // Afficher détails si disponibles
+      const status = err.response?.status;
+      const data = err.response?.data;
+      console.error('[handlePhotoChange] response status:', status, 'data:', data);
+
+      // Message utilisateur plus informatif
+      if (status === 413) {
+        alert("Image trop volumineuse (413). Réduisez la taille et réessayez.");
+      } else if (status === 401) {
+        alert("Non authentifié. Veuillez vous reconnecter.");
+        localStorage.removeItem('token');
+        localStorage.removeItem('currentUser');
+        navigate('/login');
+      } else if (status === 403) {
+        alert("Accès refusé (403) — vous n'avez pas la permission d'uploader une photo.");
+      } else {
+        alert("Erreur lors de l'upload de la photo. Voir console pour détails.");
+      }
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -84,6 +106,10 @@ export default function Dashboard() {
 
         setUser(res.data);
         await fetchLoanData(token, res.data.id);
+<<<<<<< HEAD
+=======
+        await fetchNotifications(token);
+>>>>>>> c6a83a6f783ecac3e1e35768905f9bd3c47f8dc5
 
       } catch (err) {
         console.error('Erreur chargement profil:', err);
@@ -106,8 +132,90 @@ export default function Dashboard() {
     fetchProfile();
   }, [navigate]);
 
+  // Fonction pour récupérer les notifications
+  const fetchNotifications = async (token) => {
+    try {
+      const response = await axios.get('http://localhost:8080/mut/notification', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setNotifications(response.data);
+    } catch (error) {
+      console.error('Erreur lors du chargement des notifications:', error);
+      // Notifications simulées en cas d'erreur
+      setNotifications([
+        {
+          id: 1,
+          title: 'Bienvenue sur votre dashboard',
+          message: 'Vous pouvez consulter ici toutes vos activités récentes',
+          type: 'INFO',
+          read: false,
+          createdDate: new Date()
+        }
+      ]);
+    }
+  };
+
+  // Fonction pour marquer une notification comme lue
+  const markAsRead = async (notificationId) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`http://localhost:8080/mut/notification/${notificationId}/read`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setNotifications(prev => 
+        prev.map(notif => 
+          notif.id === notificationId ? { ...notif, read: true } : notif
+        )
+      );
+    } catch (error) {
+      console.error('Erreur:', error);
+      // Mettre à jour localement même en cas d'erreur
+      setNotifications(prev => 
+        prev.map(notif => 
+          notif.id === notificationId ? { ...notif, read: true } : notif
+        )
+      );
+    }
+  };
+
+  // Fonction pour marquer toutes les notifications comme lues
+  const markAllAsRead = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put('http://localhost:8080/mut/notification/mark-all-read', {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setNotifications(prev => prev.map(notif => ({ ...notif, read: true })));
+    } catch (error) {
+      console.error('Erreur:', error);
+      setNotifications(prev => prev.map(notif => ({ ...notif, read: true })));
+    }
+  };
+
+  // Fonction pour supprimer une notification
+  const deleteNotification = async (notificationId) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`http://localhost:8080/mut/notification/${notificationId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
+    } catch (error) {
+      console.error('Erreur:', error);
+      setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
+    }
+  };
+
   const fetchLoanData = async (token, userId) => {
     try {
+      console.log('[fetchLoanData] token present?', !!token);
+      // helpful debug: show token (trimmed) in dev only
+      if (token && process.env.NODE_ENV !== 'production') {
+        console.log('[fetchLoanData] token (start):', token.substring(0, 20) + '...');
+      }
       // Charger mes demandes de prêt
       const requestsRes = await axios.get('http://localhost:8080/mut/loan_request/my-requests', {
         headers: { Authorization: `Bearer ${token}` }
@@ -115,7 +223,7 @@ export default function Dashboard() {
       setMyLoanRequests(requestsRes.data);
 
       // Charger mes prêts
-      const loansRes = await axios.get('http://localhost:8080/mut/loan', {
+      const loansRes = await axios.get('http://localhost:8080/mut/loans', {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -135,6 +243,25 @@ export default function Dashboard() {
 
     } catch (error) {
       console.error('Erreur lors du chargement des données de prêt:', error);
+      // Afficher informations de réponse si disponibles (status, data)
+      const status = error.response?.status;
+      const respData = error.response?.data;
+      console.error('[fetchLoanData] response status:', status, 'data:', respData);
+
+      if (status === 401) {
+        setError('Accès non autorisé (401). Veuillez vous reconnecter.');
+        localStorage.removeItem('token');
+        localStorage.removeItem('currentUser');
+        navigate('/login');
+        return;
+      }
+
+      if (status === 403) {
+        setError('Accès refusé (403). Votre compte n\'a pas les droits nécessaires pour accéder à ces données.');
+        return;
+      }
+
+      setError('Erreur lors du chargement des données de prêt. Voir la console pour détails.');
     }
   };
 
@@ -182,6 +309,19 @@ export default function Dashboard() {
     }).format(amount);
   };
 
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case 'SUCCESS': return '✅';
+      case 'WARNING': return '⚠️';
+      case 'ERROR': return '❌';
+      case 'INFO': return 'ℹ️';
+      default: return '🔔';
+    }
+  };
+
+  // Calculer le nombre de notifications non lues
+  const unreadCount = notifications.filter(notif => !notif.read).length;
+
   const isAdmin = user && (user.role === 'ADMIN' || user.role === 'PRESIDENT' || user.role === 'SECRETARY' || user.role === 'TREASURER');
 
   if (loading) {
@@ -216,8 +356,8 @@ export default function Dashboard() {
   return (
     <div className="container-fluid py-4">
       {/* Header avec informations utilisateur */}
-      <div className="row mb-4">
-        <div className="col-12">
+      <div className="row mb-2">
+        <div className="col-8">
           <div className="card shadow-sm border-0">
             <div className="card-body">
               <div className="row align-items-center">
@@ -225,7 +365,11 @@ export default function Dashboard() {
                   <div className="position-relative">
                     <img
                       src={user.photo || '/default-avatar.png'}
+<<<<<<< HEAD
                       alt={`Profil de ${user.firstName} ${user.name}`}
+=======
+                      alt="Profil"
+>>>>>>> c6a83a6f783ecac3e1e35768905f9bd3c47f8dc5
                       className="rounded-circle shadow"
                       width={120}
                       height={120}
@@ -253,7 +397,7 @@ export default function Dashboard() {
                 <div className="col">
                   <h2 className="h4 mb-2">Bienvenue, {user.firstName} {user.name}!</h2>
                   <div className="row text-muted">
-                    <div className="col-md-6">
+                    <div className="col-md-3">
                       <p className="mb-1">
                         <i className="fas fa-envelope me-2"></i>
                         {user.email}
@@ -263,7 +407,7 @@ export default function Dashboard() {
                         NPI: {user.npi}
                       </p>
                     </div>
-                    <div className="col-md-6">
+                    <div className="col-md-3">
                       <p className="mb-1">
                         <i className="fas fa-phone me-2"></i>
                         {user.phone}
@@ -277,6 +421,20 @@ export default function Dashboard() {
                 </div>
 
                 <div className="col-auto">
+                  {/* Bouton Notifications */}
+                  <button 
+                    className="btn btn-warning position-relative me-2"
+                    onClick={() => setShowNotificationsPanel(!showNotificationsPanel)}
+                  >
+                    <i className="fas fa-bell me-2"></i>
+                    Notifications
+                    {unreadCount > 0 && (
+                      <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </button>
+
                   <button
                     className="btn btn-outline-danger"
                     onClick={handleLogout}
@@ -291,10 +449,89 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Panel des notifications */}
+      {showNotificationsPanel && (
+        <div className="card mb-4">
+          <div className="card-header d-flex justify-content-between align-items-center">
+            <h5 className="mb-0">
+              <i className="fas fa-bell me-2"></i>
+              Mes Notifications ({notifications.length})
+            </h5>
+            <div>
+              {unreadCount > 0 && (
+                <button 
+                  className="btn btn-sm btn-outline-info me-2"
+                  onClick={markAllAsRead}
+                >
+                  <i className="fas fa-check-double me-1"></i>
+                  Tout marquer comme lu
+                </button>
+              )}
+              <button 
+                className="btn btn-sm btn-outline-primary"
+                onClick={() => fetchNotifications(localStorage.getItem('token'))}
+              >
+                <i className="fas fa-sync-alt me-1"></i>
+                Actualiser
+              </button>
+            </div>
+          </div>
+          <div className="card-body">
+            {notifications.length === 0 ? (
+              <p className="text-muted text-center py-3">
+                <i className="fas fa-bell-slash fa-2x mb-2"></i>
+                <br />
+                Aucune notification
+              </p>
+            ) : (
+              <div className="list-group">
+                {notifications.map(notification => (
+                  <div 
+                    key={notification.id} 
+                    className={`list-group-item ${notification.read ? '' : 'list-group-item-warning'}`}
+                  >
+                    <div className="d-flex justify-content-between align-items-start">
+                      <div className="flex-grow-1">
+                        <h6 className="mb-1">
+                          {getNotificationIcon(notification.type)}
+                          {notification.title}
+                        </h6>
+                        <p className="mb-1">{notification.message}</p>
+                        <small className="text-muted">
+                          {new Date(notification.createdDate).toLocaleString()}
+                        </small>
+                      </div>
+                      <div className="btn-group ms-2">
+                        {!notification.read && (
+                          <button 
+                            className="btn btn-sm btn-success"
+                            onClick={() => markAsRead(notification.id)}
+                            title="Marquer comme lu"
+                          >
+                            <i className="fas fa-check"></i>
+                          </button>
+                        )}
+                        <button 
+                          className="btn btn-sm btn-outline-danger"
+                          onClick={() => deleteNotification(notification.id)}
+                          title="Supprimer"
+                        >
+                          <i className="fas fa-trash"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Cartes de statistiques */}
       <div className="row mb-4">
-        <div className="col-xl-3 col-md-6 mb-4">
-          <div className="card border-left-primary shadow h-100 py-2">
+        <div className="col-xl-3 col-md-3 mb-2">
+          <div className="card border-left-primary shadow h-50 py-2">
             <div className="card-body">
               <div className="row no-gutters align-items-center">
                 <div className="col mr-2">
@@ -313,8 +550,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="col-xl-3 col-md-6 mb-4">
-          <div className="card border-left-success shadow h-100 py-2">
+        <div className="col-xl-3 col-md-3 mb-2">
+          <div className="card border-left-success shadow h-50 py-2">
             <div className="card-body">
               <div className="row no-gutters align-items-center">
                 <div className="col mr-2">
@@ -333,8 +570,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="col-xl-3 col-md-6 mb-4">
-          <div className="card border-left-warning shadow h-100 py-2">
+        <div className="col-xl-3 col-md-3 mb-2">
+          <div className="card border-left-warning shadow h-50 py-2">
             <div className="card-body">
               <div className="row no-gutters align-items-center">
                 <div className="col mr-2">
@@ -354,7 +591,7 @@ export default function Dashboard() {
         </div>
 
         <div className="col-xl-3 col-md-6 mb-4">
-          <div className="card border-left-info shadow h-100 py-2">
+          <div className="card border-left-info shadow h-50 py-2">
             <div className="card-body">
               <div className="row no-gutters align-items-center">
                 <div className="col mr-2">
@@ -387,7 +624,7 @@ export default function Dashboard() {
             </div>
             <div className="card-body">
               <div className="row">
-                <div className="col-md-6 mb-3">
+                <div className="col-md-3 mb-3">
                   <div className="card border-left-primary h-100">
                     <div className="card-body">
                       <h6 className="card-title text-primary">
@@ -407,7 +644,7 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                <div className="col-md-6 mb-3">
+                <div className="col-md-3 mb-3">
                   <div className="card border-left-info h-100">
                     <div className="card-body">
                       <h6 className="card-title text-info">
@@ -418,37 +655,42 @@ export default function Dashboard() {
                         Consultez l'état de vos demandes de prêt
                       </p>
                       <button
+<<<<<<< HEAD
                         className="btn btn-info btn-sm w-100 text-white"
                         onClick={() => navigate('/mut/loans')}
+=======
+                        className="btn btn-info btn-sm w-50 text-white"
+                        onClick={() => navigate('/loans/requests')}
+>>>>>>> c6a83a6f783ecac3e1e35768905f9bd3c47f8dc5
                       >
-                        Voir mes demandes
+                      Toutes les demandes de prêt
                       </button>
                     </div>
                   </div>
                 </div>
 
-                <div className="col-md-6 mb-3">
-                  <div className="card border-left-warning h-100">
+                <div className="col-md-3 mb-2">
+                  <div className="card border-left-warning h-50">
                     <div className="card-body">
                       <h6 className="card-title text-warning">
                         <i className="fas fa-chart-line me-2"></i>
-                        Mes Prêts
+                        Les Assistances
                       </h6>
                       <p className="card-text small text-muted">
-                        Suivez vos prêts en cours et leur statut
+                        Suivez les assistances en cours et leur statut
                       </p>
                       <button
-                        className="btn btn-warning btn-sm w-100"
+                        className="btn btn-warning btn-sm w-15"
                         onClick={() => navigate('/loans/list')}
                       >
-                        Mes prêts en cours
+                        Toues les assistances
                       </button>
                     </div>
                   </div>
                 </div>
 
-                <div className="col-md-6 mb-3">
-                  <div className="card border-left-success h-100">
+                <div className="col-md-2 mb-1">
+                  <div className="card border-left-success h-15">
                     <div className="card-body">
                       <h6 className="card-title text-success">
                         <i className="fas fa-money-bill-wave me-2"></i>
@@ -458,7 +700,7 @@ export default function Dashboard() {
                         Gérez vos cotisations individuelles ou de groupe
                       </p>
                       <button
-                        className="btn btn-success btn-sm w-100"
+                        className="btn btn-success btn-sm w-10"
                         onClick={() => setShowContributionModal(true)}
                       >
                         Faire une cotisation
@@ -469,8 +711,8 @@ export default function Dashboard() {
               </div>
 
               {/* Aperçu rapide */}
-              <div className="row mt-4">
-                <div className="col-md-6">
+              <div className="row mt-2">
+                <div className="col-md-3">
                   <h6 className="text-muted mb-3">
                     <i className="fas fa-history me-2"></i>
                     Dernières demandes
@@ -492,7 +734,7 @@ export default function Dashboard() {
                   )}
                 </div>
 
-                <div className="col-md-6">
+                <div className="col-md-3">
                   <h6 className="text-muted mb-3">
                     <i className="fas fa-chart-line me-2"></i>
                     Prêts en cours
@@ -519,17 +761,39 @@ export default function Dashboard() {
 
           {/* Panel administrateur */}
           {isAdmin && (
-            <div className="card shadow mb-4">
+            <div className="card shadow mb-2">
               <div className="card-header bg-warning text-white py-3">
                 <h5 className="m-0 font-weight-bold">
                   <i className="fas fa-user-shield me-2"></i>
                   Panel Validation des Prêts
                 </h5>
+<<<<<<< HEAD
               </div>
               <div className="card-body">
                 <div className="row">
                   <div className="col-md-4 mb-3">
                     <div className="card border-primary h-100">
+=======
+                <div className="col-md-4 mb-3">
+                  <div className="card border-primary h-10">
+                    <div className="card-body text-center">
+                      <i className="fas fa-list-check fa-2x text-primary mb-2"></i>
+                      <h6>Approbation Prêts</h6>
+                      <button
+                        className="btn btn-primary btn-sm mt-2"
+                        onClick={() => navigate('/loans/approval-dashboard')}
+                      >
+                        Tableau d'approbation
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="card-body">
+                <div className="row">
+                  <div className="col-md-2 mb-2">
+                    <div className="card border-warning h-10">
+>>>>>>> c6a83a6f783ecac3e1e35768905f9bd3c47f8dc5
                       <div className="card-body text-center">
                         <i className="fas fa-list-check fa-2x text-primary mb-2"></i>
                         <h6>Tableau d'approbation</h6>
@@ -545,7 +809,11 @@ export default function Dashboard() {
                   </div>
 
                   <div className="col-md-4 mb-3">
+<<<<<<< HEAD
                     <div className="card border-warning h-100">
+=======
+                    <div className="card border-info h-10">
+>>>>>>> c6a83a6f783ecac3e1e35768905f9bd3c47f8dc5
                       <div className="card-body text-center">
                         <i className="fas fa-check-circle fa-2x text-warning mb-2"></i>
                         <h6>Validation rapide</h6>
@@ -562,7 +830,11 @@ export default function Dashboard() {
                   </div>
 
                   <div className="col-md-4 mb-3">
+<<<<<<< HEAD
                     <div className="card border-info h-100">
+=======
+                    <div className="card border-success h-10">
+>>>>>>> c6a83a6f783ecac3e1e35768905f9bd3c47f8dc5
                       <div className="card-body text-center">
                         <i className="fas fa-chart-bar fa-2x text-info mb-2"></i>
                         <h6>Rapports validation</h6>
@@ -584,35 +856,37 @@ export default function Dashboard() {
 
         {/* Sidebar - Notifications et Actions rapides */}
         <div className="col-lg-4 mb-4">
-          {/* Notifications */}
+          {/* Notifications résumées */}
           <div className="card shadow mb-4">
             <div className="card-header bg-white py-3">
               <h5 className="m-0 font-weight-bold text-primary">
                 <i className="fas fa-bell me-2"></i>
-                Notifications
+                Alertes Récentes
               </h5>
             </div>
             <div className="card-body">
-              {myLoanRequests.some(req => req.status === 'APPROVED') && (
-                <div className="alert alert-success d-flex align-items-center mb-3">
-                  <i className="fas fa-check-circle me-2"></i>
-                  <div>
-                    <strong>Félicitations!</strong>
-                    <div className="small">Vous avez des demandes de prêt approuvées</div>
+              {notifications.slice(0, 3).map(notification => (
+                <div key={notification.id} className={`alert ${notification.read ? 'alert-light' : 'alert-warning'} d-flex align-items-center mb-3`}>
+                  <div className="me-2">
+                    {getNotificationIcon(notification.type)}
                   </div>
-                </div>
-              )}
-
-              {myLoanRequests.some(req => req.status === 'REJECTED') && (
-                <div className="alert alert-danger d-flex align-items-center mb-3">
-                  <i className="fas fa-times-circle me-2"></i>
-                  <div>
-                    <strong>Demandes rejetées</strong>
-                    <div className="small">Certaines demandes ont été rejetées</div>
+                  <div className="flex-grow-1">
+                    <strong className="small">{notification.title}</strong>
+                    <div className="small text-muted">{notification.message}</div>
                   </div>
+                  {!notification.read && (
+                    <button 
+                      className="btn btn-sm btn-success"
+                      onClick={() => markAsRead(notification.id)}
+                      title="Marquer comme lu"
+                    >
+                      <i className="fas fa-check"></i>
+                    </button>
+                  )}
                 </div>
-              )}
+              ))}
 
+<<<<<<< HEAD
               {myLoans.some(loan => !loan.isRepaid && new Date(loan.endDate) < new Date()) && (
                 <div className="alert alert-warning d-flex align-items-center mb-3">
                   <i className="fas fa-exclamation-triangle me-2"></i>
@@ -631,6 +905,25 @@ export default function Dashboard() {
                     <div>Aucune notification</div>
                   </div>
                 )}
+=======
+              {notifications.length === 0 && (
+                <div className="text-center text-muted py-3">
+                  <i className="fas fa-bell-slash fa-2x mb-2"></i>
+                  <div>Aucune notification</div>
+                </div>
+              )}
+
+              {notifications.length > 3 && (
+                <div className="text-center">
+                  <button 
+                    className="btn btn-outline-primary btn-sm"
+                    onClick={() => setShowNotificationsPanel(true)}
+                  >
+                    Voir toutes les notifications ({notifications.length})
+                  </button>
+                </div>
+              )}
+>>>>>>> c6a83a6f783ecac3e1e35768905f9bd3c47f8dc5
             </div>
           </div>
 
@@ -689,8 +982,8 @@ export default function Dashboard() {
               <div className="modal-body">
                 <p className="text-muted mb-4">Sélectionnez le type de cotisation que vous souhaitez effectuer :</p>
                 <div className="row g-3">
-                  <div className="col-md-6">
-                    <div className="card h-100 border-primary">
+                  <div className="col-md-">
+                    <div className="card h-10 border-primary">
                       <div className="card-body text-center">
                         <i className="fas fa-user fa-3x text-primary mb-3"></i>
                         <h6 className="card-title">Individuelle</h6>
