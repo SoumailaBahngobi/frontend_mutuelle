@@ -1,3 +1,5 @@
+
+
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
@@ -35,12 +37,13 @@ export default function LoanApprovalDashboard() {
     try {
       const token = localStorage.getItem('token');
       const endpoint = `http://localhost:8080/mut/loan_request/${requestId}/approve/${role.toLowerCase()}`;
-      
-      await axios.post(endpoint, 
+
+      const response = await axios.post(endpoint,
         { comment },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      
+      console.log('[LoanApprovalDashboard] approve response:', response.status, response.data);
+
       alert('Demande approuvée avec succès!');
       setSelectedRequest(null);
       setComment('');
@@ -57,14 +60,15 @@ export default function LoanApprovalDashboard() {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`http://localhost:8080/mut/loan_request/${requestId}/reject`, 
-        { 
+      const response = await axios.post(`http://localhost:8080/mut/loan_request/${requestId}/reject`,
+        {
           rejectionReason: reason,
-          rejectedByRole: role 
+          rejectedByRole: role
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      
+      console.log('[LoanApprovalDashboard] reject response:', response.status, response.data);
+
       alert('Demande rejetée!');
       fetchLoanRequests();
     } catch (error) {
@@ -88,12 +92,16 @@ export default function LoanApprovalDashboard() {
 
   const canApprove = (request, userRole) => {
     if (request.status === 'REJECTED' || request.status === 'APPROVED') return false;
-    
-    switch(userRole) {
-      case 'PRESIDENT': return !request.presidentApproved;
-      case 'SECRETARY': return !request.secretaryApproved;
-      case 'TREASURER': return !request.treasurerApproved;
-      default: return false;
+
+    switch (userRole) {
+      case 'PRESIDENT':
+        return !request.presidentApproved;
+      case 'SECRETARY':
+        return !request.secretaryApproved;
+      case 'TREASURER':
+        return !request.treasurerApproved;
+      default:
+        return false;
     }
   };
 
@@ -104,7 +112,7 @@ export default function LoanApprovalDashboard() {
       APPROVED: { class: 'bg-success text-white', label: 'Approuvé' },
       REJECTED: { class: 'bg-danger text-white', label: 'Rejeté' }
     }[status] || { class: 'bg-secondary', label: status };
-    
+
     return <span className={`badge ${config.class}`}>{config.label}</span>;
   };
 
@@ -133,7 +141,7 @@ export default function LoanApprovalDashboard() {
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>
           <i className="fas fa-list-check me-2 text-primary"></i>
-          Tableau de bord d'approbation des prêts
+          Liste des Demandes de Prêt
         </h2>
         <div>
           <button className="btn btn-outline-secondary me-2" onClick={() => navigate('/dashboard')}>
@@ -208,7 +216,7 @@ export default function LoanApprovalDashboard() {
             <div className="card-header bg-white border-bottom">
               <h5 className="mb-0">
                 <i className="fas fa-list-check me-2"></i>
-                Demandes de prêt - État d'approbation
+                Demandes de Prêt ({loanRequests.length})
               </h5>
             </div>
             <div className="card-body p-0">
@@ -261,10 +269,10 @@ export default function LoanApprovalDashboard() {
                           <td>
                             <div className="d-flex align-items-center">
                               <div className="progress flex-grow-1 me-2" style={{ height: '8px' }}>
-                                <div 
-                                  className="progress-bar" 
-                                  style={{ 
-                                    width: `${request.approvalProgress?.approvalPercentage || 0}%` 
+                                <div
+                                  className="progress-bar"
+                                  style={{
+                                    width: `${request.approvalProgress?.approvalPercentage || 0}%`
                                   }}
                                 ></div>
                               </div>
@@ -275,33 +283,52 @@ export default function LoanApprovalDashboard() {
                           </td>
                           <td>
                             <div className="btn-group btn-group-sm">
-                              <button 
+                              <button
                                 className="btn btn-outline-primary"
                                 onClick={() => setSelectedRequest(request)}
                                 title="Voir les détails"
                               >
                                 <i className="fas fa-eye"></i>
                               </button>
-                              
+
                               {/* Actions d'approbation selon le rôle */}
                               {user && canApprove(request, user.role) && (
-                                <button 
-                                  className="btn btn-outline-success"
-                                  onClick={() => setSelectedRequest(request)}
-                                  title="Approuver cette demande"
+                                <>
+                                  <button
+                                    className="btn btn-outline-success"
+                                    onClick={() => handleApprove(request.id, user.role)}
+                                    title="Approuver"
+                                  >
+                                    <i className="fas fa-check"></i>
+                                  </button>
+                                  <button
+                                    className="btn btn-outline-danger"
+                                    onClick={() => handleReject(request.id, user.role)}
+                                    title="Rejeter"
+                                  >
+                                    <i className="fas fa-times"></i>
+                                  </button>
+                                </>
+                              )}
+
+                              {/* Forcer création prêt */}
+                              {request.status === 'APPROVED' && !request.loanCreated && (
+                                <button
+                                  className="btn btn-outline-warning"
+                                  onClick={() => axios.post(`http://localhost:8080/mut/loan_request/${request.id}/force-create-loan`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(res => { console.log('force create', res.status); fetchLoanRequests(); }).catch(err => console.error(err))}
+                                  title="Forcer création prêt"
                                 >
-                                  <i className="fas fa-check"></i>
+                                  <i className="fas fa-bolt"></i>
                                 </button>
                               )}
-                              
-                              {user && ['PRESIDENT', 'SECRETARY', 'TREASURER'].includes(user.role) && 
-                               request.status !== 'REJECTED' && request.status !== 'APPROVED' && (
-                                <button 
-                                  className="btn btn-outline-danger"
-                                  onClick={() => handleReject(request.id, user.role)}
-                                  title="Rejeter cette demande"
+
+                              {request.loanCreated && (
+                                <button
+                                  className="btn btn-outline-success"
+                                  onClick={() => navigate('/loans/list')}
+                                  title="Voir le prêt créé"
                                 >
-                                  <i className="fas fa-times"></i>
+                                  <i className="fas fa-hand-holding-usd"></i>
                                 </button>
                               )}
                             </div>
@@ -349,7 +376,7 @@ export default function LoanApprovalDashboard() {
                     <p><strong>Statut:</strong> {getStatusBadge(selectedRequest.status)}</p>
                   </div>
                 </div>
-                
+
                 <div className="row mt-3">
                   <div className="col-12">
                     <h6>État des approbations</h6>
@@ -391,8 +418,8 @@ export default function LoanApprovalDashboard() {
                 {user && canApprove(selectedRequest, user.role) && (
                   <div className="mt-3">
                     <label className="form-label fw-bold">Commentaire (optionnel)</label>
-                    <textarea 
-                      className="form-control" 
+                    <textarea
+                      className="form-control"
                       rows="3"
                       value={comment}
                       onChange={(e) => setComment(e.target.value)}
@@ -404,14 +431,14 @@ export default function LoanApprovalDashboard() {
               <div className="modal-footer">
                 {user && canApprove(selectedRequest, user.role) ? (
                   <>
-                    <button 
+                    <button
                       className="btn btn-success"
                       onClick={() => handleApprove(selectedRequest.id, user.role)}
                     >
                       <i className="fas fa-check me-2"></i>
                       Approuver la demande
                     </button>
-                    <button 
+                    <button
                       className="btn btn-danger"
                       onClick={() => handleReject(selectedRequest.id, user.role)}
                     >
@@ -420,7 +447,7 @@ export default function LoanApprovalDashboard() {
                     </button>
                   </>
                 ) : (
-                  <button 
+                  <button
                     className="btn btn-secondary"
                     onClick={() => {
                       setSelectedRequest(null);

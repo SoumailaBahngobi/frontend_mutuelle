@@ -419,8 +419,8 @@ const AddRepayment = () => {
                                                     name="amount"
                                                     value={repaymentData.amount}
                                                     onChange={handleInputChange}
-                                                    min="0.01"
-                                                    step="0.01"
+                                                    min="1000"
+                                                    step="500"
                                                     required
                                                     placeholder="Montant à rembourser"
                                                 />
