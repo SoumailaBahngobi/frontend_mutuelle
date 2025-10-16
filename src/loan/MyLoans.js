@@ -56,6 +56,11 @@ export default function MyLoans() {
     return (totalRepaid / loan.amount) * 100;
   };
 
+  // ✅ NOUVELLE FONCTION : Vérifier si le prêt est accordé
+  const isLoanGranted = (loan) => {
+    return loan.loanRequest?.loanGranted || false;
+  };
+
   if (loading) {
     return (
       <div className="container mt-4 d-flex justify-content-center align-items-center" style={{ minHeight: '60vh' }}>
@@ -118,6 +123,7 @@ export default function MyLoans() {
                   <table className="table table-striped table-hover mb-0">
                     <thead className="table-light">
                       <tr>
+                        <th>Statut Accord</th>
                         <th>Montant</th>
                         <th>Montant remboursé</th>
                         <th>Reste à payer</th>
@@ -132,9 +138,17 @@ export default function MyLoans() {
                       {loans.map(loan => {
                         const remainingAmount = calculateRemainingAmount(loan);
                         const progress = calculateProgress(loan);
+                        const granted = isLoanGranted(loan);
                         
                         return (
                           <tr key={loan.id}>
+                            <td>
+                              {granted ? (
+                                <span className="badge bg-success">💰 Accordé</span>
+                              ) : (
+                                <span className="badge bg-warning">⏳ En attente</span>
+                              )}
+                            </td>
                             <td className="fw-bold text-primary">
                               {formatCurrency(loan.amount)}
                             </td>
@@ -145,7 +159,7 @@ export default function MyLoans() {
                               {formatCurrency(remainingAmount)}
                             </td>
                             <td>
-                              {loan.startDate ? new Date(loan.startDate).toLocaleDateString() : 'N/A'}
+                              {loan.beginDate ? new Date(loan.beginDate).toLocaleDateString() : 'N/A'}
                             </td>
                             <td>
                               {loan.endDate ? new Date(loan.endDate).toLocaleDateString() : 'N/A'}
@@ -171,7 +185,8 @@ export default function MyLoans() {
                                 <button 
                                   className="btn btn-outline-primary"
                                   onClick={() => navigate('/loans/repayment', { state: { loan } })}
-                                  disabled={loan.isRepaid}
+                                  disabled={loan.isRepaid || !granted}
+                                  title={!granted ? "Prêt non encore accordé" : "Effectuer un remboursement"}
                                 >
                                   <i className="fas fa-credit-card me-1"></i>
                                   Rembourser
@@ -179,8 +194,14 @@ export default function MyLoans() {
                                 <button 
                                   className="btn btn-outline-info"
                                   onClick={() => {
-                                    // Voir les détails du remboursement
-                                    alert(`Détails du prêt:\nMontant: ${formatCurrency(loan.amount)}\nReste: ${formatCurrency(remainingAmount)}\nProgression: ${progress.toFixed(1)}%`);
+                                    alert(`Détails du prêt:\n
+                                      Montant: ${formatCurrency(loan.amount)}\n
+                                      Reste: ${formatCurrency(remainingAmount)}\n
+                                      Progression: ${progress.toFixed(1)}%\n
+                                      Statut: ${granted ? 'Prêt accordé' : 'En attente d\'accord'}\n
+                                      Date début: ${loan.beginDate ? new Date(loan.beginDate).toLocaleDateString() : 'N/A'}\n
+                                      Date fin: ${loan.endDate ? new Date(loan.endDate).toLocaleDateString() : 'N/A'}`
+                                    );
                                   }}
                                 >
                                   <i className="fas fa-info-circle"></i>
@@ -236,7 +257,7 @@ export default function MyLoans() {
             <div className="card border-info">
               <div className="card-body text-center">
                 <h4 className="text-info">
-                  {loans.filter(loan => !loan.isRepaid).length}
+                  {loans.filter(loan => !loan.isRepaid && isLoanGranted(loan)).length}
                 </h4>
                 <p className="mb-0 text-muted">Prêts en cours</p>
               </div>
@@ -244,6 +265,30 @@ export default function MyLoans() {
           </div>
         </div>
       )}
+
+      {/* Information sur le système d'accord */}
+      <div className="row mt-4">
+        <div className="col-12">
+          <div className="card border-warning">
+            <div className="card-header bg-warning text-dark">
+              <h5 className="mb-0">
+                <i className="fas fa-info-circle me-2"></i>
+                Information importante
+              </h5>
+            </div>
+            <div className="card-body">
+              <p>
+                <strong>Nouveau processus :</strong> Après l'approbation de votre demande par les responsables, 
+                le prêt doit être <strong>accordé par le trésorier</strong> avant que vous puissiez effectuer des remboursements.
+              </p>
+              <ul>
+                <li>✅ <strong>Prêt accordé</strong> : Vous pouvez effectuer des remboursements</li>
+                <li>⏳ <strong>En attente d'accord</strong> : Votre prêt est approuvé mais en attente de l'accord final du trésorier</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+
 import './App.css';
 import { Routes, Route } from 'react-router-dom';
 import AddMember from './members/AddMember.js';
@@ -18,9 +19,13 @@ import LoanApprovalDashboard from './loan/LoanApprovalDashboard.js';
 import MyLoans from './loan/MyLoans.js';
 import LoanValidationReports from './loan/LoanValidationReports.js';
 import Home from './pages/Home.js';
+
 import LoanApprovalList from './loan/LoanApprovalList.js';
 
 
+
+import TreasurerLoanDashboard from './treasurer/TreasurerLoanDashboard.js';
+import RoleProtectedRoute from './treasurer/RoleProtectedRoute.js';
 
 function App() {
   return (
@@ -91,6 +96,12 @@ function App() {
             </div>
           </div>
         } />
+
+        <Route path="/treasurer/loans" element={
+            <RoleProtectedRoute allowedRoles={['TREASURER', 'ADMIN']}>
+              <TreasurerLoanDashboard />
+            </RoleProtectedRoute>
+          } />
 
         {/* Route 404 */}
         <Route path="*" element={<NotFound />} />

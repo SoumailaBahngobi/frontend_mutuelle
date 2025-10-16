@@ -69,6 +69,16 @@ const MyLoanRequests = () => {
         return <span className={`badge ${config.class}`}>{config.text}</span>;
     };
 
+    // ✅ NOUVELLE FONCTION : Statut d'accord du prêt
+    const getGrantStatus = (request) => {
+        if (request.loanGranted) {
+            return <span className="badge bg-success">💰 Prêt accordé</span>;
+        } else if (request.status === 'APPROVED') {
+            return <span className="badge bg-warning">⏳ En attente d'accord</span>;
+        }
+        return null;
+    };
+
     const getApprovalProgress = (request) => {
         const approvals = [request.presidentApproved, request.secretaryApproved, request.treasurerApproved];
         const approvedCount = approvals.filter(Boolean).length;
@@ -109,6 +119,7 @@ const MyLoanRequests = () => {
                 'Durée (mois)': request.duration,
                 'Motif': request.reason,
                 'Statut': request.status,
+                'Statut Accord': request.loanGranted ? 'Accordé' : 'En attente',
                 'Date de demande': new Date(request.requestDate).toLocaleDateString(),
                 'Président approuvé': request.presidentApproved ? 'Oui' : 'Non',
                 'Secrétaire approuvé': request.secretaryApproved ? 'Oui' : 'Non',
@@ -157,6 +168,7 @@ const MyLoanRequests = () => {
                             .approved { background-color: #28a745; }
                             .rejected { background-color: #dc3545; }
                             .in-review { background-color: #17a2b8; }
+                            .granted { background-color: #20c997; }
                         </style>
                     </head>
                     <body>
@@ -169,6 +181,7 @@ const MyLoanRequests = () => {
                                     <th>Montant</th>
                                     <th>Durée</th>
                                     <th>Statut</th>
+                                    <th>Accord</th>
                                     <th>Date</th>
                                 </tr>
                             </thead>
@@ -186,6 +199,13 @@ const MyLoanRequests = () => {
                                                 request.status === 'REJECTED' ? 'rejected' : 'in-review'
                                             }">
                                                 ${request.status}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge ${
+                                                request.loanGranted ? 'granted' : 'pending'
+                                            }">
+                                                ${request.loanGranted ? 'Accordé' : 'En attente'}
                                             </span>
                                         </td>
                                         <td>${new Date(request.requestDate).toLocaleDateString()}</td>
@@ -225,7 +245,7 @@ const MyLoanRequests = () => {
             // Préparer les données CSV
             const headers = [
                 'ID', 'Membre', 'Email', 'Montant (FCFA)', 'Durée (mois)', 
-                'Motif', 'Statut', 'Date de demande', 'Président approuvé',
+                'Motif', 'Statut', 'Statut Accord', 'Date de demande', 'Président approuvé',
                 'Secrétaire approuvé', 'Trésorier approuvé'
             ].join(',');
 
@@ -237,6 +257,7 @@ const MyLoanRequests = () => {
                 request.duration,
                 `"${request.reason}"`,
                 request.status,
+                request.loanGranted ? 'Accordé' : 'En attente',
                 new Date(request.requestDate).toLocaleDateString(),
                 request.presidentApproved ? 'Oui' : 'Non',
                 request.secretaryApproved ? 'Oui' : 'Non',
@@ -354,12 +375,12 @@ const MyLoanRequests = () => {
                         </div>
                     </div>
                     <div className="col-md-3">
-                        <div className="card text-white bg-danger">
+                        <div className="card text-white bg-info">
                             <div className="card-body">
                                 <h5 className="card-title">
-                                    {loanRequests.filter(r => r.status === 'REJECTED').length}
+                                    {loanRequests.filter(r => r.loanGranted).length}
                                 </h5>
-                                <p className="card-text">Rejetées</p>
+                                <p className="card-text">Prêts accordés</p>
                             </div>
                         </div>
                     </div>
@@ -392,6 +413,18 @@ const MyLoanRequests = () => {
                                         <p><strong>Durée:</strong> {request.duration} mois</p>
                                         <p><strong>Motif:</strong> {request.reason}</p>
                                         <p><strong>Date de demande:</strong> {new Date(request.requestDate).toLocaleDateString()}</p>
+                                        
+                                        {/* ✅ Statut d'accord du prêt */}
+                                        {getGrantStatus(request) && (
+                                            <div className="mb-3">
+                                                <strong>Statut du prêt:</strong> {getGrantStatus(request)}
+                                                {request.loanGrantedDate && (
+                                                    <div className="small text-muted">
+                                                        Accordé le: {new Date(request.loanGrantedDate).toLocaleDateString()}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                         
                                         {/* Progression de validation */}
                                         <div className="mt-3">
