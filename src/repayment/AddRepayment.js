@@ -332,7 +332,8 @@ const AddRepayment = () => {
                                                         <div className="col-md-4">
                                                             <strong>Montant total à rembourser:</strong><br/>
                                                             <span className="text-success fw-bold">
-                                                                {calculateTotalAmount(loanDetails)} FCFA
+                                                                {/* {calculateTotalAmount(loanDetails)} FCFA */}
+                                                                {loanDetails.requestAmount?.toFixed(2) || '0000'} FCFA
                                                             </span>
                                                         </div>
                                                     </div>
@@ -341,7 +342,8 @@ const AddRepayment = () => {
                                                         <div className="col-md-4">
                                                             <strong>Montant restant:</strong><br/>
                                                             <span className="text-warning fw-bold">
-                                                                {calculateRemainingAmount(loanDetails)} FCFA
+                                                                {/* {calculateRemainingAmount(loanDetails)} FCFA */}
+                                                                {loanDetails.requestAmount?.toFixed() || '0000'} FCFA
                                                             </span>
                                                         </div>
                                                         <div className="col-md-4">
@@ -350,7 +352,7 @@ const AddRepayment = () => {
                                                         </div>
                                                         <div className="col-md-4">
                                                             <strong>Taux d'intérêt:</strong><br/>
-                                                            {loanDetails.interestRate?.toFixed(1) || '00'}%
+                                                            {loanDetails.interestRate?.toFixed(0) || '00'}%
                                                         </div>
                                                     </div>
                                                 </div>
