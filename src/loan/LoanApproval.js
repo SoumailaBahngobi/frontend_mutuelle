@@ -63,13 +63,14 @@ const LoanApproval = () => {
         );
     };
 
-    const getLoanCreationBadge = (loanRequest) => {
-        if (loanRequest.loanCreated) {
-            return <span className="badge bg-success">✅ Prêt créé</span>;
+    // ✅ NOUVELLE FONCTION : Badge pour l'accord du prêt
+    const getLoanGrantBadge = (loanRequest) => {
+        if (loanRequest.loanGranted) {
+            return <span className="badge bg-success">💰 Prêt accordé</span>;
         } else if (loanRequest.status === 'APPROVED') {
-            return <span className="badge bg-warning">🔄 Prêt en création...</span>;
+            return <span className="badge bg-warning">⏳ En attente d'accord</span>;
         } else {
-            return <span className="badge bg-secondary">⏳ En attente</span>;
+            return <span className="badge bg-secondary">📝 En validation</span>;
         }
     };
 
@@ -135,10 +136,14 @@ const LoanApproval = () => {
                 { comment: comment || '' },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
-            console.log('[LoanApproval] approve response:', response.status, response.data);
 
-            toast.success('Demande approuvée avec succès! Le prêt sera créé automatiquement.');
-            fetchLoanRequests(); // Rafraîchir la liste
+            if (userRole === 'TREASURER') {
+                toast.success('✅ Demande approuvée ! Le prêt est maintenant prêt à être accordé.');
+            } else {
+                toast.success('✅ Demande approuvée ! En attente des autres validations.');
+            }
+            
+            fetchLoanRequests();
         } catch (err) {
             console.error('Erreur approbation:', err);
             toast.error('Erreur lors de l\'approbation: ' + (err.response?.data?.message || err.message));
@@ -171,25 +176,29 @@ const LoanApproval = () => {
         }
     };
 
-    // ✅ NOUVELLE FONCTION : Forcer la création du prêt
-    const handleForceCreateLoan = async (loanRequestId) => {
-        try {
-            const token = localStorage.getItem('token');
-            await axios.post(`http://localhost:8080/mut/loan_request/${loanRequestId}/force-create-loan`, 
-                {},
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
-            
-            toast.success('Prêt créé avec succès!');
-            fetchLoanRequests();
-        } catch (err) {
-            console.error('Erreur création forcée:', err);
-            toast.error('Erreur lors de la création du prêt: ' + (err.response?.data?.message || err.message));
+    // ✅ NOUVELLE FONCTION : Rediriger vers l'accord du trésorier
+    const handleTreasurerGrant = (request) => {
+        if (userRole === 'TREASURER') {
+            navigate('/treasurer/loans');
+        } else {
+            toast.info('Seul le trésorier peut accorder les prêts');
+        }
+    };
+
+    // ✅ NOUVELLE FONCTION : Voir les détails de l'accord
+    const handleViewGrantDetails = (request) => {
+        if (request.loanGranted) {
+            navigate('/loans/list');
+        } else if (request.status === 'APPROVED') {
+            toast.info('Ce prêt est approuvé et en attente d\'accord par le trésorier');
         }
     };
 
     const filteredRequests = loanRequests.filter(request => {
         if (filter === 'all') return true;
+        if (filter === 'pending_grant') {
+            return request.status === 'APPROVED' && !request.loanGranted;
+        }
         return request.status === filter.toUpperCase();
     });
 
@@ -220,7 +229,7 @@ const LoanApproval = () => {
                                         Liste des Demandes de Prêt
                                     </h2>
                                     <p className="text-muted mb-0">
-                                        Gestion et suivi des approbations de prêt - Création automatique des prêts
+                                        Gestion et suivi des approbations de prêt - Système d'accord par le trésorier
                                     </p>
                                 </div>
                                 <div className="col-auto">
@@ -274,6 +283,13 @@ const LoanApproval = () => {
                                 </button>
                                 <button
                                     type="button"
+                                    className={`btn ${filter === 'pending_grant' ? 'btn-warning' : 'btn-outline-warning'}`}
+                                    onClick={() => setFilter('pending_grant')}
+                                >
+                                    ⏳ À accorder ({loanRequests.filter(r => r.status === 'APPROVED' && !r.loanGranted).length})
+                                </button>
+                                <button
+                                    type="button"
                                     className={`btn ${filter === 'rejected' ? 'btn-danger' : 'btn-outline-danger'}`}
                                     onClick={() => setFilter('rejected')}
                                 >
@@ -289,6 +305,17 @@ const LoanApproval = () => {
                         <div className="card-body text-center">
                             <h6 className="card-title">Rôle actuel</h6>
                             <span className="badge bg-primary fs-6">{userRole || 'Membre'}</span>
+                            {userRole === 'TREASURER' && (
+                                <div className="mt-2">
+                                    <button 
+                                        className="btn btn-warning btn-sm"
+                                        onClick={() => navigate('/treasurer/loans')}
+                                    >
+                                        <i className="fas fa-coins me-1"></i>
+                                        Gestion des prêts
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -312,7 +339,7 @@ const LoanApproval = () => {
                                     <p className="text-muted">
                                         {filter === 'all' 
                                             ? "Aucune demande de prêt n'a été soumise pour le moment."
-                                            : `Aucune demande avec le statut "${filter}" n'a été trouvée.`
+                                            : `Aucune demande avec le filtre "${filter}" n'a été trouvée.`
                                         }
                                     </p>
                                 </div>
@@ -327,7 +354,7 @@ const LoanApproval = () => {
                                                 <th>Motif</th>
                                                 <th>Date demande</th>
                                                 <th>Statut</th>
-                                                <th>Création Prêt</th>
+                                                <th>Accord Prêt</th>
                                                 <th>Progression</th>
                                                 <th>Actions</th>
                                             </tr>
@@ -366,7 +393,7 @@ const LoanApproval = () => {
                                                         {getStatusBadge(request.status)}
                                                     </td>
                                                     <td>
-                                                        {getLoanCreationBadge(request)}
+                                                        {getLoanGrantBadge(request)}
                                                     </td>
                                                     <td style={{ minWidth: '120px' }}>
                                                         {getApprovalProgress(request)}
@@ -400,25 +427,25 @@ const LoanApproval = () => {
                                                                 </>
                                                             )}
 
-                                                            {/* ✅ BOUTON POUR FORCER LA CRÉATION DU PRÊT */}
-                                                            {request.status === 'APPROVED' && !request.loanCreated && (
+                                                            {/* ✅ BOUTON POUR L'ACCORD DU TRÉSORIER */}
+                                                            {request.status === 'APPROVED' && !request.loanGranted && userRole === 'TREASURER' && (
                                                                 <button
                                                                     className="btn btn-outline-warning"
-                                                                    onClick={() => handleForceCreateLoan(request.id)}
-                                                                    title="Forcer la création du prêt"
+                                                                    onClick={() => handleTreasurerGrant(request)}
+                                                                    title="Accorder le prêt"
                                                                 >
-                                                                    <i className="fas fa-bolt"></i>
+                                                                    <i className="fas fa-hand-holding-usd"></i>
                                                                 </button>
                                                             )}
 
-                                                            {/* ✅ LIEN VERS LE PRÊT SI CRÉÉ */}
-                                                            {request.loanCreated && (
+                                                            {/* ✅ BOUTON POUR VOIR LE PRÊT ACCORDÉ */}
+                                                            {request.loanGranted && (
                                                                 <button
                                                                     className="btn btn-outline-success"
-                                                                    onClick={() => navigate('/loans/list')}
-                                                                    title="Voir le prêt créé"
+                                                                    onClick={() => handleViewGrantDetails(request)}
+                                                                    title="Voir le prêt accordé"
                                                                 >
-                                                                    <i className="fas fa-hand-holding-usd"></i>
+                                                                    <i className="fas fa-file-contract"></i>
                                                                 </button>
                                                             )}
                                                         </div>
@@ -442,22 +469,22 @@ const LoanApproval = () => {
                             <h6 className="card-title">Légende:</h6>
                             <div className="row">
                                 <div className="col-md-3">
-                                    <span className="badge bg-success me-2">✅ Prêt créé</span>
-                                    <small>Prêt créé automatiquement</small>
+                                    <span className="badge bg-success me-2">💰 Prêt accordé</span>
+                                    <small>Prêt accordé par le trésorier</small>
                                 </div>
                                 <div className="col-md-3">
-                                    <span className="badge bg-warning me-2">🔄 Prêt en création...</span>
-                                    <small>Approuvé, prêt en cours de création</small>
+                                    <span className="badge bg-warning me-2">⏳ En attente d'accord</span>
+                                    <small>Approuvé, en attente d'accord</small>
                                 </div>
                                 <div className="col-md-3">
-                                    <span className="badge bg-secondary me-2">⏳ En attente</span>
-                                    <small>En attente d'approbation</small>
+                                    <span className="badge bg-secondary me-2">📝 En validation</span>
+                                    <small>En cours de validation</small>
                                 </div>
                                 <div className="col-md-3">
                                     <button className="btn btn-outline-warning btn-sm me-2">
-                                        <i className="fas fa-bolt"></i>
+                                        <i className="fas fa-hand-holding-usd"></i>
                                     </button>
-                                    <small>Forcer création prêt</small>
+                                    <small>Accorder le prêt (Trésorier)</small>
                                 </div>
                             </div>
                         </div>
