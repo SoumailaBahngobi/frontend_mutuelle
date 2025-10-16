@@ -76,7 +76,7 @@ const LoanRequestsValidator = () => {
         try {
             const token = localStorage.getItem('token');
             let endpoint = '';
-            
+
             switch (role) {
                 case 'PRESIDENT':
                     endpoint = `president`;
@@ -97,16 +97,50 @@ const LoanRequestsValidator = () => {
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
-            if (response.status === 200) {
-                alert('Demande approuvée avec succès !');
+            console.log('[handleApprove] response status:', response.status, 'data:', response.data);
+
+            // Accept any 2xx as success
+            if (response.status >= 200 && response.status < 300) {
+                alert('Demande approuv\u00e9e avec succ\u00e8s !');
                 setApprovalComment('');
-                setSelectedRequest(null);
+
+                // Update selectedRequest optimistically so the modal shows the new approval immediately
+                setLoanRequests((prev) => prev.map((r) => {
+                    if (r.id === requestId) {
+                        const updated = { ...r };
+                        if (role === 'PRESIDENT') updated.presidentApproved = true;
+                        if (role === 'SECRETARY') updated.secretaryApproved = true;
+                        if (role === 'TREASURER') updated.treasurerApproved = true;
+
+                        // If all three are true, set status to APPROVED locally (backend should do this too)
+                        if (updated.presidentApproved && updated.secretaryApproved && updated.treasurerApproved) {
+                            updated.status = 'APPROVED';
+                        }
+                        return updated;
+                    }
+                    return r;
+                }));
+
+                // Refresh server-side state but don't rely solely on it for UI feedback
                 fetchAllLoanRequests();
                 fetchValidatorStats();
+                setSelectedRequest(null);
             }
         } catch (error) {
             console.error('Erreur approbation:', error);
-            alert('Erreur lors de l\'approbation');
+            // Show clearer message depending on response
+            const status = error.response?.status;
+            if (status === 401) {
+                alert('Non authentifi\u00e9. Veuillez vous reconnecter.');
+                localStorage.removeItem('token');
+                navigate('/login');
+                return;
+            }
+            if (status === 403) {
+                alert('Acc\u00e8s refus\u00e9. Vous n\'avez pas les droits pour approuver.');
+                return;
+            }
+            alert("Erreur lors de l'approbation (voir console)");
         }
     };
 

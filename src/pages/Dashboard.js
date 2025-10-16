@@ -45,10 +45,6 @@ export default function Dashboard() {
       const formData = new FormData();
       formData.append('file', file);
 
-<<<<<<< HEAD
-=======
-      // Ne pas définir explicitement Content-Type; axios / le navigateur définira le boundary automatiquement
->>>>>>> c6a83a6f783ecac3e1e35768905f9bd3c47f8dc5
       const res = await axios.post('http://localhost:8080/mut/member/profile/photo', formData, {
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {})
@@ -67,7 +63,6 @@ export default function Dashboard() {
 
     } catch (err) {
       console.error('Erreur upload:', err);
-      // Afficher détails si disponibles
       const status = err.response?.status;
       const data = err.response?.data;
       console.error('[handlePhotoChange] response status:', status, 'data:', data);
@@ -106,10 +101,7 @@ export default function Dashboard() {
 
         setUser(res.data);
         await fetchLoanData(token, res.data.id);
-<<<<<<< HEAD
-=======
         await fetchNotifications(token);
->>>>>>> c6a83a6f783ecac3e1e35768905f9bd3c47f8dc5
 
       } catch (err) {
         console.error('Erreur chargement profil:', err);
@@ -212,10 +204,7 @@ export default function Dashboard() {
   const fetchLoanData = async (token, userId) => {
     try {
       console.log('[fetchLoanData] token present?', !!token);
-      // helpful debug: show token (trimmed) in dev only
-      if (token && process.env.NODE_ENV !== 'production') {
-        console.log('[fetchLoanData] token (start):', token.substring(0, 20) + '...');
-      }
+      
       // Charger mes demandes de prêt
       const requestsRes = await axios.get('http://localhost:8080/mut/loan_request/my-requests', {
         headers: { Authorization: `Bearer ${token}` }
@@ -243,7 +232,6 @@ export default function Dashboard() {
 
     } catch (error) {
       console.error('Erreur lors du chargement des données de prêt:', error);
-      // Afficher informations de réponse si disponibles (status, data)
       const status = error.response?.status;
       const respData = error.response?.data;
       console.error('[fetchLoanData] response status:', status, 'data:', respData);
@@ -356,8 +344,8 @@ export default function Dashboard() {
   return (
     <div className="container-fluid py-4">
       {/* Header avec informations utilisateur */}
-      <div className="row mb-2">
-        <div className="col-8">
+      <div className="row mb-4">
+        <div className="col-12">
           <div className="card shadow-sm border-0">
             <div className="card-body">
               <div className="row align-items-center">
@@ -365,11 +353,7 @@ export default function Dashboard() {
                   <div className="position-relative">
                     <img
                       src={user.photo || '/default-avatar.png'}
-<<<<<<< HEAD
                       alt={`Profil de ${user.firstName} ${user.name}`}
-=======
-                      alt="Profil"
->>>>>>> c6a83a6f783ecac3e1e35768905f9bd3c47f8dc5
                       className="rounded-circle shadow"
                       width={120}
                       height={120}
@@ -530,8 +514,8 @@ export default function Dashboard() {
 
       {/* Cartes de statistiques */}
       <div className="row mb-4">
-        <div className="col-xl-3 col-md-3 mb-2">
-          <div className="card border-left-primary shadow h-50 py-2">
+        <div className="col-xl-3 col-md-6 mb-4">
+          <div className="card border-left-primary shadow h-100 py-2">
             <div className="card-body">
               <div className="row no-gutters align-items-center">
                 <div className="col mr-2">
@@ -550,8 +534,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="col-xl-3 col-md-3 mb-2">
-          <div className="card border-left-success shadow h-50 py-2">
+        <div className="col-xl-3 col-md-6 mb-4">
+          <div className="card border-left-success shadow h-100 py-2">
             <div className="card-body">
               <div className="row no-gutters align-items-center">
                 <div className="col mr-2">
@@ -570,8 +554,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="col-xl-3 col-md-3 mb-2">
-          <div className="card border-left-warning shadow h-50 py-2">
+        <div className="col-xl-3 col-md-6 mb-4">
+          <div className="card border-left-warning shadow h-100 py-2">
             <div className="card-body">
               <div className="row no-gutters align-items-center">
                 <div className="col mr-2">
@@ -591,7 +575,7 @@ export default function Dashboard() {
         </div>
 
         <div className="col-xl-3 col-md-6 mb-4">
-          <div className="card border-left-info shadow h-50 py-2">
+          <div className="card border-left-info shadow h-100 py-2">
             <div className="card-body">
               <div className="row no-gutters align-items-center">
                 <div className="col mr-2">
@@ -655,42 +639,37 @@ export default function Dashboard() {
                         Consultez l'état de vos demandes de prêt
                       </p>
                       <button
-<<<<<<< HEAD
                         className="btn btn-info btn-sm w-100 text-white"
-                        onClick={() => navigate('/mut/loans')}
-=======
-                        className="btn btn-info btn-sm w-50 text-white"
                         onClick={() => navigate('/loans/requests')}
->>>>>>> c6a83a6f783ecac3e1e35768905f9bd3c47f8dc5
                       >
-                      Toutes les demandes de prêt
+                        Voir mes demandes
                       </button>
                     </div>
                   </div>
                 </div>
 
-                <div className="col-md-3 mb-2">
-                  <div className="card border-left-warning h-50">
+                <div className="col-md-3 mb-3">
+                  <div className="card border-left-warning h-100">
                     <div className="card-body">
                       <h6 className="card-title text-warning">
-                        <i className="fas fa-chart-line me-2"></i>
-                        Les Assistances
+                        <i className="fas fa-file-invoice me-2"></i>
+                        Mes Prêts
                       </h6>
                       <p className="card-text small text-muted">
-                        Suivez les assistances en cours et leur statut
+                        Suivez vos prêts en cours et leur statut
                       </p>
                       <button
-                        className="btn btn-warning btn-sm w-15"
-                        onClick={() => navigate('/loans/list')}
+                        className="btn btn-warning btn-sm w-100 text-dark"
+                        onClick={() => navigate('/loans/my-loans')}
                       >
-                        Toues les assistances
+                        Voir mes prêts
                       </button>
                     </div>
                   </div>
                 </div>
 
-                <div className="col-md-2 mb-1">
-                  <div className="card border-left-success h-15">
+                <div className="col-md-3 mb-3">
+                  <div className="card border-left-success h-100">
                     <div className="card-body">
                       <h6 className="card-title text-success">
                         <i className="fas fa-money-bill-wave me-2"></i>
@@ -700,7 +679,7 @@ export default function Dashboard() {
                         Gérez vos cotisations individuelles ou de groupe
                       </p>
                       <button
-                        className="btn btn-success btn-sm w-10"
+                        className="btn btn-success btn-sm w-100"
                         onClick={() => setShowContributionModal(true)}
                       >
                         Faire une cotisation
@@ -711,8 +690,8 @@ export default function Dashboard() {
               </div>
 
               {/* Aperçu rapide */}
-              <div className="row mt-2">
-                <div className="col-md-3">
+              <div className="row mt-4">
+                <div className="col-md-6">
                   <h6 className="text-muted mb-3">
                     <i className="fas fa-history me-2"></i>
                     Dernières demandes
@@ -734,7 +713,7 @@ export default function Dashboard() {
                   )}
                 </div>
 
-                <div className="col-md-3">
+                <div className="col-md-6">
                   <h6 className="text-muted mb-3">
                     <i className="fas fa-chart-line me-2"></i>
                     Prêts en cours
@@ -761,46 +740,40 @@ export default function Dashboard() {
 
           {/* Panel administrateur */}
           {isAdmin && (
-            <div className="card shadow mb-2">
+            <div className="card shadow mb-4">
               <div className="card-header bg-warning text-white py-3">
                 <h5 className="m-0 font-weight-bold">
                   <i className="fas fa-user-shield me-2"></i>
                   Panel Validation des Prêts
                 </h5>
-<<<<<<< HEAD
               </div>
               <div className="card-body">
                 <div className="row">
                   <div className="col-md-4 mb-3">
                     <div className="card border-primary h-100">
-=======
-                <div className="col-md-4 mb-3">
-                  <div className="card border-primary h-10">
-                    <div className="card-body text-center">
-                      <i className="fas fa-list-check fa-2x text-primary mb-2"></i>
-                      <h6>Approbation Prêts</h6>
-                      <button
-                        className="btn btn-primary btn-sm mt-2"
-                        onClick={() => navigate('/loans/approval-dashboard')}
-                      >
-                        Tableau d'approbation
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="card-body">
-                <div className="row">
-                  <div className="col-md-2 mb-2">
-                    <div className="card border-warning h-10">
->>>>>>> c6a83a6f783ecac3e1e35768905f9bd3c47f8dc5
                       <div className="card-body text-center">
                         <i className="fas fa-list-check fa-2x text-primary mb-2"></i>
-                        <h6>Tableau d'approbation</h6>
-                        <p className="small text-muted">Vue complète avec statistiques</p>
+                        <h6>Approbation Prêts</h6>
+                        <p className="small text-muted mb-3">Gérer les demandes de prêt en attente</p>
                         <button
-                          className="btn btn-primary btn-sm mt-2"
-                          onClick={() => navigate('/loans/approval-list')}
+                          className="btn btn-primary btn-sm"
+                          onClick={() => navigate('/loans/approval-dashboard')}
+                        >
+                          Tableau d'approbation
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="col-md-4 mb-3">
+                    <div className="card border-warning h-100">
+                      <div className="card-body text-center">
+                        <i className="fas fa-check-circle fa-2x text-warning mb-2"></i>
+                        <h6>Validation des Prêts</h6>
+                        <p className="small text-muted mb-3">Valider les prêts approuvés</p>
+                        <button
+                          className="btn btn-warning btn-sm text-dark"
+                          onClick={() => navigate('/loans/approval')}
                         >
                           Accéder
                         </button>
@@ -809,19 +782,14 @@ export default function Dashboard() {
                   </div>
 
                   <div className="col-md-4 mb-3">
-<<<<<<< HEAD
-                    <div className="card border-warning h-100">
-=======
-                    <div className="card border-info h-10">
->>>>>>> c6a83a6f783ecac3e1e35768905f9bd3c47f8dc5
+                    <div className="card border-info h-100">
                       <div className="card-body text-center">
-                        <i className="fas fa-check-circle fa-2x text-warning mb-2"></i>
-                        <h6>Validation rapide</h6>
-                        <p className="small text-muted">Approbations en attente</p>
+                        <i className="fas fa-calendar-alt fa-2x text-info mb-2"></i>
+                        <h6>Périodes Cotisation</h6>
+                        <p className="small text-muted mb-3">Gérer les périodes de cotisation</p>
                         <button
-                          className="btn btn-warning btn-sm mt-2"
-                          // onClick={() => navigate('/loans/approval')}
-                          onClick={() => navigate('/loans/approval-list')}
+                          className="btn btn-info btn-sm text-white"
+                          onClick={() => navigate('/mut/contribution_period')}
                         >
                           Valider
                         </button>
@@ -830,20 +798,32 @@ export default function Dashboard() {
                   </div>
 
                   <div className="col-md-4 mb-3">
-<<<<<<< HEAD
-                    <div className="card border-info h-100">
-=======
-                    <div className="card border-success h-10">
->>>>>>> c6a83a6f783ecac3e1e35768905f9bd3c47f8dc5
+                    <div className="card border-success h-100">
                       <div className="card-body text-center">
-                        <i className="fas fa-chart-bar fa-2x text-info mb-2"></i>
-                        <h6>Rapports validation</h6>
-                        <p className="small text-muted">Statistiques et historique</p>
+                        <i className="fas fa-plus-circle fa-2x text-success mb-2"></i>
+                        <h6>Créer Prêt</h6>
+                        <p className="small text-muted mb-3">Créer un nouveau prêt manuellement</p>
                         <button
-                          className="btn btn-info btn-sm mt-2 text-white"
-                          onClick={() => navigate('/loans/validation-reports')}
+                          className="btn btn-success btn-sm"
+                          onClick={() => navigate('/loans/create')}
                         >
                           Voir rapports
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="col-md-4 mb-3">
+                    <div className="card border-secondary h-100">
+                      <div className="card-body text-center">
+                        <i className="fas fa-users fa-2x text-secondary mb-2"></i>
+                        <h6>Gestion Membres</h6>
+                        <p className="small text-muted mb-3">Gérer les membres de la mutuelle</p>
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => navigate('/members')}
+                        >
+                          Gérer
                         </button>
                       </div>
                     </div>
@@ -886,7 +866,6 @@ export default function Dashboard() {
                 </div>
               ))}
 
-<<<<<<< HEAD
               {myLoans.some(loan => !loan.isRepaid && new Date(loan.endDate) < new Date()) && (
                 <div className="alert alert-warning d-flex align-items-center mb-3">
                   <i className="fas fa-exclamation-triangle me-2"></i>
@@ -897,15 +876,6 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {!myLoanRequests.some(req => req.status === 'APPROVED') &&
-                !myLoanRequests.some(req => req.status === 'REJECTED') &&
-                !myLoans.some(loan => !loan.isRepaid && new Date(loan.endDate) < new Date()) && (
-                  <div className="text-center text-muted py-3">
-                    <i className="fas fa-check-circle fa-2x mb-2"></i>
-                    <div>Aucune notification</div>
-                  </div>
-                )}
-=======
               {notifications.length === 0 && (
                 <div className="text-center text-muted py-3">
                   <i className="fas fa-bell-slash fa-2x mb-2"></i>
@@ -923,7 +893,6 @@ export default function Dashboard() {
                   </button>
                 </div>
               )}
->>>>>>> c6a83a6f783ecac3e1e35768905f9bd3c47f8dc5
             </div>
           </div>
 
@@ -957,6 +926,14 @@ export default function Dashboard() {
                   <i className="fas fa-headset me-2"></i>
                   Assistance
                 </button>
+
+                <button
+                  className="btn btn-outline-success btn-sm"
+                  onClick={() => navigate('/loans/request')}
+                >
+                  <i className="fas fa-plus me-2"></i>
+                  Nouvelle demande
+                </button>
               </div>
             </div>
           </div>
@@ -965,7 +942,7 @@ export default function Dashboard() {
 
       {/* Modal de sélection du type de cotisation */}
       {showContributionModal && (
-        <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+        <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} tabIndex="-1">
           <div className="modal-dialog modal-dialog-centered">
             <div className="modal-content">
               <div className="modal-header">
@@ -982,8 +959,8 @@ export default function Dashboard() {
               <div className="modal-body">
                 <p className="text-muted mb-4">Sélectionnez le type de cotisation que vous souhaitez effectuer :</p>
                 <div className="row g-3">
-                  <div className="col-md-">
-                    <div className="card h-10 border-primary">
+                  <div className="col-md-6">
+                    <div className="card h-100 border-primary">
                       <div className="card-body text-center">
                         <i className="fas fa-user fa-3x text-primary mb-3"></i>
                         <h6 className="card-title">Individuelle</h6>
