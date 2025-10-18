@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
@@ -8,11 +8,8 @@ const MyLoanRequests = () => {
     const [loading, setLoading] = useState(true);
     const [exportLoading, setExportLoading] = useState(false);
 
-    useEffect(() => {
-        fetchMyLoanRequests();
-    }, []);
-
-    const fetchMyLoanRequests = async () => {
+    // ✅ CORRECTION : Utilisation de useCallback pour stabiliser la fonction
+    const fetchMyLoanRequests = useCallback(async () => {
         try {
             setLoading(true);
             const token = localStorage.getItem('token');
@@ -27,7 +24,20 @@ const MyLoanRequests = () => {
             const response = await axios.get('http://localhost:8080/mut/loan_request/my-requests', {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            setLoanRequests(response.data);
+            
+            // ✅ CORRECTION : S'assurer que loanRequests est toujours un tableau
+            const data = response.data;
+            if (Array.isArray(data)) {
+                setLoanRequests(data);
+            } else if (data && typeof data === 'object') {
+                // Si c'est un objet unique, le mettre dans un tableau
+                setLoanRequests([data]);
+            } else {
+                // Si la réponse est null, undefined ou autre, utiliser un tableau vide
+                console.warn('Réponse inattendue du serveur:', data);
+                setLoanRequests([]);
+            }
+            
         } catch (error) {
             console.error('Erreur fetching my loan requests:', error);
             const status = error.response?.status;
@@ -53,9 +63,31 @@ const MyLoanRequests = () => {
             }
 
             alert('Erreur lors du chargement des demandes');
+            setLoanRequests([]); // ✅ S'assurer que c'est un tableau même en cas d'erreur
         } finally {
             setLoading(false);
         }
+    }, [navigate]); // ✅ navigate est une dépendance car utilisé dans la fonction
+
+    useEffect(() => {
+        fetchMyLoanRequests();
+    }, [fetchMyLoanRequests]); // ✅ Maintenant fetchMyLoanRequests est stable grâce à useCallback
+
+    // ✅ CORRECTION : Fonctions sécurisées pour les statistiques
+    const getTotalRequests = () => {
+        return Array.isArray(loanRequests) ? loanRequests.length : 0;
+    };
+
+    const getPendingCount = () => {
+        return Array.isArray(loanRequests) ? loanRequests.filter(r => r.status === 'PENDING').length : 0;
+    };
+
+    const getApprovedCount = () => {
+        return Array.isArray(loanRequests) ? loanRequests.filter(r => r.status === 'APPROVED').length : 0;
+    };
+
+    const getGrantedCount = () => {
+        return Array.isArray(loanRequests) ? loanRequests.filter(r => r.loanGranted).length : 0;
     };
 
     const getStatusBadge = (status) => {
@@ -98,6 +130,14 @@ const MyLoanRequests = () => {
 
     // Fonction pour exporter en Excel (avec vérification de la dépendance)
     const exportToExcel = async () => {
+        // ✅ CORRECTION : Vérifier que loanRequests est un tableau non vide
+        const requests = Array.isArray(loanRequests) ? loanRequests : [];
+        
+        if (requests.length === 0) {
+            alert('Aucune donnée à exporter');
+            return;
+        }
+
         setExportLoading(true);
         try {
             // Vérifier si xlsx est disponible
@@ -111,7 +151,7 @@ const MyLoanRequests = () => {
             }
 
             // Préparer les données pour l'export
-            const exportData = loanRequests.map(request => ({
+            const exportData = requests.map(request => ({
                 'ID': request.id,
                 'Membre': getMemberName(request),
                 'Email': getMemberEmail(request),
@@ -150,6 +190,14 @@ const MyLoanRequests = () => {
 
     // Fonction pour exporter en PDF (version simple)
     const exportToPDF = () => {
+        // ✅ CORRECTION : Vérifier que loanRequests est un tableau non vide
+        const requests = Array.isArray(loanRequests) ? loanRequests : [];
+        
+        if (requests.length === 0) {
+            alert('Aucune donnée à exporter');
+            return;
+        }
+
         setExportLoading(true);
         try {
             // Créer le contenu HTML pour le PDF
@@ -186,7 +234,7 @@ const MyLoanRequests = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                ${loanRequests.map(request => `
+                                ${requests.map(request => `
                                     <tr>
                                         <td>${getMemberName(request)}</td>
                                         <td>${getMemberEmail(request)}</td>
@@ -240,6 +288,14 @@ const MyLoanRequests = () => {
 
     // Fonction pour exporter en CSV
     const exportToCSV = () => {
+        // ✅ CORRECTION : Vérifier que loanRequests est un tableau non vide
+        const requests = Array.isArray(loanRequests) ? loanRequests : [];
+        
+        if (requests.length === 0) {
+            alert('Aucune donnée à exporter');
+            return;
+        }
+
         setExportLoading(true);
         try {
             // Préparer les données CSV
@@ -249,7 +305,7 @@ const MyLoanRequests = () => {
                 'Secrétaire approuvé', 'Trésorier approuvé'
             ].join(',');
 
-            const csvData = loanRequests.map(request => [
+            const csvData = requests.map(request => [
                 request.id,
                 `"${getMemberName(request)}"`,
                 `"${getMemberEmail(request)}"`,
@@ -298,6 +354,9 @@ const MyLoanRequests = () => {
         );
     }
 
+    // ✅ CORRECTION : S'assurer que loanRequests est un tableau pour le rendu
+    const displayRequests = Array.isArray(loanRequests) ? loanRequests : [];
+
     return (
         <div className="container mt-4">
             <div className="d-flex justify-content-between align-items-center mb-4">
@@ -308,21 +367,21 @@ const MyLoanRequests = () => {
                         <button 
                             className="btn btn-success"
                             onClick={exportToExcel}
-                            disabled={exportLoading || loanRequests.length === 0}
+                            disabled={exportLoading || displayRequests.length === 0}
                         >
                             {exportLoading ? '⏳' : '📊'} Excel
                         </button>
                         <button 
                             className="btn btn-danger"
                             onClick={exportToPDF}
-                            disabled={exportLoading || loanRequests.length === 0}
+                            disabled={exportLoading || displayRequests.length === 0}
                         >
                             {exportLoading ? '⏳' : '📄'} PDF
                         </button>
                         <button 
                             className="btn btn-info"
                             onClick={exportToCSV}
-                            disabled={exportLoading || loanRequests.length === 0}
+                            disabled={exportLoading || displayRequests.length === 0}
                         >
                             {exportLoading ? '⏳' : '📋'} CSV
                         </button>
@@ -344,12 +403,12 @@ const MyLoanRequests = () => {
             </div>
 
             {/* Statistiques */}
-            {loanRequests.length > 0 && (
+            {displayRequests.length > 0 && (
                 <div className="row mb-4">
                     <div className="col-md-3">
                         <div className="card text-white bg-primary">
                             <div className="card-body">
-                                <h5 className="card-title">{loanRequests.length}</h5>
+                                <h5 className="card-title">{getTotalRequests()}</h5>
                                 <p className="card-text">Total demandes</p>
                             </div>
                         </div>
@@ -358,7 +417,7 @@ const MyLoanRequests = () => {
                         <div className="card text-white bg-warning">
                             <div className="card-body">
                                 <h5 className="card-title">
-                                    {loanRequests.filter(r => r.status === 'PENDING').length}
+                                    {getPendingCount()}
                                 </h5>
                                 <p className="card-text">En attente</p>
                             </div>
@@ -368,7 +427,7 @@ const MyLoanRequests = () => {
                         <div className="card text-white bg-success">
                             <div className="card-body">
                                 <h5 className="card-title">
-                                    {loanRequests.filter(r => r.status === 'APPROVED').length}
+                                    {getApprovedCount()}
                                 </h5>
                                 <p className="card-text">Approuvées</p>
                             </div>
@@ -378,7 +437,7 @@ const MyLoanRequests = () => {
                         <div className="card text-white bg-info">
                             <div className="card-body">
                                 <h5 className="card-title">
-                                    {loanRequests.filter(r => r.loanGranted).length}
+                                    {getGrantedCount()}
                                 </h5>
                                 <p className="card-text">Prêts accordés</p>
                             </div>
@@ -387,7 +446,7 @@ const MyLoanRequests = () => {
                 </div>
             )}
 
-            {loanRequests.length === 0 ? (
+            {displayRequests.length === 0 ? (
                 <div className="alert alert-info text-center">
                     <h5>📭 Aucune demande de prêt</h5>
                     <p>Aucune demande de prêt n'a été trouvée.</p>
@@ -395,7 +454,7 @@ const MyLoanRequests = () => {
             ) : (
                 <>
                     <div className="row">
-                        {loanRequests.map(request => (
+                        {displayRequests.map(request => (
                             <div key={request.id} className="col-md-6 mb-3">
                                 <div className="card h-100">
                                     <div className="card-header d-flex justify-content-between align-items-center">

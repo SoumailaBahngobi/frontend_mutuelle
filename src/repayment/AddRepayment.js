@@ -18,7 +18,7 @@ const AddRepayment = () => {
         transactionReference: '',
         notes: ''
     });
-    const [paymentMode, setPaymentMode] = useState('single'); // 'single' ou 'installment'
+    const [paymentMode, setPaymentMode] = useState('single');
     const [installments, setInstallments] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -32,21 +32,16 @@ const AddRepayment = () => {
         try {
             setLoading(true);
             const token = localStorage.getItem('token');
-            const response = await axios.get('http://localhost:8080/mut/loan-requests/approved', {
+            const response = await axios.get('http://localhost:8080/mut/loans/active', {
                 headers: { 
                     Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 }
             });
             
-            const activeLoans = response.data.filter(loan => 
-                !loan.isRepaid && loan.status === 'APPROVED'
-            );
-            
-            setActiveLoans(activeLoans);
+            setActiveLoans(response.data);
         } catch (error) {
-            // console.error('Erreur lors du chargement des prêts:', error);
-            toast.error('Erreur lors du chargement des prêts. Voir la console pour plus de détails.');
+            console.error('Erreur lors du chargement des prêts:', error);
             
             if (error.code === 'ERR_NETWORK') {
                 setError('Impossible de joindre le serveur backend. Vérifiez que le serveur est démarré.');
@@ -63,6 +58,10 @@ const AddRepayment = () => {
             }
             if (status === 403) {
                 setError('Accès refusé — vous n\'avez pas la permission d\'accéder à ces prêts.');
+                return;
+            }
+            if (status === 404) {
+                setError('Endpoint non trouvé. Vérifiez la configuration du backend.');
                 return;
             }
 
@@ -117,7 +116,7 @@ const AddRepayment = () => {
                 amount: parseFloat(repaymentData.amount),
                 installmentNumber: repaymentData.installmentNumber ? parseInt(repaymentData.installmentNumber) : null,
                 totalInstallments: repaymentData.totalInstallments ? parseInt(repaymentData.totalInstallments) : null,
-                loanRequest: { id: parseInt(selectedLoan) }
+                loan: { id: parseInt(selectedLoan) }
             };
 
             // Nettoyer les champs non remplis
@@ -130,14 +129,31 @@ const AddRepayment = () => {
 
             console.log('Données envoyées:', submitData);
 
-            const response = await axios.post('http://localhost:8080/mut/repayment', submitData, {
-                headers: { 
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json'
+            // Essayer différents endpoints possibles
+            let response;
+            try {
+                response = await axios.post('http://localhost:8080/mut/repayment', submitData, {
+                    headers: { 
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+            } catch (endpointError) {
+                if (endpointError.response?.status === 404) {
+                    // Essayer un autre endpoint
+                    response = await axios.post('http://localhost:8080/mut/repayment', submitData, {
+                        headers: { 
+                            Authorization: `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                } else {
+                    throw endpointError;
                 }
-            });
+            }
 
             setSuccess('Remboursement enregistré avec succès !');
+            toast.success('Remboursement enregistré avec succès !');
             
             // Réinitialiser le formulaire
             setSelectedLoan('');
@@ -160,11 +176,20 @@ const AddRepayment = () => {
             
         } catch (error) {
             console.error('Erreur détaillée:', error);
-            const errorMessage = error.response?.data?.message 
-                || error.response?.data 
-                || error.message 
-                || 'Erreur lors de l\'enregistrement du remboursement';
+            let errorMessage = 'Erreur lors de l\'enregistrement du remboursement';
+            
+            if (error.response?.status === 403) {
+                errorMessage = 'Accès refusé. Vérifiez vos permissions.';
+            } else if (error.response?.status === 404) {
+                errorMessage = 'Endpoint non trouvé. Contactez l\'administrateur.';
+            } else if (error.response?.data) {
+                errorMessage = error.response.data.message || error.response.data;
+            } else {
+                errorMessage = error.message || errorMessage;
+            }
+            
             setError(errorMessage);
+            toast.error(errorMessage);
         } finally {
             setLoading(false);
         }
@@ -178,9 +203,9 @@ const AddRepayment = () => {
 
     // Calculer le montant total à rembourser
     const calculateTotalAmount = (loan) => {
-        if (!loan || !loan.requestAmount || !loan.interestRate) return 0;
+        if (!loan || !loan.amount || !loan.interestRate) return 0;
         
-        const principal = parseFloat(loan.requestAmount);
+        const principal = parseFloat(loan.amount);
         const interestRate = parseFloat(loan.interestRate) / 100;
         const total = principal + (principal * interestRate);
         
@@ -280,7 +305,7 @@ const AddRepayment = () => {
                             ) : activeLoans.length === 0 ? (
                                 <div className="alert alert-warning">
                                     <i className="fas fa-exclamation-circle me-2"></i>
-                                    Aucun prêt approuvé et actif disponible pour le remboursement.
+                                    Aucun prêt actif disponible pour le remboursement.
                                 </div>
                             ) : (
                                 <form onSubmit={handleSubmit}>
@@ -302,7 +327,7 @@ const AddRepayment = () => {
                                             {activeLoans.map(loan => (
                                                 <option key={loan.id} value={loan.id}>
                                                     {loan.member?.name || 'N/A'} {loan.member?.firstName || ''} - 
-                                                    Montant: {loan.requestAmount?.toFixed(2) || ''} FCFA - 
+                                                    Montant: {loan.amount?.toFixed(2) || ''} FCFA - 
                                                     Durée: {loan.duration} mois
                                                 </option>
                                             ))}
@@ -326,14 +351,13 @@ const AddRepayment = () => {
                                                             {loanDetails.member?.name || 'N/A'} {loanDetails.member?.firstName || ''}
                                                         </div>
                                                         <div className="col-md-4">
-                                                            <strong>Montant demandé:</strong><br/>
-                                                            {loanDetails.requestAmount?.toFixed(2) || '0000'} FCFA
+                                                            <strong>Montant du prêt:</strong><br/>
+                                                            {loanDetails.amount?.toFixed(2) || '0000'} FCFA
                                                         </div>
                                                         <div className="col-md-4">
                                                             <strong>Montant total à rembourser:</strong><br/>
                                                             <span className="text-success fw-bold">
-                                                                {/* {calculateTotalAmount(loanDetails)} FCFA */}
-                                                                {loanDetails.requestAmount?.toFixed(2) || '0000'} FCFA
+                                                                {calculateTotalAmount(loanDetails)} FCFA
                                                             </span>
                                                         </div>
                                                     </div>
@@ -342,8 +366,7 @@ const AddRepayment = () => {
                                                         <div className="col-md-4">
                                                             <strong>Montant restant:</strong><br/>
                                                             <span className="text-warning fw-bold">
-                                                                {/* {calculateRemainingAmount(loanDetails)} FCFA */}
-                                                                {loanDetails.requestAmount?.toFixed() || '0000'} FCFA
+                                                                {calculateRemainingAmount(loanDetails)} FCFA
                                                             </span>
                                                         </div>
                                                         <div className="col-md-4">

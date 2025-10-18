@@ -38,13 +38,65 @@ const LoanApproval = () => {
                 headers: { Authorization: `Bearer ${token}` }
             });
             
-            setLoanRequests(res.data);
+            // ✅ CORRECTION : S'assurer que loanRequests est toujours un tableau
+            const data = res.data;
+            console.log('📊 Données reçues:', data);
+            
+            if (Array.isArray(data)) {
+                setLoanRequests(data);
+            } else if (data && typeof data === 'object') {
+                // Si c'est un objet unique, le mettre dans un tableau
+                setLoanRequests([data]);
+            } else {
+                // Si null, undefined ou autre type, utiliser un tableau vide
+                console.warn('Réponse inattendue du serveur:', data);
+                setLoanRequests([]);
+            }
+            
         } catch (err) {
             console.error('Erreur chargement demandes:', err);
             setError('Impossible de charger les demandes de prêt');
+            setLoanRequests([]); // ✅ S'assurer que c'est un tableau même en cas d'erreur
         } finally {
             setLoading(false);
         }
+    };
+
+    // ✅ CORRECTION : Toujours s'assurer que loanRequests est un tableau avant filter
+    const getFilteredRequests = () => {
+        const requests = Array.isArray(loanRequests) ? loanRequests : [];
+        
+        if (filter === 'all') return requests;
+        if (filter === 'pending_grant') {
+            return requests.filter(request => request.status === 'APPROVED' && !request.loanGranted);
+        }
+        return requests.filter(request => request.status === filter.toUpperCase());
+    };
+
+    // ✅ CORRECTION : Fonctions de statistiques sécurisées
+    const getPendingCount = () => {
+        const requests = Array.isArray(loanRequests) ? loanRequests : [];
+        return requests.filter(request => request.status === 'PENDING').length;
+    };
+
+    const getInReviewCount = () => {
+        const requests = Array.isArray(loanRequests) ? loanRequests : [];
+        return requests.filter(request => request.status === 'IN_REVIEW').length;
+    };
+
+    const getApprovedCount = () => {
+        const requests = Array.isArray(loanRequests) ? loanRequests : [];
+        return requests.filter(request => request.status === 'APPROVED').length;
+    };
+
+    const getRejectedCount = () => {
+        const requests = Array.isArray(loanRequests) ? loanRequests : [];
+        return requests.filter(request => request.status === 'REJECTED').length;
+    };
+
+    const getPendingGrantCount = () => {
+        const requests = Array.isArray(loanRequests) ? loanRequests : [];
+        return requests.filter(request => request.status === 'APPROVED' && !request.loanGranted).length;
     };
 
     const getStatusBadge = (status) => {
@@ -194,13 +246,9 @@ const LoanApproval = () => {
         }
     };
 
-    const filteredRequests = loanRequests.filter(request => {
-        if (filter === 'all') return true;
-        if (filter === 'pending_grant') {
-            return request.status === 'APPROVED' && !request.loanGranted;
-        }
-        return request.status === filter.toUpperCase();
-    });
+    // ✅ CORRECTION : Utiliser un tableau sécurisé pour l'affichage
+    const displayRequests = Array.isArray(loanRequests) ? loanRequests : [];
+    const filteredRequests = getFilteredRequests();
 
     if (loading) {
         return (
@@ -258,42 +306,42 @@ const LoanApproval = () => {
                                     className={`btn ${filter === 'all' ? 'btn-primary' : 'btn-outline-primary'}`}
                                     onClick={() => setFilter('all')}
                                 >
-                                    Toutes ({loanRequests.length})
+                                    Toutes ({displayRequests.length})
                                 </button>
                                 <button
                                     type="button"
                                     className={`btn ${filter === 'pending' ? 'btn-warning' : 'btn-outline-warning'}`}
                                     onClick={() => setFilter('pending')}
                                 >
-                                    En attente ({loanRequests.filter(r => r.status === 'PENDING').length})
+                                    En attente ({getPendingCount()})
                                 </button>
                                 <button
                                     type="button"
                                     className={`btn ${filter === 'in_review' ? 'btn-info' : 'btn-outline-info'}`}
                                     onClick={() => setFilter('in_review')}
                                 >
-                                    En examen ({loanRequests.filter(r => r.status === 'IN_REVIEW').length})
+                                    En examen ({getInReviewCount()})
                                 </button>
                                 <button
                                     type="button"
                                     className={`btn ${filter === 'approved' ? 'btn-success' : 'btn-outline-success'}`}
                                     onClick={() => setFilter('approved')}
                                 >
-                                    Approuvées ({loanRequests.filter(r => r.status === 'APPROVED').length})
+                                    Approuvées ({getApprovedCount()})
                                 </button>
                                 <button
                                     type="button"
                                     className={`btn ${filter === 'pending_grant' ? 'btn-warning' : 'btn-outline-warning'}`}
                                     onClick={() => setFilter('pending_grant')}
                                 >
-                                    ⏳ À accorder ({loanRequests.filter(r => r.status === 'APPROVED' && !r.loanGranted).length})
+                                    ⏳ À accorder ({getPendingGrantCount()})
                                 </button>
                                 <button
                                     type="button"
                                     className={`btn ${filter === 'rejected' ? 'btn-danger' : 'btn-outline-danger'}`}
                                     onClick={() => setFilter('rejected')}
                                 >
-                                    Rejetées ({loanRequests.filter(r => r.status === 'REJECTED').length})
+                                    Rejetées ({getRejectedCount()})
                                 </button>
                             </div>
                         </div>

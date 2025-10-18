@@ -209,24 +209,43 @@ export default function Dashboard() {
       const requestsRes = await axios.get('http://localhost:8080/mut/loan_request/my-requests', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setMyLoanRequests(requestsRes.data);
+      
+      // S'assurer que c'est un tableau
+      const loanRequests = Array.isArray(requestsRes.data) ? requestsRes.data : [];
+      setMyLoanRequests(loanRequests);
 
       // Charger mes prêts
       const loansRes = await axios.get('http://localhost:8080/mut/loans', {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      // Filtrer seulement les prêts de l'utilisateur connecté
-      const userLoans = loansRes.data.filter(loan =>
-        loan.member && loan.member.id === userId
+      // Debug: Vérifier la structure de la réponse
+      console.log('[fetchLoanData] loansRes.data:', loansRes.data);
+      console.log('[fetchLoanData] loansRes.data type:', typeof loansRes.data);
+      console.log('[fetchLoanData] loansRes.data isArray:', Array.isArray(loansRes.data));
+
+      // S'assurer que c'est un tableau et filtrer seulement les prêts de l'utilisateur connecté
+      let loansData = [];
+      
+      if (Array.isArray(loansRes.data)) {
+        loansData = loansRes.data;
+      } else if (loansRes.data && typeof loansRes.data === 'object') {
+        // Si c'est un objet, essayer d'extraire un tableau
+        loansData = loansRes.data.content || loansRes.data.loans || loansRes.data.data || [];
+      }
+      
+      console.log('[fetchLoanData] loansData after processing:', loansData);
+
+      const userLoans = loansData.filter(loan =>
+        loan && loan.member && loan.member.id === userId
       );
       setMyLoans(userLoans);
 
       // Calculer les statistiques
       setStats({
-        totalRequests: requestsRes.data.length,
+        totalRequests: loanRequests.length,
         activeLoans: userLoans.filter(loan => !loan.isRepaid).length,
-        pendingApprovals: requestsRes.data.filter(req => req.status === 'PENDING').length,
+        pendingApprovals: loanRequests.filter(req => req.status === 'PENDING').length,
         totalContributions: 0 // À implémenter selon votre API
       });
 
@@ -500,7 +519,7 @@ export default function Dashboard() {
                           onClick={() => deleteNotification(notification.id)}
                           title="Supprimer"
                         >
-                          <i className="fas fa-trash"></i>
+                            <i className="fas fa-trash"></i>
                         </button>
                       </div>
                     </div>
