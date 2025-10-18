@@ -941,9 +941,10 @@ export default function Dashboard() {
                   Remboursement
                 </button>
 
-                <button className="btn btn-outline-warning btn-sm">
+                <button className="btn btn-outline-warning btn-sm"
+                  onClick={() => navigate('/mut/event')}>
                   <i className="fas fa-headset me-2"></i>
-                  Assistance
+                  Evenements
                 </button>
 
                 <button

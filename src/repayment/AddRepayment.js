@@ -158,6 +158,7 @@ const AddRepayment = () => {
             // Réinitialiser le formulaire
             setSelectedLoan('');
             setRepaymentData({
+                //amount: '',
                 amount: '',
                 repaymentDate: new Date().toISOString().split('T')[0],
                 dueDate: '',
@@ -209,7 +210,7 @@ const AddRepayment = () => {
         const interestRate = parseFloat(loan.interestRate) / 100;
         const total = principal + (principal * interestRate);
         
-        return total.toFixed(2);
+        return total.toFixed(0);
     };
 
     // Calculer le montant restant
@@ -227,10 +228,11 @@ const AddRepayment = () => {
     const generateInstallmentPlan = () => {
         if (!loanDetails) return;
 
-        const remainingAmount = parseFloat(calculateRemainingAmount(loanDetails));
+        //const remainingAmount = parseFloat(calculateRemainingAmount(loanDetails));
+        const remainingAmount = parseFloat((loanDetails.amount) || 0);
         const totalInstallments = parseInt(loanDetails.duration) || 12;
         
-        const installmentAmount = (remainingAmount / totalInstallments).toFixed(2);
+        const installmentAmount = (remainingAmount / totalInstallments).toFixed(0);
         const today = new Date();
         
         const plan = [];
@@ -278,7 +280,7 @@ const AddRepayment = () => {
                         <div className="card-header bg-primary text-white">
                             <h3 className="card-title mb-0">
                                 <i className="fas fa-money-bill-wave me-2"></i>
-                                Enregistrer un Remboursement
+                                Rembourser
                             </h3>
                         </div>
                         <div className="card-body">
@@ -327,7 +329,7 @@ const AddRepayment = () => {
                                             {activeLoans.map(loan => (
                                                 <option key={loan.id} value={loan.id}>
                                                     {loan.member?.name || 'N/A'} {loan.member?.firstName || ''} - 
-                                                    Montant: {loan.amount?.toFixed(2) || ''} FCFA - 
+                                                    Montant: {loan.amount?.toFixed(0) || ''} FCFA - 
                                                     Durée: {loan.duration} mois
                                                 </option>
                                             ))}
@@ -352,12 +354,13 @@ const AddRepayment = () => {
                                                         </div>
                                                         <div className="col-md-4">
                                                             <strong>Montant du prêt:</strong><br/>
-                                                            {loanDetails.amount?.toFixed(2) || '0000'} FCFA
+                                                            {loanDetails.amount?.toFixed(0) || '0000'} FCFA
                                                         </div>
                                                         <div className="col-md-4">
                                                             <strong>Montant total à rembourser:</strong><br/>
                                                             <span className="text-success fw-bold">
-                                                                {calculateTotalAmount(loanDetails)} FCFA
+                                                               {/* {calculateTotalAmount(loanDetails.amount)} FCFA*/}
+                                                               {loanDetails.amount?.toFixed(0) || '0000'} FCFA
                                                             </span>
                                                         </div>
                                                     </div>
@@ -366,7 +369,7 @@ const AddRepayment = () => {
                                                         <div className="col-md-4">
                                                             <strong>Montant restant:</strong><br/>
                                                             <span className="text-warning fw-bold">
-                                                                {calculateRemainingAmount(loanDetails)} FCFA
+                                                                {calculateRemainingAmount(loanDetails.amount)} FCFA
                                                             </span>
                                                         </div>
                                                         <div className="col-md-4">

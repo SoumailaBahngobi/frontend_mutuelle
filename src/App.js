@@ -19,6 +19,7 @@ import MyLoans from './loan/MyLoans.js';
 import Home from './pages/Home.js';
 import TreasurerLoanDashboard from './treasurer/TreasurerLoanDashboard.js';
 import RoleProtectedRoute from './treasurer/RoleProtectedRoute.js';
+import AddEvent from './evenement/AddEvent.js';
 
 function App() {
   return (
@@ -38,6 +39,7 @@ function App() {
         <Route path="/mut/contribution/individual" element={<AddIndividualContribution />} />
         <Route path="/mut/contribution/group" element={<AddGroupContribution />} />
         <Route path="/mut/contribution/individual/my-contributions" element={<ContributionHistory />} />
+        <Route path="/mut/event" element={<AddEvent/>} />
 
         {/* Routes prêts */}
         <Route path="/loans/request" element={<AddLoanRequest />} />
