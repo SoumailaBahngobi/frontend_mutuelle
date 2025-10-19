@@ -948,6 +948,14 @@ export default function Dashboard() {
                 </button>
 
                 <button
+                  className="btn btn-outline-info btn-sm"
+                  onClick={() => navigate('/mut/event/list')}
+                >
+                  <i className="fas fa-credit-card me-2"></i>
+                  Voir les Evenements
+                </button>
+
+                <button
                   className="btn btn-outline-success btn-sm"
                   onClick={() => navigate('/loans/request')}
                 >

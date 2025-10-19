@@ -20,6 +20,9 @@ import Home from './pages/Home.js';
 import TreasurerLoanDashboard from './treasurer/TreasurerLoanDashboard.js';
 import RoleProtectedRoute from './treasurer/RoleProtectedRoute.js';
 import AddEvent from './evenement/AddEvent.js';
+import RepaymentList from './repayment/RepaymentList.js';
+import LoanList from './loan/LoanList.js';
+import EventList from './evenement/EventList.js';
 
 function App() {
   return (
@@ -50,6 +53,10 @@ function App() {
         <Route path="/loans/requests" element={<MyLoanRequests />} />
         <Route path="/loans/my-loans" element={<MyLoans />} />
 
+        <Route path='/mut/repayments/view' element={<RepaymentList />} />
+        <Route path='/mut/loan-list' element={<LoanList />} />
+        <Route path='/mut/event/list' element={<EventList />} />
+
         {/* Routes administration */}
         <Route path="/members" element={<AddMember />} />
         <Route path="/repayment" element={<AddRepayment />} />
@@ -60,6 +67,7 @@ function App() {
               <TreasurerLoanDashboard />
             </RoleProtectedRoute>
           } />
+
 
         {/* Route 404 */}
         <Route path="*" element={<NotFound />} />
