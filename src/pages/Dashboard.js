@@ -84,7 +84,7 @@ export default function Dashboard() {
       const requestsRes = await axios.get('http://localhost:8080/mut/loan_request/my-requests', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       const loanRequests = Array.isArray(requestsRes.data) ? requestsRes.data : [];
       setMyLoanRequests(loanRequests);
 
@@ -93,13 +93,13 @@ export default function Dashboard() {
       });
 
       let loansData = [];
-      
+
       if (Array.isArray(loansRes.data)) {
         loansData = loansRes.data;
       } else if (loansRes.data && typeof loansRes.data === 'object') {
         loansData = loansRes.data.content || loansRes.data.loans || loansRes.data.data || [];
       }
-      
+
       const userLoans = loansData.filter(loan =>
         loan && loan.member && loan.member.id === userId
       );
@@ -213,7 +213,7 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="col-auto">
-                  <button 
+                  <button
                     className="btn btn-warning btn-sm position-relative me-1"
                     onClick={() => setShowNotificationsPanel(!showNotificationsPanel)}
                   >
@@ -302,7 +302,7 @@ export default function Dashboard() {
                   <i className="fas fa-list me-1"></i>
                   Mes Demandes
                 </button>
-               {/* <button
+                {/* <button
                   className="btn btn-outline-primary btn-sm"
                   onClick={() => navigate('/loans/my-loans')}
                 >
@@ -376,7 +376,7 @@ export default function Dashboard() {
                   <i className="fas fa-history me-1"></i>
                   Historique
                 </button>
-               
+
               </div>
             </div>
           </div>
@@ -411,6 +411,7 @@ export default function Dashboard() {
         </div>
 
         {/* Panel de Validation (Admin seulement) */}
+        {/*}
         {isAdmin && (
           <div className="col-md-3">
             <div className="card shadow-sm h-100">
@@ -455,6 +456,84 @@ export default function Dashboard() {
             </div>
           </div>
         )}
+
+        */}
+
+
+        {/* Panel de Validation (Admin seulement) */}
+        {isAdmin && (
+          <div className="col-md-3">
+            <div className="card shadow-sm h-100">
+              <div className="card-header bg-secondary text-white py-1 px-2">
+                <small className="fw-bold">
+                  <i className="fas fa-user-shield me-1"></i>
+                  Administration
+                </small>
+              </div>
+              <div className="card-body p-2">
+                <div className="d-grid gap-1">
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => navigate('/loans/approval-dashboard')}
+                  >
+                    <i className="fas fa-list-check me-1"></i>
+                    Approbation
+                  </button>
+                  <button
+                    className="btn btn-outline-secondary btn-sm"
+                    onClick={() => navigate('/loans/approval')}
+                  >
+                    <i className="fas fa-check-circle me-1"></i>
+                    Validation
+                  </button>
+                  <button
+                    className="btn btn-outline-secondary btn-sm"
+                    onClick={() => navigate('/mut/contribution_period')}
+                  >
+                    <i className="fas fa-calendar-alt me-1"></i>
+                    Périodes
+                  </button>
+
+                  {/* NOUVEAUX BOUTONS GESTION DES MEMBRES */}
+                  <div className="dropdown">
+                    <button
+                      className="btn btn-outline-secondary btn-sm dropdown-toggle w-100"
+                      type="button"
+                      data-bs-toggle="dropdown"
+                      aria-expanded="false"
+                    >
+                      <i className="fas fa-users me-1"></i>
+                      Gérer Membres
+                    </button>
+                    <ul className="dropdown-menu w-100">
+                      <li>
+                        <button
+                          className="dropdown-item"
+                          onClick={() => navigate('/members/add')}
+                        >
+                          <i className="fas fa-user-plus me-2 text-success"></i>
+                          Ajouter Membre
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          className="dropdown-item"
+                          onClick={() => navigate('/members/list')}
+                        >
+                          <i className="fas fa-list me-2 text-primary"></i>
+                          Voir Tous les Membres
+                        </button>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+
+
       </div>
 
       {/* Aperçu rapide des prêts */}
@@ -526,7 +605,7 @@ export default function Dashboard() {
               <i className="fas fa-bell me-1"></i>
               Notifications ({notifications.length})
             </small>
-            <button 
+            <button
               className="btn btn-sm btn-outline-primary"
               onClick={() => setShowNotificationsPanel(false)}
             >
@@ -539,8 +618,8 @@ export default function Dashboard() {
             ) : (
               <div className="small">
                 {notifications.slice(0, 5).map(notification => (
-                  <div 
-                    key={notification.id} 
+                  <div
+                    key={notification.id}
                     className={`p-2 border-bottom ${notification.read ? '' : 'bg-light'}`}
                   >
                     <div className="d-flex justify-content-between">

@@ -277,7 +277,7 @@ function AddMember() {
                                     <button 
                                         type="button" 
                                         className="btn btn-outline-secondary me-md-2"
-                                        onClick={() => navigate('/login')}
+                                        onClick={() => navigate('/dashboard')}
                                         disabled={loading}
                                     >
                                         Annuler

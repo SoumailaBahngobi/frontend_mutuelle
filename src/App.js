@@ -25,12 +25,16 @@ import RepaymentList from './repayment/RepaymentList.js';
 import LoanList from './loan/LoanList.js';
 import EventList from './evenement/EventList.js';
 import Footer from './pages/layout/footer.js';
+import ViewMember from './members/ViewMember.js';
+import EditMember from './members/EditMember.js';
+
+///mut/member/profile/update
 
 function App() {
   return (
     <div className="d-flex flex-column min-vh-100">
       <Navbar />
-      
+
       {/* Contenu principal qui s'étend pour pousser le footer vers le bas */}
       <main className="flex-grow-1">
         <Routes>
@@ -47,7 +51,7 @@ function App() {
           <Route path="/mut/contribution/individual" element={<AddIndividualContribution />} />
           <Route path="/mut/contribution/group" element={<AddGroupContribution />} />
           <Route path="/mut/contribution/individual/my-contributions" element={<ContributionHistory />} />
-          <Route path="/mut/event" element={<AddEvent/>} />
+          <Route path="/mut/event" element={<AddEvent />} />
 
           {/* Routes prêts */}
           <Route path="/loans/request" element={<AddLoanRequest />} />
@@ -68,10 +72,15 @@ function App() {
           <Route path="/contribution-period" element={<AddContributionPeriod />} />
 
           <Route path="/treasurer/loans" element={
-              <RoleProtectedRoute allowedRoles={['TREASURER', 'ADMIN']}>
-                <TreasurerLoanDashboard />
-              </RoleProtectedRoute>
-            } />
+            <RoleProtectedRoute allowedRoles={['TREASURER', 'ADMIN']}>
+              <TreasurerLoanDashboard />
+            </RoleProtectedRoute>
+          } />
+
+          <Route path="/edit-member/:id" element={<EditMember />} />
+          <Route path="/members/add" element={<AddMember />} />
+          <Route path="/members/edit/:id" element={<EditMember />} />
+          <Route path="/members/list" element={<ViewMember />} />
 
           {/* Route 404 */}
           <Route path="*" element={<NotFound />} />
@@ -109,7 +118,7 @@ function NotFound() {
           <p className="text-muted mb-4">
             La page que vous recherchez n'existe pas ou a été déplacée.
           </p>
-          <button 
+          <button
             className="btn btn-primary"
             onClick={() => window.history.back()}
           >

@@ -10,6 +10,9 @@ export default function Login() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -23,7 +26,6 @@ export default function Login() {
     setError('');
     
     if (!form.email || !form.password) {
-      //setError('Veuillez remplir tous les champs');
       toast.error('Veuillez remplir tous les champs');
       return;
     }
@@ -32,11 +34,10 @@ export default function Login() {
 
     try {
       const res = await axios.post('http://localhost:8080/mut/login', form);
-      // Affichage temporaire pour debug
-      // alert('Réponse backend: ' + JSON.stringify(res.data));
+      
       if (res.data && res.data.token) {
         localStorage.setItem('token', res.data.token);
-        // alert('Token stocké: ' + localStorage.getItem('token'));
+        
         let userData = null;
         if (res.data.user) {
           userData = res.data.user;
@@ -45,31 +46,29 @@ export default function Login() {
         } else {
           userData = await fetchUserProfile(res.data.token);
         }
+        
         if (userData) {
           localStorage.setItem('currentUser', JSON.stringify(userData));
+          toast.success('Connexion réussie !');
           navigate('/dashboard');
         } else {
-         // setError("Connexion réussie, mais accès au profil refusé (403). Contactez l'administrateur.");
-          toast.error("Connexion réussie, mais accès au profil refusé (403). Contactez l'administrateur.");
+          toast.error("Connexion réussie, mais accès au profil refusé. Contactez l'administrateur.");
         }
       } else {
-       // setError("Réponse invalide du serveur");
         toast.error("Réponse invalide du serveur");
       }
     } catch (err) {
       console.error('Erreur de connexion:', err);
       if (err.response?.status === 401) {
-       // setError("Email ou mot de passe incorrect");
-        toast.error("Email ou mot de passe incorrect");
+        const errorMessage = "Email ou mot de passe incorrect";
+        setError(errorMessage);
+        toast.error(errorMessage);
       } else if (err.response?.status === 400) {
-       // setError("Données de connexion invalides");
         toast.error("Données de connexion invalides");
       } else if (err.response?.status >= 500) {
-      //  setError("Erreur serveur. Veuillez réessayer.");
         toast.error("Erreur serveur. Veuillez réessayer.");
       } else {
-      //  setError("Erreur de connexion. Vérifiez votre réseau.");
-      toast.error("Erreur de connexion. Vérifiez votre réseau.");
+        toast.error("Erreur de connexion. Vérifiez votre réseau.");
       }
     } finally {
       setLoading(false);
@@ -83,10 +82,49 @@ export default function Login() {
       });
       return response.data;
     } catch (error) {
-    //  console.error('Erreur lors de la récupération du profil:', error);
-    toast.error('Erreur lors de la récupération du profil. Veuillez réessayer.');
+      toast.error('Erreur lors de la récupération du profil. Veuillez réessayer.');
       return null;
     }
+  };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    
+    if (!forgotPasswordEmail) {
+      toast.error('Veuillez entrer votre adresse email');
+      return;
+    }
+
+    setForgotPasswordLoading(true);
+
+    try {
+      // Appel à votre API pour la réinitialisation du mot de passe
+      const response = await axios.post('http://localhost:8080/mut/forgot-password', {
+        email: forgotPasswordEmail
+      });
+
+      if (response.status === 200) {
+        toast.success('Un email de réinitialisation a été envoyé à votre adresse');
+        setShowForgotPassword(false);
+        setForgotPasswordEmail('');
+      }
+    } catch (error) {
+      console.error('Erreur mot de passe oublié:', error);
+      if (error.response?.status === 404) {
+        toast.error('Aucun compte trouvé avec cette adresse email');
+      } else {
+        toast.error('Erreur lors de la demande de réinitialisation');
+      }
+    } finally {
+      setForgotPasswordLoading(false);
+    }
+  };
+
+  const simulateForgotPassword = () => {
+    // Simulation si l'API n'est pas encore implémentée
+    toast.info('Fonctionnalité "Mot de passe oublié" en cours de développement');
+    setShowForgotPassword(false);
+    setForgotPasswordEmail('');
   };
 
   return (
@@ -94,8 +132,84 @@ export default function Login() {
       <div className="container">
         <div className="row justify-content-center">
           <div className="col-md-6 col-lg-5">
-            <div className="card shadow-lg border-0 rounded-3">
             
+            {/* Modal Mot de passe oublié */}
+            {showForgotPassword && (
+              <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} tabIndex="-1">
+                <div className="modal-dialog modal-dialog-centered">
+                  <div className="modal-content">
+                    <div className="modal-header">
+                      <h5 className="modal-title">
+                        <i className="bi bi-key me-2"></i>
+                        Mot de passe oublié
+                      </h5>
+                      <button
+                        type="button"
+                        className="btn-close"
+                        onClick={() => {
+                          setShowForgotPassword(false);
+                          setForgotPasswordEmail('');
+                        }}
+                      ></button>
+                    </div>
+                    <div className="modal-body">
+                      <p className="text-muted mb-3">
+                        Entrez votre adresse email pour recevoir un lien de réinitialisation.
+                      </p>
+                      <form onSubmit={handleForgotPassword}>
+                        <div className="form-group mb-3">
+                          <label htmlFor="forgotPasswordEmail" className="form-label">
+                            Email
+                          </label>
+                          <input 
+                            type="email" 
+                            className="form-control"
+                            id="forgotPasswordEmail" 
+                            value={forgotPasswordEmail} 
+                            onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                            placeholder="votre@email.com"
+                            required
+                            disabled={forgotPasswordLoading}
+                          />
+                        </div>
+                        <div className="d-grid gap-2">
+                          <button 
+                            type="submit" 
+                            className="btn btn-primary"
+                            disabled={forgotPasswordLoading}
+                          >
+                            {forgotPasswordLoading ? (
+                              <>
+                                <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                                Envoi en cours...
+                              </>
+                            ) : (
+                              <>
+                                <i className="bi bi-send me-2"></i>
+                                Envoyer le lien
+                              </>
+                            )}
+                          </button>
+                          <button 
+                            type="button" 
+                            className="btn btn-outline-secondary"
+                            onClick={simulateForgotPassword}
+                            disabled={forgotPasswordLoading}
+                          >
+                            <i className="bi bi-lightbulb me-2"></i>
+                            Solution temporaire
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Carte de connexion principale */}
+            <div className="card shadow-lg border-0 rounded-3">
+              
               <div className="card-header bg-primary text-white text-center py-3 rounded-top-3">
                 <h4 className="fw-bold mb-0">
                   <i className="bi bi-shield-lock me-2"></i>
@@ -123,7 +237,7 @@ export default function Login() {
                     />
                   </div>
 
-                  <div className="form-group mb-4">
+                  <div className="form-group mb-3">
                     <label htmlFor="password" className="form-label fw-semibold">
                       <i className="bi bi-lock me-2"></i>
                       Mot de passe
@@ -141,10 +255,36 @@ export default function Login() {
                     />
                   </div>
 
+                  {/* Lien Mot de passe oublié */}
+                  <div className="text-end mb-4">
+                    <button
+                      type="button"
+                      className="btn btn-link p-0 text-decoration-none"
+                      onClick={() => setShowForgotPassword(true)}
+                    >
+                      <small>
+                        <i className="bi bi-question-circle me-1"></i>
+                        Mot de passe oublié ?
+                      </small>
+                    </button>
+                  </div>
+
                   {error && (
-                    <div className="alert alert-danger d-flex align-items-center mb-4" role="alert">
+                    <div className="alert alert-warning d-flex align-items-center mb-4" role="alert">
                       <i className="bi bi-exclamation-triangle me-2"></i>
-                      <div className="small">{error}</div>
+                      <div className="small">
+                        <strong>Identifiants incorrects</strong>
+                        <div className="mt-1">
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-outline-primary"
+                            onClick={() => setShowForgotPassword(true)}
+                          >
+                            <i className="bi bi-key me-1"></i>
+                            Réinitialiser le mot de passe
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   )}
 
