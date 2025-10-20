@@ -16,6 +16,7 @@
     "kkiapay": "^2.0.23",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "react-hot-toast": "^2.6.0",
     "react-router-dom": "^7.9.2",
     "react-scripts": "^5.0.1",
     "react-toastify": "^11.0.5",

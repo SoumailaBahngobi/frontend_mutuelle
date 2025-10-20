@@ -132,7 +132,7 @@ function EventList() {
               </h4>
               <button
                 className="btn btn-light btn-sm"
-                onClick={() => navigate('/events/add')}
+                onClick={() => navigate('/mut/event')}
               >
                 <i className="fas fa-plus me-1"></i>
                 Nouvel Événement
@@ -201,7 +201,7 @@ function EventList() {
                           <p className="text-muted">Aucun événement trouvé</p>
                           <button
                             className="btn btn-primary btn-sm"
-                            onClick={() => navigate('/events/add')}
+                            onClick={() => navigate('/mut/event')}
                           >
                             <i className="fas fa-plus me-1"></i>
                             Créer le premier événement

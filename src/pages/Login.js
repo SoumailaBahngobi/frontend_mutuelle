@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
+import { toast } from 'react-toastify';
 
 export default function Login() {
   const [form, setForm] = useState({ 
@@ -22,7 +23,8 @@ export default function Login() {
     setError('');
     
     if (!form.email || !form.password) {
-      setError('Veuillez remplir tous les champs');
+      //setError('Veuillez remplir tous les champs');
+      toast.error('Veuillez remplir tous les champs');
       return;
     }
 
@@ -47,21 +49,27 @@ export default function Login() {
           localStorage.setItem('currentUser', JSON.stringify(userData));
           navigate('/dashboard');
         } else {
-          setError("Connexion réussie, mais accès au profil refusé (403). Contactez l'administrateur.");
+         // setError("Connexion réussie, mais accès au profil refusé (403). Contactez l'administrateur.");
+          toast.error("Connexion réussie, mais accès au profil refusé (403). Contactez l'administrateur.");
         }
       } else {
-        setError("Réponse invalide du serveur");
+       // setError("Réponse invalide du serveur");
+        toast.error("Réponse invalide du serveur");
       }
     } catch (err) {
       console.error('Erreur de connexion:', err);
       if (err.response?.status === 401) {
-        setError("Email ou mot de passe incorrect");
+       // setError("Email ou mot de passe incorrect");
+        toast.error("Email ou mot de passe incorrect");
       } else if (err.response?.status === 400) {
-        setError("Données de connexion invalides");
+       // setError("Données de connexion invalides");
+        toast.error("Données de connexion invalides");
       } else if (err.response?.status >= 500) {
-        setError("Erreur serveur. Veuillez réessayer.");
+      //  setError("Erreur serveur. Veuillez réessayer.");
+        toast.error("Erreur serveur. Veuillez réessayer.");
       } else {
-        setError("Erreur de connexion. Vérifiez votre réseau.");
+      //  setError("Erreur de connexion. Vérifiez votre réseau.");
+      toast.error("Erreur de connexion. Vérifiez votre réseau.");
       }
     } finally {
       setLoading(false);
@@ -75,7 +83,8 @@ export default function Login() {
       });
       return response.data;
     } catch (error) {
-      console.error('Erreur lors de la récupération du profil:', error);
+    //  console.error('Erreur lors de la récupération du profil:', error);
+    toast.error('Erreur lors de la récupération du profil. Veuillez réessayer.');
       return null;
     }
   };

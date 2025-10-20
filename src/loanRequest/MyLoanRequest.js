@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { toast } from 'react-toastify';
 
 const MyLoanRequests = () => {
     const navigate = useNavigate();
@@ -42,15 +43,19 @@ const MyLoanRequests = () => {
             console.error('Erreur fetching my loan requests:', error);
             const status = error.response?.status;
             const data = error.response?.data;
-            console.error('[fetchMyLoanRequests] status:', status, 'data:', data);
+
+           // console.error('[fetchMyLoanRequests] status:', status, 'data:', data);
+           toast.error('Erreur lors du chargement des demandes de prêt. Veuillez réessayer plus tard.', { autoClose: 7000 });
 
             if (error.code === 'ERR_NETWORK' || (!error.response && error.request)) {
-                alert('Impossible de joindre le serveur backend. Vérifiez qu\'il est démarré.');
+               // alert('Impossible de joindre le serveur backend. Vérifiez qu\'il est démarré.');
+                toast.error('Impossible de joindre le serveur backend. Vérifiez qu\'il est démarré.', { autoClose: 7000 });
                 return;
             }
 
             if (status === 401) {
-                alert('Non authentifié. Veuillez vous reconnecter.');
+                //alert('Non authentifié. Veuillez vous reconnecter.');
+                toast.error('Non authentifié. Veuillez vous reconnecter.', { autoClose: 7000 });
                 localStorage.removeItem('token');
                 localStorage.removeItem('currentUser');
                 navigate('/login');
@@ -62,7 +67,8 @@ const MyLoanRequests = () => {
                 return;
             }
 
-            alert('Erreur lors du chargement des demandes');
+           // alert('Erreur lors du chargement des demandes');
+            toast.error('Erreur lors du chargement des demandes de prêt. Veuillez réessayer plus tard.', { autoClose: 7000 });
             setLoanRequests([]); // ✅ S'assurer que c'est un tableau même en cas d'erreur
         } finally {
             setLoading(false);
@@ -134,7 +140,8 @@ const MyLoanRequests = () => {
         const requests = Array.isArray(loanRequests) ? loanRequests : [];
         
         if (requests.length === 0) {
-            alert('Aucune donnée à exporter');
+           // alert('Aucune donnée à exporter');
+           toast.info('Aucune donnée à exporter en Excel.', { autoClose: 5000 });
             return;
         }
 
@@ -145,9 +152,10 @@ const MyLoanRequests = () => {
             try {
                 XLSX = await import('xlsx');
             } catch (error) {
-                console.error('Bibliothèque xlsx non disponible:', error);
-                alert('La fonctionnalité Excel nécessite l\'installation de la bibliothèque xlsx. Exécutez: npm install xlsx');
-                return;
+               // console.error('Bibliothèque xlsx non disponible:', error);
+              //  alert('La fonctionnalité Excel nécessite l\'installation de la bibliothèque xlsx. Exécutez: npm install xlsx');
+              toast.error('La fonctionnalité Excel nécessite l\'installation de la bibliothèque xlsx. Exécutez: npm install xlsx', { autoClose: 10000 }); 
+              return;
             }
 
             // Préparer les données pour l'export
@@ -179,10 +187,12 @@ const MyLoanRequests = () => {
             const fileName = `demandes_pret_${new Date().toISOString().split('T')[0]}.xlsx`;
             XLSX.writeFile(wb, fileName);
 
-            alert('Exportation Excel réussie !');
+           // alert('Exportation Excel réussie !');
+           toast.info('Exportation Excel réussie !', { autoClose: 5000 });
         } catch (error) {
-            console.error('Erreur lors de l\'exportation Excel:', error);
-            alert('Erreur lors de l\'exportation Excel');
+           // console.error('Erreur lors de l\'exportation Excel:', error);
+           // alert('Erreur lors de l\'exportation Excel');
+           toast.error('Erreur lors de l\'exportation Excel. Veuillez réessayer.', { autoClose: 7000 });
         } finally {
             setExportLoading(false);
         }
@@ -194,7 +204,8 @@ const MyLoanRequests = () => {
         const requests = Array.isArray(loanRequests) ? loanRequests : [];
         
         if (requests.length === 0) {
-            alert('Aucune donnée à exporter');
+           // alert('Aucune donnée à exporter');
+            toast.info('Aucune donnée à exporter en PDF.', { autoClose: 5000 });
             return;
         }
 
@@ -279,8 +290,9 @@ const MyLoanRequests = () => {
             };
 
         } catch (error) {
-            console.error('Erreur lors de l\'export PDF:', error);
-            alert('Erreur lors de l\'export PDF');
+           // console.error('Erreur lors de l\'export PDF:', error);
+            //alert('Erreur lors de l\'export PDF');
+            toast.error('Erreur lors de l\'exportation PDF. Veuillez réessayer.', { autoClose: 7000 });
         } finally {
             setExportLoading(false);
         }
@@ -292,7 +304,8 @@ const MyLoanRequests = () => {
         const requests = Array.isArray(loanRequests) ? loanRequests : [];
         
         if (requests.length === 0) {
-            alert('Aucune donnée à exporter');
+            //alert('Aucune donnée à exporter');
+            toast.info('Aucune donnée à exporter en CSV.', { autoClose: 5000 });
             return;
         }
 
@@ -333,10 +346,12 @@ const MyLoanRequests = () => {
             link.click();
             document.body.removeChild(link);
 
-            alert('Export CSV réussi !');
+           // alert('Export CSV réussi !');
+           toast.info('Exportation CSV réussie !', { autoClose: 5000 });
         } catch (error) {
-            console.error('Erreur lors de l\'export CSV:', error);
-            alert('Erreur lors de l\'export CSV');
+           // console.error('Erreur lors de l\'export CSV:', error);
+           // alert('Erreur lors de l\'export CSV');
+           toast.error('Erreur lors de l\'exportation CSV. Veuillez réessayer.', { autoClose: 7000 });
         } finally {
             setExportLoading(false);
         }

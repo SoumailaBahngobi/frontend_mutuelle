@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import { toast } from 'react-toastify';
 
 function RepaymentList() {
   const [repayments, setRepayments] = useState([]);
@@ -53,10 +54,12 @@ function RepaymentList() {
       });
       
       setRepayments(repayments.filter(repayment => repayment.id !== repaymentId));
-      alert('Remboursement supprimé avec succès');
+      //alert('Remboursement supprimé avec succès');
+      toast.success('Remboursement supprimé avec succès', { autoClose: 5000 });
     } catch (error) {
-      console.error('Erreur lors de la suppression:', error);
-      alert('Erreur lors de la suppression du remboursement');
+      //console.error('Erreur lors de la suppression:', error);
+      //alert('Erreur lors de la suppression du remboursement');
+      toast.error('Erreur lors de la suppression du remboursement. Veuillez réessayer.', { autoClose: 7000 });
     }
   };
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { toast } from 'react-toastify';
 
 const LoanRequestsValidator = () => {
     const [loanRequests, setLoanRequests] = useState([]);
@@ -23,8 +24,9 @@ const LoanRequestsValidator = () => {
             });
             setLoanRequests(response.data);
         } catch (error) {
-            console.error('Erreur:', error);
-            alert('Erreur lors du chargement des demandes');
+            //console.error('Erreur:', error);
+           // alert('Erreur lors du chargement des demandes');
+           toast.error('Erreur lors du chargement des demandes de prêt. Veuillez réessayer plus tard.', { autoClose: 7000 });   
         } finally {
             setLoading(false);
         }
@@ -38,7 +40,8 @@ const LoanRequestsValidator = () => {
             });
             setStats(response.data);
         } catch (error) {
-            console.error('Erreur stats:', error);
+           // console.error('Erreur stats:', error);
+           toast.error('Erreur lors du chargement des statistiques. Veuillez réessayer plus tard.', { autoClose: 7000 });
         }
     };
 
@@ -97,11 +100,13 @@ const LoanRequestsValidator = () => {
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
-            console.log('[handleApprove] response status:', response.status, 'data:', response.data);
+            //console.log('[handleApprove] response status:', response.status, 'data:', response.data);
+            toast.info('✅ Approbation en cours de traitement...', { autoClose: 3000 });
 
             // Accept any 2xx as success
             if (response.status >= 200 && response.status < 300) {
-                alert('Demande approuv\u00e9e avec succ\u00e8s !');
+               // alert('Demande approuv\u00e9e avec succ\u00e8s !');
+               toast.success('Demande approuvée avec succès !', { autoClose: 5000 });
                 setApprovalComment('');
 
                 // Update selectedRequest optimistically so the modal shows the new approval immediately
@@ -127,17 +132,20 @@ const LoanRequestsValidator = () => {
                 setSelectedRequest(null);
             }
         } catch (error) {
-            console.error('Erreur approbation:', error);
+            //console.error('Erreur approbation:', error);
+            toast.error('Erreur lors de l\'approbation. Veuillez r\u00e9essayer.', { autoClose: 7000 });
             // Show clearer message depending on response
             const status = error.response?.status;
             if (status === 401) {
-                alert('Non authentifi\u00e9. Veuillez vous reconnecter.');
+               // alert('Non authentifi\u00e9. Veuillez vous reconnecter.');
+               toast.error('Non authentifié. Veuillez vous reconnecter.');
                 localStorage.removeItem('token');
                 navigate('/login');
                 return;
             }
             if (status === 403) {
-                alert('Acc\u00e8s refus\u00e9. Vous n\'avez pas les droits pour approuver.');
+               // alert('Acc\u00e8s refus\u00e9. Vous n\'avez pas les droits pour approuver.');
+               toast.error('Accès refusé. Vous n\'avez pas les droits pour approuver.');
                 return;
             }
             alert("Erreur lors de l'approbation (voir console)");

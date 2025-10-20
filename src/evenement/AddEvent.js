@@ -41,7 +41,7 @@ function AddEvent() {
       });
       setMembers(response.data);
     } catch (error) {
-      console.error('Erreur lors du chargement des membres:', error);
+     // console.error('Erreur lors du chargement des membres:', error);
       setError('Impossible de charger la liste des membres');
     }
   };
@@ -149,7 +149,7 @@ function AddEvent() {
                 </h4>
                 <button
                   className="btn btn-light btn-sm"
-                  onClick={() => navigate('/events')}
+                  onClick={() => navigate('/dashboard')}
                 >
                   <i className="fas fa-arrow-left me-1"></i>
                   Retour
@@ -309,7 +309,7 @@ function AddEvent() {
                       <button
                         type="button"
                         className="btn btn-secondary"
-                        onClick={() => navigate('/events')}
+                        onClick={() => navigate('/dashboard')}
                         disabled={loading}
                       >
                         <i className="fas fa-times me-1"></i>

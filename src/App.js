@@ -1,6 +1,7 @@
-
 import './App.css';
 import { Routes, Route } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import Navbar from './layout/NavBar.js';
 import AddMember from './members/AddMember.js';
 import Login from './pages/Login.js';
@@ -23,56 +24,77 @@ import AddEvent from './evenement/AddEvent.js';
 import RepaymentList from './repayment/RepaymentList.js';
 import LoanList from './loan/LoanList.js';
 import EventList from './evenement/EventList.js';
+import Footer from './pages/layout/footer.js';
 
 function App() {
   return (
-    <>
+    <div className="d-flex flex-column min-vh-100">
       <Navbar />
-      <Routes>
-        {/* Routes publiques */}
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<AddMember />} />
+      
+      {/* Contenu principal qui s'étend pour pousser le footer vers le bas */}
+      <main className="flex-grow-1">
+        <Routes>
+          {/* Routes publiques */}
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<AddMember />} />
 
-        {/* Routes protégées - Tableau de bord */}
-        <Route path="/dashboard" element={<Dashboard />} />
+          {/* Routes protégées - Tableau de bord */}
+          <Route path="/dashboard" element={<Dashboard />} />
 
-        {/* Routes cotisations */}
-        <Route path="/mut/contribution_period" element={<AddContributionPeriod />} />
-        <Route path="/mut/contribution/individual" element={<AddIndividualContribution />} />
-        <Route path="/mut/contribution/group" element={<AddGroupContribution />} />
-        <Route path="/mut/contribution/individual/my-contributions" element={<ContributionHistory />} />
-        <Route path="/mut/event" element={<AddEvent/>} />
+          {/* Routes cotisations */}
+          <Route path="/mut/contribution_period" element={<AddContributionPeriod />} />
+          <Route path="/mut/contribution/individual" element={<AddIndividualContribution />} />
+          <Route path="/mut/contribution/group" element={<AddGroupContribution />} />
+          <Route path="/mut/contribution/individual/my-contributions" element={<ContributionHistory />} />
+          <Route path="/mut/event" element={<AddEvent/>} />
 
-        {/* Routes prêts */}
-        <Route path="/loans/request" element={<AddLoanRequest />} />
-        <Route path="/loans/create" element={<AddLoan />} />
-        <Route path="/loans/repayment" element={<AddRepayment />} />
-        <Route path="/loans/approval" element={<LoanApproval />} />
-        <Route path="/loans/approval-dashboard" element={<LoanApprovalDashboard />} />
-        <Route path="/loans/requests" element={<MyLoanRequests />} />
-        <Route path="/loans/my-loans" element={<MyLoans />} />
+          {/* Routes prêts */}
+          <Route path="/loans/request" element={<AddLoanRequest />} />
+          <Route path="/loans/create" element={<AddLoan />} />
+          <Route path="/loans/repayment" element={<AddRepayment />} />
+          <Route path="/loans/approval" element={<LoanApproval />} />
+          <Route path="/loans/approval-dashboard" element={<LoanApprovalDashboard />} />
+          <Route path="/loans/requests" element={<MyLoanRequests />} />
+          <Route path="/loans/my-loans" element={<MyLoans />} />
 
-        <Route path='/mut/repayments/view' element={<RepaymentList />} />
-        <Route path='/mut/loan-list' element={<LoanList />} />
-        <Route path='/mut/event/list' element={<EventList />} />
+          <Route path='/mut/repayments/view' element={<RepaymentList />} />
+          <Route path='/mut/loan-list' element={<LoanList />} />
+          <Route path='/mut/event/list' element={<EventList />} />
 
-        {/* Routes administration */}
-        <Route path="/members" element={<AddMember />} />
-        <Route path="/repayment" element={<AddRepayment />} />
-        <Route path="/contribution-period" element={<AddContributionPeriod />} />
+          {/* Routes administration */}
+          <Route path="/members" element={<AddMember />} />
+          <Route path="/repayment" element={<AddRepayment />} />
+          <Route path="/contribution-period" element={<AddContributionPeriod />} />
 
-        <Route path="/treasurer/loans" element={
-            <RoleProtectedRoute allowedRoles={['TREASURER', 'ADMIN']}>
-              <TreasurerLoanDashboard />
-            </RoleProtectedRoute>
-          } />
+          <Route path="/treasurer/loans" element={
+              <RoleProtectedRoute allowedRoles={['TREASURER', 'ADMIN']}>
+                <TreasurerLoanDashboard />
+              </RoleProtectedRoute>
+            } />
 
+          {/* Route 404 */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </main>
 
-        {/* Route 404 */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </>
+      {/* Footer - sera masqué automatiquement sur /login et /register */}
+      <Footer />
+
+      {/* Container pour les toasts */}
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
+    </div>
   );
 }
 

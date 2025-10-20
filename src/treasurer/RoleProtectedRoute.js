@@ -1,40 +1,8 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 
-/**
- * Composant de protection de route basé sur les rôles
- * 
- * @param {Object} props
- * @param {ReactNode} props.children - Les composants enfants à afficher si l'utilisateur est autorisé
- * @param {string[]} props.allowedRoles - Les rôles autorisés à accéder à la route
- * @param {string} props.redirectTo - Route de redirection si non autorisé (par défaut: '/dashboard')
- * @param {boolean} props.requireAuth - Si l'authentification est requise (par défaut: true)
- * @param {ReactNode} props.fallback - Composant de fallback à afficher si non autorisé
- * 
- * @example
- * // Protection basique avec rôle
- * <RoleProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}>
- *   <AdminDashboard />
- * </RoleProtectedRoute>
- * 
- * @example
- * // Redirection personnalisée
- * <RoleProtectedRoute 
- *   allowedRoles={['TREASURER']} 
- *   redirectTo="/unauthorized"
- * >
- *   <TreasurerPanel />
- * </RoleProtectedRoute>
- * 
- * @example
- * // Avec fallback personnalisé
- * <RoleProtectedRoute 
- *   allowedRoles={['PRESIDENT']}
- *   fallback={<div>Accès réservé au président</div>}
- * >
- *   <PresidentPanel />
- * </RoleProtectedRoute>
- */
+
 const RoleProtectedRoute = ({ 
   children, 
   allowedRoles = [], 
@@ -51,7 +19,8 @@ const RoleProtectedRoute = ({
       const userData = localStorage.getItem('currentUser');
       return userData ? JSON.parse(userData) : null;
     } catch (error) {
-      console.error('Erreur lors de la récupération des données utilisateur:', error);
+     // console.error('Erreur lors de la récupération des données utilisateur:', error);
+     toast.error('Erreur lors de la récupération des données utilisateur.', { autoClose: 7000 });
       return null;
     }
   };
@@ -93,7 +62,8 @@ const RoleProtectedRoute = ({
       
       return true;
     } catch (error) {
-      console.error('Erreur de décodage du token:', error);
+      //console.error('Erreur de décodage du token:', error);
+      toast.error('Erreur de décodage du token. Veuillez vous reconnecter.', { autoClose: 7000 });
       return false;
     }
   };
@@ -104,13 +74,15 @@ const RoleProtectedRoute = ({
   // Vérifications principales
   if (requireAuth && !isAuthenticated()) {
     // Utilisateur non authentifié
-    console.warn('Accès refusé: utilisateur non authentifié');
+   // console.warn('Accès refusé: utilisateur non authentifié');
+    toast.error('Vous devez être connecté pour accéder à cette page.', { autoClose: 7000 });
     return <Navigate to="/login" replace />;
   }
 
   if (requireAuth && !hasRequiredRole(currentUser)) {
     // Utilisateur authentifié mais sans le rôle requis
-    console.warn(`Accès refusé: rôle ${currentUser?.role} non autorisé. Rôles requis:`, allowedRoles);
+   // console.warn(`Accès refusé: rôle ${currentUser?.role} non autorisé. Rôles requis:`, allowedRoles);
+    toast.error('Accès refusé: vous n\'avez pas les permissions nécessaires pour accéder à cette page.', { autoClose: 7000 });
     
     // Afficher le composant de fallback si fourni
     if (fallback) {
@@ -150,7 +122,8 @@ export const useRoleCheck = () => {
       const userData = localStorage.getItem('currentUser');
       return userData ? JSON.parse(userData) : null;
     } catch (error) {
-      console.error('Erreur lors de la récupération des données utilisateur:', error);
+     // console.error('Erreur lors de la récupération des données utilisateur:', error);
+     toast.error('Erreur lors de la récupération des données utilisateur.', { autoClose: 7000 });
       return null;
     }
   };
@@ -207,31 +180,3 @@ export const ShowForRoles = ({ roles, children, fallback = null }) => {
   
   return fallback;
 };
-
-// Exemple d'utilisation dans d'autres composants :
-/*
-import { useRoleCheck, ShowForRoles } from './RoleProtectedRoute';
-
-// Dans un composant fonctionnel
-function MyComponent() {
-  const { hasRole, getCurrentRole } = useRoleCheck();
-  
-  return (
-    <div>
-      <ShowForRoles roles={['ADMIN', 'MANAGER']}>
-        <button>Action réservée aux admins</button>
-      </ShowForRoles>
-      
-      <ShowForRoles roles={['TREASURER']} fallback={<p>Accès trésorier requis</p>}>
-        <TreasurerActions />
-      </ShowForRoles>
-    </div>
-  );
-}
-
-// Avec HOC
-const ProtectedAdminPanel = withRoleProtection(AdminPanel, ['ADMIN'], {
-  redirectTo: '/unauthorized',
-  fallback: <div>Accès administrateur requis</div>
-});
-*/

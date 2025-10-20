@@ -21,8 +21,9 @@ const AllLoanRequests = () => {
             });
             setLoanRequests(response.data);
         } catch (error) {
-            console.error('Erreur:', error);
-            alert('Erreur lors du chargement des demandes');
+           // console.error('Erreur:', error);
+           toast.error('Erreur lors du chargement des demandes de prêt. Veuillez réessayer plus tard.', { autoClose: 7000 });
+           // alert('Erreur lors du chargement des demandes');
         } finally {
             setLoading(false);
         }

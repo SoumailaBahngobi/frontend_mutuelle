@@ -176,7 +176,8 @@ const AddRepayment = () => {
             }, 1000);
             
         } catch (error) {
-            console.error('Erreur détaillée:', error);
+          //  console.error('Erreur détaillée:', error);
+          toast.error('Erreur lors de l\'enregistrement du remboursement. Veuillez réessayer.', { autoClose: 10000 });
             let errorMessage = 'Erreur lors de l\'enregistrement du remboursement';
             
             if (error.response?.status === 403) {

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import axios from 'axios';
+import { toast } from 'react-toastify';
 
 function AddMember() {
     const [form, setForm] = useState({
@@ -67,7 +68,8 @@ function AddMember() {
             const response = await axios.post('http://localhost:8080/mut/register', form);
             
             if (response.status === 200 || response.status === 201) {
-                alert('Membre inscrit avec succès !');
+               // alert('Membre inscrit avec succès !');
+               toast.success('Membre inscrit avec succès !');
                 // Réinitialiser le formulaire
                 setForm({
                     name: '', 
@@ -82,15 +84,19 @@ function AddMember() {
                 navigate('/login');
             }
         } catch (error) {
-            console.error('Erreur d\'inscription:', error);
+           // console.error('Erreur d\'inscription:', error);
+         //  toast.error('Erreur d\'inscription. Veuillez réessayer.');
             
             if (error.response?.status === 400) {
                 const errorMessage = error.response.data?.message || 'Données invalides';
-                alert(`Erreur: ${errorMessage}`);
+               // alert(`Erreur: ${errorMessage}`);
+               toast.error(`Erreur: ${errorMessage}`);
             } else if (error.response?.status === 409) {
-                alert('Cet email ou NPI est déjà utilisé');
+               // alert('Cet email ou NPI est déjà utilisé');
+                toast.error('Cet email ou NPI est déjà utilisé');
             } else {
-                alert('Erreur lors de l\'inscription. Veuillez réessayer.');
+              //  alert('Erreur lors de l\'inscription. Veuillez réessayer.');
+                toast.error('Erreur lors de l\'inscription. Veuillez réessayer.');
             }
         } finally {
             setLoading(false);
