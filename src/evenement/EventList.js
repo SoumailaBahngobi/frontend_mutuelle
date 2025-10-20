@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import { toast } from 'react-toastify';
 
 function EventList() {
   const [events, setEvents] = useState([]);
@@ -24,8 +25,9 @@ function EventList() {
       });
       setEvents(response.data);
     } catch (error) {
-      console.error('Erreur lors du chargement des événements:', error);
-      setError('Impossible de charger la liste des événements');
+     // console.error('Erreur lors du chargement des événements:', error);
+     // setError('Impossible de charger la liste des événements');
+     toast.error('Impossible de charger la liste des événements.', { autoClose: 7000 });
     } finally {
       setLoading(false);
     }
@@ -43,10 +45,12 @@ function EventList() {
       });
       
       setEvents(events.filter(event => event.id !== eventId));
-      alert('Événement supprimé avec succès');
+    //  alert('Événement supprimé avec succès');
+      toast.success('Événement supprimé avec succès.', { autoClose: 5000 });
     } catch (error) {
-      console.error('Erreur lors de la suppression:', error);
-      alert('Erreur lors de la suppression de l\'événement');
+    //  console.error('Erreur lors de la suppression:', error);
+     // alert('Erreur lors de la suppression de l\'événement');
+     toast.error('Erreur lors de la suppression de l\'événement.', { autoClose: 7000 });
     }
   };
 

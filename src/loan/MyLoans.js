@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 
 export default function MyLoans() {
   const [loans, setLoans] = useState([]);
@@ -14,7 +15,7 @@ export default function MyLoans() {
   const fetchMyLoans = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get('http://localhost:8080/mut/loan', {
+      const res = await axios.get('http://localhost:8080/mut/loan_request/my-requests', {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -26,8 +27,9 @@ export default function MyLoans() {
       
       setLoans(userLoans);
     } catch (error) {
-      console.error('Erreur chargement prêts:', error);
-      alert('Erreur lors du chargement de vos prêts');
+     // console.error('Erreur chargement prêts:', error);
+     // alert('Erreur lors du chargement de vos prêts');
+     toast.error('Erreur lors du chargement de vos prêts.', { autoClose: 7000 });
     } finally {
       setLoading(false);
     }

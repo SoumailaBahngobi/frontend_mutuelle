@@ -16,7 +16,8 @@ const MyLoanRequests = () => {
             const token = localStorage.getItem('token');
             console.log('[fetchMyLoanRequests] token present?', !!token);
             if (!token) {
-                alert('Vous devez être connecté pour voir vos demandes');
+                //alert('Vous devez être connecté pour voir vos demandes');
+                toast.error('Vous devez être connecté pour voir vos demandes.', { autoClose: 7000 });
                 navigate('/login');
                 return;
             }
@@ -40,7 +41,8 @@ const MyLoanRequests = () => {
             }
             
         } catch (error) {
-            console.error('Erreur fetching my loan requests:', error);
+          //  console.error('Erreur fetching my loan requests:', error);
+          toast.error('Erreur lors de la récupération des demandes de prêt.', { autoClose: 7000 });
             const status = error.response?.status;
             const data = error.response?.data;
 

@@ -194,7 +194,7 @@ export default function Dashboard() {
         <div className="col-12">
           <div className="card shadow-sm border-0">
             <div className="card-body py-2">
-              <div className="row align-items-center">
+              <div className="row align-items-center">{/*
                 <div className="col-auto">
                   <img
                     src={user.photo || '/default-avatar.png'}
@@ -204,12 +204,12 @@ export default function Dashboard() {
                     height={50}
                     style={{ objectFit: 'cover' }}
                   />
-                </div>
+                </div>*/}
                 <div className="col">
                   <h6 className="mb-0 fw-bold">{user.firstName} {user.name}</h6>
                   <div className="text-muted small">
-                    <span className="me-2">{user.email}</span>
-                    <span className="badge bg-primary small">{user.role}</span>
+                    <span className="me-2">Email:{user.email}</span>
+                    <span className="badge bg-primary small"> Rôle:{user.role}</span>
                   </div>
                 </div>
                 <div className="col-auto">
@@ -302,13 +302,13 @@ export default function Dashboard() {
                   <i className="fas fa-list me-1"></i>
                   Mes Demandes
                 </button>
-                <button
+               {/* <button
                   className="btn btn-outline-primary btn-sm"
                   onClick={() => navigate('/loans/my-loans')}
                 >
                   <i className="fas fa-file-invoice me-1"></i>
                   Mes Prêts
-                </button>
+                </button>*/}
               </div>
             </div>
           </div>
@@ -332,7 +332,7 @@ export default function Dashboard() {
                   <i className="fas fa-money-bill me-1"></i>
                   Faire un remboursement
                 </button>
-                <button
+                {/*<button
                   className="btn btn-outline-info btn-sm"
                   onClick={() => navigate('/loans/repayment-history')}
                 >
@@ -345,7 +345,7 @@ export default function Dashboard() {
                 >
                   <i className="fas fa-calendar me-1"></i>
                   Échéancier
-                </button>
+                </button>*/}
               </div>
             </div>
           </div>
@@ -376,13 +376,7 @@ export default function Dashboard() {
                   <i className="fas fa-history me-1"></i>
                   Historique
                 </button>
-                <button
-                  className="btn btn-outline-success btn-sm"
-                  onClick={() => navigate('/mut/contribution/group')}
-                >
-                  <i className="fas fa-users me-1"></i>
-                  Groupe
-                </button>
+               
               </div>
             </div>
           </div>

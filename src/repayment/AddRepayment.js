@@ -33,16 +33,16 @@ const AddRepayment = () => {
             setLoading(true);
             const token = localStorage.getItem('token');
             const response = await axios.get('http://localhost:8080/mut/loans/active', {
-                headers: { 
+                headers: {
                     Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 }
             });
-            
+
             setActiveLoans(response.data);
         } catch (error) {
             console.error('Erreur lors du chargement des prêts:', error);
-            
+
             if (error.code === 'ERR_NETWORK') {
                 setError('Impossible de joindre le serveur backend. Vérifiez que le serveur est démarré.');
                 return;
@@ -102,7 +102,7 @@ const AddRepayment = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         if (!validateForm()) return;
 
         setLoading(true);
@@ -133,7 +133,7 @@ const AddRepayment = () => {
             let response;
             try {
                 response = await axios.post('http://localhost:8080/mut/repayment', submitData, {
-                    headers: { 
+                    headers: {
                         Authorization: `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     }
@@ -142,7 +142,7 @@ const AddRepayment = () => {
                 if (endpointError.response?.status === 404) {
                     // Essayer un autre endpoint
                     response = await axios.post('http://localhost:8080/mut/repayment', submitData, {
-                        headers: { 
+                        headers: {
                             Authorization: `Bearer ${token}`,
                             'Content-Type': 'application/json'
                         }
@@ -154,7 +154,7 @@ const AddRepayment = () => {
 
             setSuccess('Remboursement enregistré avec succès !');
             toast.success('Remboursement enregistré avec succès !');
-            
+
             // Réinitialiser le formulaire
             setSelectedLoan('');
             setRepaymentData({
@@ -174,12 +174,12 @@ const AddRepayment = () => {
             setTimeout(() => {
                 fetchActiveLoans();
             }, 1000);
-            
+
         } catch (error) {
-          //  console.error('Erreur détaillée:', error);
-          toast.error('Erreur lors de l\'enregistrement du remboursement. Veuillez réessayer.', { autoClose: 10000 });
+            //  console.error('Erreur détaillée:', error);
+            toast.error('Erreur lors de l\'enregistrement du remboursement. Veuillez réessayer.', { autoClose: 10000 });
             let errorMessage = 'Erreur lors de l\'enregistrement du remboursement';
-            
+
             if (error.response?.status === 403) {
                 errorMessage = 'Accès refusé. Vérifiez vos permissions.';
             } else if (error.response?.status === 404) {
@@ -189,7 +189,7 @@ const AddRepayment = () => {
             } else {
                 errorMessage = error.message || errorMessage;
             }
-            
+
             setError(errorMessage);
             toast.error(errorMessage);
         } finally {
@@ -206,11 +206,11 @@ const AddRepayment = () => {
     // Calculer le montant total à rembourser
     const calculateTotalAmount = (loan) => {
         if (!loan || !loan.amount || !loan.interestRate) return 0;
-        
+
         const principal = parseFloat(loan.amount);
         const interestRate = parseFloat(loan.interestRate) / 100;
         const total = principal + (principal * interestRate);
-        
+
         return total.toFixed(0);
     };
 
@@ -232,10 +232,10 @@ const AddRepayment = () => {
         //const remainingAmount = parseFloat(calculateRemainingAmount(loanDetails));
         const remainingAmount = parseFloat((loanDetails.amount) || 0);
         const totalInstallments = parseInt(loanDetails.duration) || 12;
-        
+
         const installmentAmount = (remainingAmount / totalInstallments).toFixed(0);
         const today = new Date();
-        
+
         const plan = [];
         for (let i = 1; i <= totalInstallments; i++) {
             const dueDate = new Date(today.getFullYear(), today.getMonth() + i, today.getDate());
@@ -247,7 +247,7 @@ const AddRepayment = () => {
                 status: 'PENDING'
             });
         }
-        
+
         setInstallments(plan);
     };
 
@@ -283,6 +283,7 @@ const AddRepayment = () => {
                                 <i className="fas fa-money-bill-wave me-2"></i>
                                 Rembourser
                             </h3>
+                            
                         </div>
                         <div className="card-body">
                             {error && (
@@ -309,7 +310,19 @@ const AddRepayment = () => {
                                 <div className="alert alert-warning">
                                     <i className="fas fa-exclamation-circle me-2"></i>
                                     Aucun prêt actif disponible pour le remboursement.
+
+                                    <div className="mt-3"><button
+                                        type="button"
+                                        className="btn btn-outline-secondary btn-lg me-md-2"
+                                        onClick={() => navigate('/dashboard')}
+                                        disabled={loading}
+                                    >
+                                        <i className="fas me-2"></i>
+                                        Retour
+                                    </button></div>
+                                    
                                 </div>
+
                             ) : (
                                 <form onSubmit={handleSubmit}>
                                     {/* Sélection du prêt */}
@@ -329,8 +342,8 @@ const AddRepayment = () => {
                                             <option value="">Choisir un prêt...</option>
                                             {activeLoans.map(loan => (
                                                 <option key={loan.id} value={loan.id}>
-                                                    {loan.member?.name || 'N/A'} {loan.member?.firstName || ''} - 
-                                                    Montant: {loan.amount?.toFixed(0) || ''} FCFA - 
+                                                    {loan.member?.name || 'N/A'} {loan.member?.firstName || ''} -
+                                                    Montant: {loan.amount?.toFixed(0) || ''} FCFA -
                                                     Durée: {loan.duration} mois
                                                 </option>
                                             ))}
@@ -350,35 +363,35 @@ const AddRepayment = () => {
                                                 <div className="card-body">
                                                     <div className="row">
                                                         <div className="col-md-4">
-                                                            <strong>Membre:</strong><br/>
+                                                            <strong>Membre:</strong><br />
                                                             {loanDetails.member?.name || 'N/A'} {loanDetails.member?.firstName || ''}
                                                         </div>
                                                         <div className="col-md-4">
-                                                            <strong>Montant du prêt:</strong><br/>
+                                                            <strong>Montant du prêt:</strong><br />
                                                             {loanDetails.amount?.toFixed(0) || '0000'} FCFA
                                                         </div>
                                                         <div className="col-md-4">
-                                                            <strong>Montant total à rembourser:</strong><br/>
+                                                            <strong>Montant total à rembourser:</strong><br />
                                                             <span className="text-success fw-bold">
-                                                               {/* {calculateTotalAmount(loanDetails.amount)} FCFA*/}
-                                                               {loanDetails.amount?.toFixed(0) || '0000'} FCFA
+                                                                {/* {calculateTotalAmount(loanDetails.amount)} FCFA*/}
+                                                                {loanDetails.amount?.toFixed(0) || '0000'} FCFA
                                                             </span>
                                                         </div>
                                                     </div>
-                                                    <hr/>
+                                                    <hr />
                                                     <div className="row">
                                                         <div className="col-md-4">
-                                                            <strong>Montant restant:</strong><br/>
+                                                            <strong>Montant restant:</strong><br />
                                                             <span className="text-warning fw-bold">
                                                                 {calculateRemainingAmount(loanDetails.amount)} FCFA
                                                             </span>
                                                         </div>
                                                         <div className="col-md-4">
-                                                            <strong>Durée:</strong><br/>
+                                                            <strong>Durée:</strong><br />
                                                             {loanDetails.duration} mois
                                                         </div>
                                                         <div className="col-md-4">
-                                                            <strong>Taux d'intérêt:</strong><br/>
+                                                            <strong>Taux d'intérêt:</strong><br />
                                                             {loanDetails.interestRate?.toFixed(0) || '00'}%
                                                         </div>
                                                     </div>
@@ -387,8 +400,8 @@ const AddRepayment = () => {
 
                                             {/* Génération du plan d'échéances */}
                                             <div className="mt-3">
-                                                <button 
-                                                    type="button" 
+                                                <button
+                                                    type="button"
                                                     className="btn btn-outline-primary btn-sm"
                                                     onClick={generateInstallmentPlan}
                                                 >
@@ -478,28 +491,28 @@ const AddRepayment = () => {
                                         <label className="form-label"><strong>Mode de paiement</strong></label>
                                         <div>
                                             <div className="form-check form-check-inline">
-                                                <input 
-                                                    className="form-check-input" 
-                                                    type="radio" 
-                                                    name="paymentMode" 
-                                                    id="single" 
-                                                    value="single" 
-                                                    checked={paymentMode === 'single'} 
-                                                    onChange={() => setPaymentMode('single')} 
+                                                <input
+                                                    className="form-check-input"
+                                                    type="radio"
+                                                    name="paymentMode"
+                                                    id="single"
+                                                    value="single"
+                                                    checked={paymentMode === 'single'}
+                                                    onChange={() => setPaymentMode('single')}
                                                 />
                                                 <label className="form-check-label" htmlFor="single">
                                                     Paiement unique
                                                 </label>
                                             </div>
                                             <div className="form-check form-check-inline">
-                                                <input 
-                                                    className="form-check-input" 
-                                                    type="radio" 
-                                                    name="paymentMode" 
-                                                    id="installment" 
-                                                    value="installment" 
-                                                    checked={paymentMode === 'installment'} 
-                                                    onChange={() => setPaymentMode('installment')} 
+                                                <input
+                                                    className="form-check-input"
+                                                    type="radio"
+                                                    name="paymentMode"
+                                                    id="installment"
+                                                    value="installment"
+                                                    checked={paymentMode === 'installment'}
+                                                    onChange={() => setPaymentMode('installment')}
                                                 />
                                                 <label className="form-check-label" htmlFor="installment">
                                                     Échéance
