@@ -86,7 +86,7 @@ export default function Login() {
       return null;
     }
   };
-
+{/*
   const handleForgotPassword = async (e) => {
     e.preventDefault();
     
@@ -118,7 +118,39 @@ export default function Login() {
     } finally {
       setForgotPasswordLoading(false);
     }
-  };
+  };*/}
+
+  const handleForgotPassword = async (e) => {
+  e.preventDefault();
+  
+  if (!forgotPasswordEmail) {
+    toast.error('Veuillez entrer votre adresse email');
+    return;
+  }
+
+  setForgotPasswordLoading(true);
+
+  try {
+    const response = await axios.post('http://localhost:8080/mut/member/forgot-password', {
+      email: forgotPasswordEmail
+    });
+
+    if (response.status === 200) {
+      toast.success('Un email de réinitialisation a été envoyé à votre adresse');
+      setShowForgotPassword(false);
+      setForgotPasswordEmail('');
+    }
+  } catch (error) {
+    console.error('Erreur mot de passe oublié:', error);
+    if (error.response?.status === 404) {
+      toast.error('Aucun compte trouvé avec cette adresse email');
+    } else {
+      toast.error('Erreur lors de la demande de réinitialisation');
+    }
+  } finally {
+    setForgotPasswordLoading(false);
+  }
+};
 
   const simulateForgotPassword = () => {
     // Simulation si l'API n'est pas encore implémentée
