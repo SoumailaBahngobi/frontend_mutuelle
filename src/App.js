@@ -4,7 +4,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Navbar from './layout/NavBar.js';
 import AddMember from './members/AddMember.js';
-import Login from './pages/Login.js';
+import Login from './configuration/Login.js';
 import Dashboard from './pages/Dashboard.js';
 import AddIndividualContribution from './contributions/AddIndividualContribution.js';
 import AddGroupContribution from './contributions/AddGroupContribution.js';
@@ -24,11 +24,13 @@ import AddEvent from './evenement/AddEvent.js';
 import RepaymentList from './repayment/RepaymentList.js';
 import LoanList from './loan/LoanList.js';
 import EventList from './evenement/EventList.js';
-import Footer from './pages/layout/footer.js';
 import ViewMember from './members/ViewMember.js';
 import EditMember from './members/EditMember.js';
-import ResetPassword from './pages/ResetPassword.js';
-import EmailHandler from './pages/EmailHandler.js';
+import ResetPassword from './configuration/ResetPassword.js';
+import EmailHandler from './configuration/EmailHandler.js';
+import Footer from './pages/layout/Footer.js';
+
+
 
 ///mut/member/profile/update
 
