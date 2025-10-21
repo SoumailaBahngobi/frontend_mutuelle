@@ -27,6 +27,8 @@ import EventList from './evenement/EventList.js';
 import Footer from './pages/layout/footer.js';
 import ViewMember from './members/ViewMember.js';
 import EditMember from './members/EditMember.js';
+import ResetPassword from './pages/ResetPassword.js';
+import EmailHandler from './pages/EmailHandler.js';
 
 ///mut/member/profile/update
 
@@ -81,6 +83,8 @@ function App() {
           <Route path="/members/add" element={<AddMember />} />
           <Route path="/members/edit/:id" element={<EditMember />} />
           <Route path="/members/list" element={<ViewMember />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/email-handler" element={<EmailHandler />} />
 
           {/* Route 404 */}
           <Route path="*" element={<NotFound />} />

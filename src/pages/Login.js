@@ -13,6 +13,7 @@ export default function Login() {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
   const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
+  const [lastRequestTime, setLastRequestTime] = useState(0);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -86,77 +87,67 @@ export default function Login() {
       return null;
     }
   };
-{/*
+
   const handleForgotPassword = async (e) => {
     e.preventDefault();
     
+    // Validation de l'email
     if (!forgotPasswordEmail) {
       toast.error('Veuillez entrer votre adresse email');
+      return;
+    }
+
+    // Validation du format email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(forgotPasswordEmail)) {
+      toast.error('Veuillez entrer une adresse email valide');
+      return;
+    }
+
+    // Protection contre les requêtes trop fréquentes (30 secondes)
+    const now = Date.now();
+    if (now - lastRequestTime < 30000) {
+      toast.info('Veuillez patienter 30 secondes avant une nouvelle demande');
       return;
     }
 
     setForgotPasswordLoading(true);
 
     try {
-      // Appel à votre API pour la réinitialisation du mot de passe
-      const response = await axios.post('http://localhost:8080/mut/forgot-password', {
+      const response = await axios.post('http://localhost:8080/mut/member/forgot-password', {
         email: forgotPasswordEmail
       });
 
-      if (response.status === 200) {
+      // Accepte tous les codes 2xx comme succès
+      if (response.status >= 200 && response.status < 300) {
         toast.success('Un email de réinitialisation a été envoyé à votre adresse');
+        setLastRequestTime(Date.now());
         setShowForgotPassword(false);
         setForgotPasswordEmail('');
+      } else {
+        toast.error('Réponse inattendue du serveur');
       }
     } catch (error) {
       console.error('Erreur mot de passe oublié:', error);
+      
+      // Gestion détaillée des erreurs
       if (error.response?.status === 404) {
         toast.error('Aucun compte trouvé avec cette adresse email');
+      } else if (error.response?.status === 429) {
+        toast.error('Trop de tentatives. Veuillez réessayer plus tard.');
+      } else if (error.response?.status === 500) {
+        toast.error('Erreur serveur lors de l\'envoi de l\'email');
+      } else if (error.response?.data?.message) {
+        // Utilise le message d'erreur du serveur si disponible
+        toast.error(error.response.data.message);
+      } else if (error.code === 'NETWORK_ERROR' || !error.response) {
+        toast.error('Erreur de connexion. Vérifiez votre réseau.');
       } else {
         toast.error('Erreur lors de la demande de réinitialisation');
       }
     } finally {
       setForgotPasswordLoading(false);
     }
-  };*/}
-
-  const handleForgotPassword = async (e) => {
-  e.preventDefault();
-  
-  if (!forgotPasswordEmail) {
-    toast.error('Veuillez entrer votre adresse email');
-    return;
-  }
-
-  setForgotPasswordLoading(true);
-
-  try {
-    const response = await axios.post('http://localhost:8080/mut/member/forgot-password', {
-      email: forgotPasswordEmail
-    });
-
-    if (response.status === 200) {
-      toast.success('Un email de réinitialisation a été envoyé à votre adresse');
-      setShowForgotPassword(false);
-      setForgotPasswordEmail('');
-    }
-  } catch (error) {
-    console.error('Erreur mot de passe oublié:', error);
-    if (error.response?.status === 404) {
-      toast.error('Aucun compte trouvé avec cette adresse email');
-    } else {
-      toast.error('Erreur lors de la demande de réinitialisation');
-    }
-  } finally {
-    setForgotPasswordLoading(false);
-  }
-};
-
-  const simulateForgotPassword = () => {
-    // Simulation si l'API n'est pas encore implémentée
-    toast.info('Fonctionnalité "Mot de passe oublié" en cours de développement');
-    setShowForgotPassword(false);
-    setForgotPasswordEmail('');
   };
 
   return (
@@ -182,6 +173,7 @@ export default function Login() {
                           setShowForgotPassword(false);
                           setForgotPasswordEmail('');
                         }}
+                        disabled={forgotPasswordLoading}
                       ></button>
                     </div>
                     <div className="modal-body">
@@ -225,11 +217,13 @@ export default function Login() {
                           <button 
                             type="button" 
                             className="btn btn-outline-secondary"
-                            onClick={simulateForgotPassword}
+                            onClick={() => {
+                              setShowForgotPassword(false);
+                              setForgotPasswordEmail('');
+                            }}
                             disabled={forgotPasswordLoading}
                           >
-                            <i className="bi bi-lightbulb me-2"></i>
-                            Solution temporaire
+                            Annuler
                           </button>
                         </div>
                       </form>
@@ -293,6 +287,7 @@ export default function Login() {
                       type="button"
                       className="btn btn-link p-0 text-decoration-none"
                       onClick={() => setShowForgotPassword(true)}
+                      disabled={loading}
                     >
                       <small>
                         <i className="bi bi-question-circle me-1"></i>
