@@ -47,7 +47,7 @@ const AddLoanRequest = () => {
         try {
             const token = localStorage.getItem('token');
             //console.log('🔐 Token:', token ? 'Present' : 'Missing');
-            toast.info('ℹ️ Vérification de l\'éligibilité en cours...', { autoClose: 3000 });
+           // toast.info('ℹ️ Vérification de l\'éligibilité en cours...', { autoClose: 3000 });
             
             const response = await fetch('http://localhost:8080/mut/member/current/can-request-loan', {
                 headers: {
@@ -57,14 +57,12 @@ const AddLoanRequest = () => {
             });
             
             //console.log('📡 Response status:', response.status);
-            toast.info(`ℹ️ Vérification de l'éligibilité en cours...`, { autoClose: 3000 });
+          //  toast.info(`ℹ️ Vérification de l'éligibilité en cours...`, { autoClose: 3000 });
             
             if (response.ok) {
                 const canRequest = await response.json();
               //  console.log(' Eligibility result:', canRequest);
-              toast.info(canRequest ?
-                    '✅ Vous êtes éligible pour un nouveau prêt.' :
-                    '❌ Vous avez des demandes de prêt en attente. Nouveau prêt non autorisé.');
+            //  toast.info(canRequest ? '✅ Vous êtes éligible pour un nouveau prêt.' : '❌ Vous avez des demandes de prêt en attente. Nouveau prêt non autorisé.');
               
                 setIsEligible(canRequest);
                 setEligibilityChecked(true);
@@ -76,7 +74,7 @@ const AddLoanRequest = () => {
                 return await tryAlternativeEligibilityCheck(token);
             }
         } catch (error) {
-            console.error(' Erreur vérification éligibilité:', error);
+          //  console.error(' Erreur vérification éligibilité:', error);
             setIsEligible(true); // Par défaut, autoriser à soumettre
             setEligibilityChecked(true);
             return true;
@@ -97,7 +95,7 @@ const AddLoanRequest = () => {
             if (response.ok) {
                 const myRequests = await response.json();
                // console.log('📋 Mes demandes:', myRequests);
-               toast.info('✅ Récupération de vos demandes de prêt en cours réussie.', { autoClose: 3000 });
+              // toast.info('✅ Récupération de vos demandes de prêt en cours réussie.', { autoClose: 3000 });
                 
                 // Vérifier s'il y a des demandes PENDING ou IN_REVIEW
                 const pendingRequests = myRequests.filter(request => 
@@ -105,10 +103,7 @@ const AddLoanRequest = () => {
                 );
                 
                 const isEligible = pendingRequests.length === 0;
-                toast.info(isEligible ?
-                    '✅ Vous êtes éligible pour un nouveau prêt.' :
-                    '❌ Vous avez des demandes de prêt en attente. Nouveau prêt non autorisé.', 
-                    { autoClose: 5000 }
+                toast.info(isEligible ?'✅ Vous êtes éligible pour un nouveau prêt.' :'❌ Vous avez des demandes de prêt en attente. Nouveau prêt non autorisé.',{ autoClose: 5000 }
                 );
                // console.log('📊 Calcul éligibilité:', { pending: pendingRequests.length, isEligible });
                 
@@ -138,7 +133,7 @@ const AddLoanRequest = () => {
             
             const payload = JSON.parse(atob(token.split('.')[1]));
            // console.log('👤 Token payload:', payload);
-           toast.info('✅ Informations utilisateur chargées depuis le token.', { autoClose: 3000 });
+          // toast.info('✅ Informations utilisateur chargées depuis le token.', { autoClose: 3000 });
             
             return {
                 id: payload.id || payload.userId || payload.sub,

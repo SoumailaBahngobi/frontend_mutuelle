@@ -123,23 +123,18 @@ export default function Footer() {
                             </h4>
                             <ul className="footer-links">
                                 <li>
-                                    <a href="loans/requests" className="footer-link">
+                                    <a href="/loans/request" className="footer-link">
                                         <FontAwesomeIcon icon={faHandHoldingUsd} className="link-icon" />
                                         Prêts Mutuels
                                     </a>
                                 </li>
                                 <li>
-                                    <a href="/contributions" className="footer-link">
+                                    <a href="/mut/contribution/individual" className="footer-link">
                                         <FontAwesomeIcon icon={faCoins} className="link-icon" />
                                         Cotisations
                                     </a>
                                 </li>
-                                <li>
-                                    <a href="/mut/contribution" className="footer-link">
-                                        <FontAwesomeIcon icon={faPiggyBank} className="link-icon" />
-                                        Épargne
-                                    </a>
-                                </li>
+                               
                                 <li>
                                     <a href="/mut/event/list" className="footer-link">
                                         <FontAwesomeIcon icon={faCalendarAlt} className="link-icon" />
@@ -174,12 +169,7 @@ export default function Footer() {
                                         FAQ
                                     </a>
                                 </li>
-                                <li>
-                                    <a href="/tutorials" className="footer-link">
-                                        <FontAwesomeIcon icon={faGraduationCap} className="link-icon" />
-                                        Tutoriels
-                                    </a>
-                                </li>
+        
                             </ul>
                         </div>
 
