@@ -1,480 +1,548 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import 'bootstrap/dist/css/bootstrap.min.css';
-import { toast } from 'react-toastify';
 
-function RepaymentList() {
-  const [repayments, setRepayments] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [filter, setFilter] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState('');
-
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    fetchRepayments();
-  }, []);
-
-  const fetchRepayments = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8080/mut/repayment', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      // S'assurer que c'est un tableau
-      let repaymentsData = [];
-      if (Array.isArray(response.data)) {
-        repaymentsData = response.data;
-      } else if (response.data && typeof response.data === 'object') {
-        repaymentsData = response.data.content || response.data.repayments || response.data.data || [];
-      }
-      
-      setRepayments(repaymentsData);
-    } catch (error) {
-      console.error('Erreur lors du chargement des remboursements:', error);
-      setError('Impossible de charger la liste des remboursements');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const deleteRepayment = async (repaymentId) => {
-    if (!window.confirm('Êtes-vous sûr de vouloir supprimer cet enregistrement de remboursement ?')) {
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:8080/mut/repayment/${repaymentId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      setRepayments(repayments.filter(repayment => repayment.id !== repaymentId));
-      //alert('Remboursement supprimé avec succès');
-      toast.success('Remboursement supprimé avec succès', { autoClose: 5000 });
-    } catch (error) {
-      //console.error('Erreur lors de la suppression:', error);
-      //alert('Erreur lors de la suppression du remboursement');
-      toast.error('Erreur lors de la suppression du remboursement. Veuillez réessayer.', { autoClose: 7000 });
-    }
-  };
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'XOF'
-    }).format(amount);
-  };
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('fr-FR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+const RepaymentList = () => {
+    const [repayments, setRepayments] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [pagination, setPagination] = useState({
+        page: 0,
+        size: 20,
+        totalPages: 0,
+        totalElements: 0
     });
-  };
-
-  const formatDateTime = (dateString) => {
-    return new Date(dateString).toLocaleDateString('fr-FR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    const [filters, setFilters] = useState({
+        status: '',
+        memberId: '',
+        loanRequestId: '',
+        loanId: ''
     });
-  };
 
-  const getStatusBadge = (status) => {
-    const statusConfig = {
-      'COMPLETED': { class: 'bg-success', label: 'Complété' },
-      'PARTIAL': { class: 'bg-warning text-dark', label: 'Partiel' },
-      'PENDING': { class: 'bg-secondary', label: 'En attente' },
-      'FAILED': { class: 'bg-danger', label: 'Échoué' }
+    const loadRepayments = useCallback(async (page = pagination.page, size = pagination.size) => {
+        setLoading(true);
+        setError(null);
+        try {
+            const token = localStorage.getItem('token');
+            
+            // Utiliser l'endpoint filtré avec pagination
+            let url = 'http://localhost:8080/mut/repayment/filters';
+            const params = {
+                page,
+                size,
+                _t: Date.now() // Cache buster
+            };
+
+            // Ajouter les filtres s'ils sont définis
+            if (filters.status) params.status = filters.status;
+            if (filters.memberId) params.memberId = filters.memberId;
+            if (filters.loanRequestId) params.loanRequestId = filters.loanRequestId;
+            if (filters.loanId) params.loanId = filters.loanId;
+
+            console.log('Chargement des remboursements avec params:', params);
+
+            const response = await axios.get(url, {
+                params,
+                headers: { 
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    'Cache-Control': 'no-cache'
+                }
+            });
+
+            console.log('Réponse API reçue:', response.data);
+
+            // Gestion de la réponse paginée Spring
+            if (response.data && response.data.content) {
+                // Structure paginée Spring Data
+                const pageData = response.data;
+                setRepayments(pageData.content || []);
+                setPagination({
+                    page: pageData.number || 0,
+                    size: pageData.size || size,
+                    totalPages: pageData.totalPages || 1,
+                    totalElements: pageData.totalElements || 0
+                });
+            } 
+            // Gestion des tableaux simples (fallback)
+            else if (Array.isArray(response.data)) {
+                setRepayments(response.data);
+                setPagination({
+                    page: 0,
+                    size: response.data.length,
+                    totalPages: 1,
+                    totalElements: response.data.length
+                });
+            }
+            else {
+                console.warn('Format de réponse inattendu:', response.data);
+                setRepayments([]);
+                setPagination({
+                    page: 0,
+                    size: 20,
+                    totalPages: 0,
+                    totalElements: 0
+                });
+            }
+
+        } catch (err) {
+            console.error('Erreur complète:', err);
+            
+            let errorMessage = 'Erreur lors du chargement des remboursements';
+            
+            if (err.response) {
+                if (err.response.status === 401) {
+                    errorMessage = 'Non authentifié - Veuillez vous reconnecter';
+                } else if (err.response.status === 403) {
+                    errorMessage = 'Accès non autorisé';
+                } else if (err.response.status === 404) {
+                    errorMessage = 'Endpoint non trouvé';
+                } else if (err.response.data) {
+                    // Essayer d'extraire le message d'erreur
+                    try {
+                        if (typeof err.response.data === 'string') {
+                            errorMessage = err.response.data;
+                        } else if (err.response.data.message) {
+                            errorMessage = err.response.data.message;
+                        } else {
+                            errorMessage = 'Erreur serveur';
+                        }
+                    } catch (parseError) {
+                        errorMessage = 'Erreur de traitement des données';
+                    }
+                }
+            } else if (err.request) {
+                errorMessage = 'Erreur réseau - Vérifiez votre connexion';
+            } else {
+                errorMessage = err.message || errorMessage;
+            }
+            
+            setError(errorMessage);
+            setRepayments([]);
+        } finally {
+            setLoading(false);
+        }
+    }, [filters, pagination.page, pagination.size]);
+
+    // Recharger quand les filtres changent
+    useEffect(() => {
+        loadRepayments(0, pagination.size);
+    }, [filters]);
+
+    // Recharger quand la pagination change
+    useEffect(() => {
+        loadRepayments(pagination.page, pagination.size);
+    }, [pagination.page, pagination.size]);
+
+    // Chargement initial
+    useEffect(() => {
+        loadRepayments(0, 20);
+    }, []);
+
+    const handleFilterChange = (key, value) => {
+        setFilters(prev => ({
+            ...prev,
+            [key]: value
+        }));
     };
 
-    const config = statusConfig[status] || { class: 'bg-secondary', label: status };
-    return <span className={`badge ${config.class}`}>{config.label}</span>;
-  };
-
-  const getPaymentMethodBadge = (method) => {
-    const methodConfig = {
-      'CASH': { class: 'bg-primary', label: 'Espèces' },
-      'BANK_TRANSFER': { class: 'bg-info', label: 'Virement' },
-      'MOBILE_MONEY': { class: 'bg-success', label: 'Mobile Money' },
-      'CHECK': { class: 'bg-warning text-dark', label: 'Chèque' }
+    const handlePageChange = (newPage) => {
+        if (newPage >= 0 && newPage < pagination.totalPages) {
+            setPagination(prev => ({ ...prev, page: newPage }));
+        }
     };
 
-    const config = methodConfig[method] || { class: 'bg-secondary', label: method };
-    return <span className={`badge ${config.class}`}>{config.label}</span>;
-  };
-
-  // Générer les mois pour le filtre
-  const generateMonthOptions = () => {
-    const months = [];
-    const currentDate = new Date();
-    
-    for (let i = 0; i < 12; i++) {
-      const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
-      const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      const label = date.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' });
-      months.push({ value, label });
-    }
-    
-    return months;
-  };
-
-  // Filtrer les remboursements
-  const filteredRepayments = repayments.filter(repayment => {
-    const matchesFilter = filter === 'all' || repayment.status === filter;
-    
-    const matchesSearch = 
-      repayment.member?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      repayment.member?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      repayment.member?.npi?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      repayment.loan?.id?.toString().includes(searchTerm);
-    
-    const matchesMonth = !selectedMonth || 
-      repayment.paymentDate?.startsWith(selectedMonth);
-    
-    return matchesFilter && matchesSearch && matchesMonth;
-  });
-
-  // Calculer les statistiques
-  const calculateStats = () => {
-    const totalAmount = filteredRepayments.reduce((sum, r) => sum + r.amount, 0);
-    const completedAmount = filteredRepayments
-      .filter(r => r.status === 'COMPLETED')
-      .reduce((sum, r) => sum + r.amount, 0);
-    
-    return {
-      totalAmount,
-      completedAmount,
-      totalCount: filteredRepayments.length,
-      completedCount: filteredRepayments.filter(r => r.status === 'COMPLETED').length,
-      pendingCount: filteredRepayments.filter(r => r.status === 'PENDING').length
+    const handleSizeChange = (newSize) => {
+        setPagination(prev => ({ ...prev, size: parseInt(newSize), page: 0 }));
     };
-  };
 
-  const stats = calculateStats();
+    const getStatusStyle = (status) => {
+        const styles = {
+            PENDING: { background: '#fff3cd', color: '#856404', label: 'En attente' },
+            PAID: { background: '#d4edda', color: '#155724', label: 'Payé' },
+            OVERDUE: { background: '#f8d7da', color: '#721c24', label: 'En retard' },
+            PARTIALLY_PAID: { background: '#cce7ff', color: '#004085', label: 'Partiellement payé' },
+            CANCELLED: { background: '#e2e3e5', color: '#383d41', label: 'Annulé' }
+        };
+        return styles[status] || { background: '#f8f9fa', color: '#6c757d', label: status };
+    };
 
-  if (loading) {
+    const formatCurrency = (amount) => {
+        if (!amount && amount !== 0) return 'N/A';
+        return new Intl.NumberFormat('fr-FR', {
+            style: 'currency',
+            currency: 'EUR'
+        }).format(amount);
+    };
+
+    const formatDate = (dateString) => {
+        if (!dateString) return 'N/A';
+        try {
+            return new Date(dateString).toLocaleDateString('fr-FR');
+        } catch (error) {
+            return 'Date invalide';
+        }
+    };
+
+    // Fonction pour extraire les données de manière sécurisée
+    const getSafeValue = (repayment, key, defaultValue = 'N/A') => {
+        if (!repayment || typeof repayment !== 'object') return defaultValue;
+        
+        const value = repayment[key];
+        if (value === null || value === undefined) return defaultValue;
+        
+        return value;
+    };
+
     return (
-      <div className="container mt-4 d-flex justify-content-center align-items-center" style={{ minHeight: '60vh' }}>
-        <div className="text-center">
-          <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Chargement...</span>
-          </div>
-          <p className="mt-2 text-muted">Chargement des remboursements...</p>
-        </div>
-      </div>
-    );
-  }
+        <div style={{ padding: '20px', maxWidth: '1400px', margin: '0 auto' }}>
+            {/* En-tête */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <div>
+                    <h1 style={{ margin: 0, color: '#333' }}>Gestion des Remboursements</h1>
+                    <p style={{ margin: '5px 0 0 0', color: '#666' }}>
+                        {pagination.totalElements} remboursement(s) trouvé(s)
+                        {loading && ' • Chargement...'}
+                    </p>
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    <button 
+                        onClick={() => loadRepayments(0, 20)}
+                        disabled={loading}
+                        style={{ 
+                            padding: '10px 20px', 
+                            background: '#28a745', 
+                            color: 'white', 
+                            border: 'none', 
+                            borderRadius: '4px',
+                            cursor: loading ? 'not-allowed' : 'pointer',
+                            fontWeight: 'bold',
+                            opacity: loading ? 0.6 : 1
+                        }}
+                    >
+                        {loading ? '⏳' : '🔄'} Recharger
+                    </button>
+                </div>
+            </div>
 
-  return (
-    <div className="container-fluid py-4">
-      <div className="row">
-        <div className="col-12">
-          <div className="card shadow">
-            <div className="card-header bg-info text-white d-flex justify-content-between align-items-center">
-              <h4 className="mb-0">
-                <i className="fas fa-credit-card me-2"></i>
-                Historique des Remboursements
-              </h4>
-              <div>
-                <button
-                  className="btn btn-light btn-sm me-2"
-                  onClick={() => navigate('/loans/repayment')}
-                >
-                  <i className="fas fa-plus me-1"></i>
-                  Nouveau Remboursement
-                </button>
-                <button
-                  className="btn btn-outline-light btn-sm"
-                  onClick={fetchRepayments}
-                >
-                  <i className="fas fa-sync-alt me-1"></i>
-                  Actualiser
-                </button>
+            {/* Message d'erreur */}
+            {error && (
+                <div style={{ 
+                    background: '#f8d7da', 
+                    color: '#721c24', 
+                    padding: '15px', 
+                    borderRadius: '4px', 
+                    marginBottom: '20px',
+                    border: '1px solid #f5c6cb'
+                }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                            <strong>Erreur:</strong> {error}
+                        </div>
+                        <button 
+                            onClick={() => setError(null)}
+                            style={{ 
+                                background: 'none', 
+                                border: 'none', 
+                                color: '#721c24', 
+                                cursor: 'pointer',
+                                fontSize: '16px'
+                            }}
+                        >
+                            ✕
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Filtres */}
+            <div style={{ 
+                background: '#f8f9fa', 
+                padding: '20px', 
+                borderRadius: '8px', 
+                marginBottom: '20px',
+                border: '1px solid #dee2e6'
+            }}>
+                <h3 style={{ marginTop: 0, color: '#495057' }}>Filtres</h3>
+                <div style={{ display: 'flex', gap: '20px', alignItems: 'end', flexWrap: 'wrap' }}>
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Statut</label>
+                        <select 
+                            value={filters.status}
+                            onChange={(e) => handleFilterChange('status', e.target.value)}
+                            style={{ 
+                                padding: '8px 12px', 
+                                border: '1px solid #ced4da',
+                                borderRadius: '4px',
+                                minWidth: '150px'
+                            }}
+                        >
+                            <option value="">Tous les statuts</option>
+                            <option value="PENDING">En attente</option>
+                            <option value="PAID">Payé</option>
+                            <option value="OVERDUE">En retard</option>
+                            <option value="PARTIALLY_PAID">Partiellement payé</option>
+                            <option value="CANCELLED">Annulé</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>ID Membre</label>
+                        <input 
+                            type="number"
+                            placeholder="Filtrer par membre"
+                            value={filters.memberId}
+                            onChange={(e) => handleFilterChange('memberId', e.target.value)}
+                            style={{ 
+                                padding: '8px 12px', 
+                                border: '1px solid #ced4da',
+                                borderRadius: '4px',
+                                minWidth: '150px'
+                            }}
+                        />
+                    </div>
+
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>ID Prêt</label>
+                        <input 
+                            type="number"
+                            placeholder="Filtrer par prêt"
+                            value={filters.loanId}
+                            onChange={(e) => handleFilterChange('loanId', e.target.value)}
+                            style={{ 
+                                padding: '8px 12px', 
+                                border: '1px solid #ced4da',
+                                borderRadius: '4px',
+                                minWidth: '150px'
+                            }}
+                        />
+                    </div>
+
+                    <button 
+                        onClick={() => setFilters({ status: '', memberId: '', loanRequestId: '', loanId: '' })}
+                        style={{ 
+                            padding: '8px 16px', 
+                            background: '#6c757d', 
+                            color: 'white', 
+                            border: 'none', 
+                            borderRadius: '4px',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        🔄 Réinitialiser
+                    </button>
+                </div>
+            </div>
+
+            {/* Pagination en haut */}
+            {pagination.totalPages > 1 && (
+                <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center', 
+                    marginBottom: '15px',
+                    padding: '10px',
+                    background: '#e9ecef',
+                    borderRadius: '4px'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span>Éléments par page:</span>
+                        <select 
+                            value={pagination.size}
+                            onChange={(e) => handleSizeChange(e.target.value)}
+                            style={{ padding: '5px', border: '1px solid #ced4da', borderRadius: '4px' }}
+                        >
+                            <option value="10">10</option>
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                        </select>
+                    </div>
+                    
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <button 
+                            onClick={() => handlePageChange(0)}
+                            disabled={pagination.page === 0}
+                            style={{ 
+                                padding: '5px 10px', 
+                                border: '1px solid #007bff',
+                                background: pagination.page === 0 ? '#f8f9fa' : 'white',
+                                color: pagination.page === 0 ? '#6c757d' : '#007bff',
+                                borderRadius: '4px',
+                                cursor: pagination.page === 0 ? 'not-allowed' : 'pointer'
+                            }}
+                        >
+                            ⟪
+                        </button>
+                        <button 
+                            onClick={() => handlePageChange(pagination.page - 1)}
+                            disabled={pagination.page === 0}
+                            style={{ 
+                                padding: '5px 10px', 
+                                border: '1px solid #007bff',
+                                background: pagination.page === 0 ? '#f8f9fa' : 'white',
+                                color: pagination.page === 0 ? '#6c757d' : '#007bff',
+                                borderRadius: '4px',
+                                cursor: pagination.page === 0 ? 'not-allowed' : 'pointer'
+                            }}
+                        >
+                            ⟨
+                        </button>
+                        
+                        <span style={{ margin: '0 10px' }}>
+                            Page {pagination.page + 1} sur {pagination.totalPages}
+                        </span>
+                        
+                        <button 
+                            onClick={() => handlePageChange(pagination.page + 1)}
+                            disabled={pagination.page >= pagination.totalPages - 1}
+                            style={{ 
+                                padding: '5px 10px', 
+                                border: '1px solid #007bff',
+                                background: pagination.page >= pagination.totalPages - 1 ? '#f8f9fa' : 'white',
+                                color: pagination.page >= pagination.totalPages - 1 ? '#6c757d' : '#007bff',
+                                borderRadius: '4px',
+                                cursor: pagination.page >= pagination.totalPages - 1 ? 'not-allowed' : 'pointer'
+                            }}
+                        >
+                            ⟩
+                        </button>
+                        <button 
+                            onClick={() => handlePageChange(pagination.totalPages - 1)}
+                            disabled={pagination.page >= pagination.totalPages - 1}
+                            style={{ 
+                                padding: '5px 10px', 
+                                border: '1px solid #007bff',
+                                background: pagination.page >= pagination.totalPages - 1 ? '#f8f9fa' : 'white',
+                                color: pagination.page >= pagination.totalPages - 1 ? '#6c757d' : '#007bff',
+                                borderRadius: '4px',
+                                cursor: pagination.page >= pagination.totalPages - 1 ? 'not-allowed' : 'pointer'
+                            }}
+                        >
+                            ⟫
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Tableau */}
+            {loading ? (
+                <div style={{ textAlign: 'center', padding: '40px' }}>
+                    <div style={{
+                        border: '4px solid #f3f3f3',
+                        borderTop: '4px solid #007bff',
+                        borderRadius: '50%',
+                        width: '40px',
+                        height: '40px',
+                        animation: 'spin 2s linear infinite',
+                        margin: '0 auto 20px'
+                    }}></div>
+                    <p style={{ color: '#6c757d' }}>Chargement des remboursements...</p>
+                </div>
+            ) : repayments.length > 0 ? (
+                <div style={{ 
+                    background: 'white', 
+                    borderRadius: '8px', 
+                    overflow: 'hidden', 
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                    overflowX: 'auto'
+                }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
+                        <thead>
+                            <tr style={{ background: '#f8f9fa' }}>
+                                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #dee2e6', fontWeight: '600' }}>ID</th>
+                                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #dee2e6', fontWeight: '600' }}>Montant</th>
+                                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #dee2e6', fontWeight: '600' }}>Statut</th>
+                                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #dee2e6', fontWeight: '600' }}>Date Échéance</th>
+                                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #dee2e6', fontWeight: '600' }}>Membre</th>
+                                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #dee2e6', fontWeight: '600' }}>Prêt</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {repayments.map(repayment => {
+                                const statusStyle = getStatusStyle(getSafeValue(repayment, 'status', 'PENDING'));
+                                return (
+                                    <tr key={getSafeValue(repayment, 'id')} style={{ borderBottom: '1px solid #dee2e6' }}>
+                                        <td style={{ padding: '12px', fontWeight: '500' }}>
+                                            #{getSafeValue(repayment, 'id')}
+                                        </td>
+                                        <td style={{ padding: '12px', fontWeight: '600' }}>
+                                            {formatCurrency(getSafeValue(repayment, 'amount', 0))}
+                                        </td>
+                                        <td style={{ padding: '12px' }}>
+                                            <span style={{
+                                                padding: '6px 12px',
+                                                borderRadius: '20px',
+                                                fontSize: '12px',
+                                                fontWeight: 'bold',
+                                                background: statusStyle.background,
+                                                color: statusStyle.color,
+                                                display: 'inline-block',
+                                                minWidth: '120px',
+                                                textAlign: 'center'
+                                            }}>
+                                                {statusStyle.label}
+                                            </span>
+                                        </td>
+                                        <td style={{ padding: '12px' }}>
+                                            {formatDate(getSafeValue(repayment, 'dueDate'))}
+                                        </td>
+                                        <td style={{ padding: '12px', color: '#495057' }}>
+                                            {getSafeValue(repayment, 'memberId') ? `Membre #${getSafeValue(repayment, 'memberId')}` : 'N/A'}
+                                        </td>
+                                        <td style={{ padding: '12px', color: '#495057' }}>
+                                            {getSafeValue(repayment, 'loanId') ? `Prêt #${getSafeValue(repayment, 'loanId')}` : 'N/A'}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            ) : (
+                <div style={{ 
+                    textAlign: 'center', 
+                    padding: '60px 40px', 
+                    color: '#6c757d',
+                    background: 'white',
+                    borderRadius: '8px',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}>
+                    <div style={{ fontSize: '48px', marginBottom: '20px' }}>📄</div>
+                    <h3 style={{ margin: '0 0 10px 0', color: '#495057' }}>Aucun remboursement trouvé</h3>
+                    <p style={{ margin: '0 0 20px 0' }}>
+                        {Object.values(filters).some(f => f) 
+                            ? 'Aucun remboursement ne correspond à vos critères de filtrage.' 
+                            : 'Aucun remboursement disponible pour le moment.'
+                        }
+                    </p>
+                    <button 
+                        onClick={() => loadRepayments(0, 20)}
+                        style={{ 
+                            padding: '10px 20px', 
+                            background: '#007bff', 
+                            color: 'white', 
+                            border: 'none', 
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontWeight: 'bold'
+                        }}
+                    >
+                        🔄 Recharger
+                    </button>
+                </div>
+            )}
+
+            <style>{`
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
                 
-              </div>
-            </div>
-
-            <div className="card-body">
-              {/* Filtres et recherche */}
-              <div className="row mb-4">
-                <div className="col-md-4">
-                  <div className="input-group">
-                    <span className="input-group-text">
-                      <i className="fas fa-search"></i>
-                    </span>
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="Rechercher par membre, NPI ou prêt..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="col-md-3">
-                  <select
-                    className="form-select"
-                    value={filter}
-                    onChange={(e) => setFilter(e.target.value)}
-                  >
-                    <option value="all">Tous les statuts</option>
-                    <option value="COMPLETED">Complétés</option>
-                    <option value="PARTIAL">Partiels</option>
-                    <option value="PENDING">En attente</option>
-                    <option value="FAILED">Échoués</option>
-                  </select>
-                </div>
-                <div className="col-md-3">
-                  <select
-                    className="form-select"
-                    value={selectedMonth}
-                    onChange={(e) => setSelectedMonth(e.target.value)}
-                  >
-                    <option value="">Tous les mois</option>
-                    {generateMonthOptions().map(month => (
-                      <option key={month.value} value={month.value}>
-                        {month.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="col-md-2">
-                  <button
-                    className="btn btn-outline-secondary w-100"
-                    onClick={() => {
-                      setFilter('all');
-                      setSearchTerm('');
-                      setSelectedMonth('');
-                    }}
-                  >
-                    <i className="fas fa-times me-1"></i>
-                    Réinitialiser
-                  </button>
-                </div>
-              </div>
-
-              {error && (
-                <div className="alert alert-danger d-flex align-items-center">
-                  <i className="fas fa-exclamation-triangle me-2"></i>
-                  <div>{error}</div>
-                </div>
-              )}
-
-              {/* Statistiques rapides */}
-              <div className="row mb-4">
-                <div className="col-md-3">
-                  <div className="card bg-primary text-white">
-                    <div className="card-body text-center py-3">
-                      <h5 className="mb-1">{stats.totalCount}</h5>
-                      <small>Total remboursements</small>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-md-3">
-                  <div className="card bg-success text-white">
-                    <div className="card-body text-center py-3">
-                      <h5 className="mb-1">{stats.completedCount}</h5>
-                      <small>Remboursements complétés</small>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-md-3">
-                  <div className="card bg-warning text-dark">
-                    <div className="card-body text-center py-3">
-                      <h5 className="mb-1">{stats.pendingCount}</h5>
-                      <small>En attente</small>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-md-3">
-                  <div className="card bg-info text-white">
-                    <div className="card-body text-center py-3">
-                      <h5 className="mb-1">{formatCurrency(stats.completedAmount)}</h5>
-                      <small>Montant total perçu</small>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Tableau des remboursements */}
-              <div className="table-responsive">
-                <table className="table table-striped table-hover">
-                  <thead className="table-dark">
-                    <tr>
-                      <th>Membre</th>
-                      <th>Prêt</th>
-                      <th>Montant</th>
-                      <th>Date de paiement</th>
-                      <th>Méthode</th>
-                      <th>Statut</th>
-                      <th>Référence</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredRepayments.length === 0 ? (
-                      <tr>
-                        <td colSpan="8" className="text-center py-4">
-                          <i className="fas fa-credit-card fa-2x text-muted mb-2"></i>
-                          <p className="text-muted">Aucun remboursement trouvé</p>
-                          <button
-                            className="btn btn-primary btn-sm"
-                            onClick={() => navigate('/loans/repayment')}
-                          >
-                            <i className="fas fa-plus me-1"></i>
-                            Effectuer un remboursement
-                          </button>
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredRepayments.map(repayment => (
-                        <tr key={repayment.id}>
-                          <td>
-                            <div>
-                              <strong>{repayment.member?.firstName} {repayment.member?.name}</strong>
-                            </div>
-                            <small className="text-muted">NPI: {repayment.member?.npi}</small>
-                          </td>
-                          <td>
-                            <div>
-                              <strong>Prêt #{repayment.loan?.id}</strong>
-                            </div>
-                            <small className="text-muted">
-                              {repayment.loan && formatCurrency(repayment.loan.amount)}
-                            </small>
-                          </td>
-                          <td>
-                            <span className="fw-bold text-success">
-                              {formatCurrency(repayment.amount)}
-                            </span>
-                          </td>
-                          <td>
-                            <small className="text-muted">
-                              {repayment.paymentDate ? formatDateTime(repayment.paymentDate) : 'Non définie'}
-                            </small>
-                          </td>
-                          <td>
-                            {getPaymentMethodBadge(repayment.paymentMethod)}
-                          </td>
-                          <td>
-                            {getStatusBadge(repayment.status)}
-                          </td>
-                          <td>
-                            <code className="small">
-                              {repayment.referenceNumber || 'N/A'}
-                            </code>
-                          </td>
-                          <td>
-                            <div className="btn-group btn-group-sm">
-                              <button
-                                className="btn btn-outline-info"
-                                onClick={() => navigate(`mut/repayments/view/${repayment.id}`)}
-                                title="Voir détails"
-                              >
-                                <i className="fas fa-eye"></i>
-                              </button>
-                              <button
-                                className="btn btn-outline-warning"
-                                onClick={() => navigate(`/repayments/edit/${repayment.id}`)}
-                                title="Modifier"
-                              >
-                                <i className="fas fa-edit"></i>
-                              </button>
-                              <button
-                                className="btn btn-outline-danger"
-                                onClick={() => deleteRepayment(repayment.id)}
-                                title="Supprimer"
-                              >
-                                <i className="fas fa-trash"></i>
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Résumé détaillé */}
-              <div className="row mt-4">
-                <div className="col-12">
-                  <div className="card border-info">
-                    <div className="card-header bg-info text-white">
-                      <h6 className="mb-0">
-                        <i className="fas fa-chart-pie me-2"></i>
-                        Analyse des Remboursements
-                      </h6>
-                    </div>
-                    <div className="card-body">
-                      <div className="row text-center">
-                        <div className="col-md-3">
-                          <h5 className="text-primary">
-                            {formatCurrency(stats.totalAmount)}
-                          </h5>
-                          <small className="text-muted">Montant total des remboursements</small>
-                        </div>
-                        <div className="col-md-3">
-                          <h5 className="text-success">
-                            {formatCurrency(stats.completedAmount)}
-                          </h5>
-                          <small className="text-muted">Montant perçu</small>
-                        </div>
-                        <div className="col-md-3">
-                          <h5 className="text-warning">
-                            {formatCurrency(stats.totalAmount - stats.completedAmount)}
-                          </h5>
-                          <small className="text-muted">Montant en attente</small>
-                        </div>
-                        <div className="col-md-3">
-                          <h5 className="text-info">
-                            {stats.completedCount > 0 ? Math.round((stats.completedCount / stats.totalCount) * 100) : 0}%
-                          </h5>
-                          <small className="text-muted">Taux de complétion</small>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Export et actions groupées */}
-              <div className="row mt-4">
-                <div className="col-12">
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <span className="text-muted">
-                        Affichage de {filteredRepayments.length} remboursement(s) sur {repayments.length}
-                      </span>
-                    </div>
-                    <div>
-                      <button className="btn btn-outline-primary btn-sm me-2">
-                        <i className="fas fa-download me-1"></i>
-                        Exporter en Excel
-                      </button>
-                      <button className="btn btn-outline-secondary btn-sm">
-                        <i className="fas fa-print me-1"></i>
-                        Imprimer
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+                tr:hover {
+                    background-color: #f8f9fa !important;
+                }
+            `}</style>
         </div>
-      </div>
-    </div>
-  );
-}
+    );
+};
 
 export default RepaymentList;

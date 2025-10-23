@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -194,17 +195,7 @@ export default function Dashboard() {
         <div className="col-12">
           <div className="card shadow-sm border-0">
             <div className="card-body py-2">
-              <div className="row align-items-center">{/*
-                <div className="col-auto">
-                  <img
-                    src={user.photo || '/default-avatar.png'}
-                    alt={`Profil de ${user.firstName} ${user.name}`}
-                    className="rounded-circle"
-                    width={50}
-                    height={50}
-                    style={{ objectFit: 'cover' }}
-                  />
-                </div>*/}
+              <div className="row align-items-center">
                 <div className="col">
                   <h6 className="mb-0 fw-bold">{user.firstName} {user.name}</h6>
                   <div className="text-muted small">
@@ -302,13 +293,6 @@ export default function Dashboard() {
                   <i className="fas fa-list me-1"></i>
                   Mes Demandes
                 </button>
-                {/* <button
-                  className="btn btn-outline-primary btn-sm"
-                  onClick={() => navigate('/loans/my-loans')}
-                >
-                  <i className="fas fa-file-invoice me-1"></i>
-                  Mes Prêts
-                </button>*/}
               </div>
             </div>
           </div>
@@ -332,20 +316,14 @@ export default function Dashboard() {
                   <i className="fas fa-money-bill me-1"></i>
                   Faire un remboursement
                 </button>
-                {/*<button
+                {/* NOUVEAU BOUTON MES REMBOURSEMENTS */}
+                <button
                   className="btn btn-outline-info btn-sm"
                   onClick={() => navigate('/loans/repayment-history')}
                 >
                   <i className="fas fa-history me-1"></i>
-                  Historique
+                  Mes remboursements
                 </button>
-                <button
-                  className="btn btn-outline-info btn-sm"
-                  onClick={() => navigate('/loans/repayment-schedule')}
-                >
-                  <i className="fas fa-calendar me-1"></i>
-                  Échéancier
-                </button>*/}
               </div>
             </div>
           </div>
@@ -376,7 +354,6 @@ export default function Dashboard() {
                   <i className="fas fa-history me-1"></i>
                   Historique
                 </button>
-
               </div>
             </div>
           </div>
@@ -409,56 +386,6 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-
-        {/* Panel de Validation (Admin seulement) */}
-        {/*}
-        {isAdmin && (
-          <div className="col-md-3">
-            <div className="card shadow-sm h-100">
-              <div className="card-header bg-secondary text-white py-1 px-2">
-                <small className="fw-bold">
-                  <i className="fas fa-user-shield me-1"></i>
-                  Administration
-                </small>
-              </div>
-              <div className="card-body p-2">
-                <div className="d-grid gap-1">
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    onClick={() => navigate('/loans/approval-dashboard')}
-                  >
-                    <i className="fas fa-list-check me-1"></i>
-                    Approbation
-                  </button>
-                  <button
-                    className="btn btn-outline-secondary btn-sm"
-                    onClick={() => navigate('/loans/approval')}
-                  >
-                    <i className="fas fa-check-circle me-1"></i>
-                    Validation
-                  </button>
-                  <button
-                    className="btn btn-outline-secondary btn-sm"
-                    onClick={() => navigate('/mut/contribution_period')}
-                  >
-                    <i className="fas fa-calendar-alt me-1"></i>
-                    Périodes
-                  </button>
-                  <button
-                    className="btn btn-outline-secondary btn-sm"
-                    onClick={() => navigate('/members')}
-                  >
-                    <i className="fas fa-users me-1"></i>
-                    Membres
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        */}
-
 
         {/* Panel de Validation (Admin seulement) */}
         {isAdmin && (
@@ -531,9 +458,6 @@ export default function Dashboard() {
             </div>
           </div>
         )}
-
-
-
       </div>
 
       {/* Aperçu rapide des prêts */}

@@ -25,18 +25,41 @@ const TreasurerLoanDashboard = () => {
                 'http://localhost:8080/mut/loan_request/treasurer/pending-grant',
                 { headers: { Authorization: `Bearer ${token}` } }
             );
-            setPendingGrants(pendingResponse.data);
+            // Ensure we're setting an array
+            setPendingGrants(Array.isArray(pendingResponse.data) ? pendingResponse.data : []);
 
             // Récupérer les prêts déjà accordés
             const grantedResponse = await axios.get(
                 'http://localhost:8080/mut/loan_request/treasurer/granted-loans',
                 { headers: { Authorization: `Bearer ${token}` } }
             );
-            setGrantedLoans(grantedResponse.data);
+            
+            // Debug: log the response to see the actual structure
+            console.log('Granted loans API response:', grantedResponse.data);
+            console.log('Type of response:', typeof grantedResponse.data);
+            console.log('Is array?', Array.isArray(grantedResponse.data));
+            
+            // Ensure we're setting an array, handle different response structures
+            const grantedData = grantedResponse.data;
+            if (Array.isArray(grantedData)) {
+                setGrantedLoans(grantedData);
+            } else if (grantedData && Array.isArray(grantedData.loans)) {
+                setGrantedLoans(grantedData.loans);
+            } else if (grantedData && grantedData.content && Array.isArray(grantedData.content)) {
+                setGrantedLoans(grantedData.content);
+            } else if (grantedData && grantedData.data && Array.isArray(grantedData.data)) {
+                setGrantedLoans(grantedData.data);
+            } else {
+                console.warn('Unexpected granted loans response structure:', grantedData);
+                setGrantedLoans([]);
+            }
 
         } catch (error) {
             console.error('Erreur chargement données trésorier:', error);
             toast.error('Erreur lors du chargement des données');
+            // Set empty arrays on error to prevent map errors
+            setPendingGrants([]);
+            setGrantedLoans([]);
         } finally {
             setLoading(false);
         }
@@ -155,7 +178,7 @@ const TreasurerLoanDashboard = () => {
                 <div className="col-md-4 mb-3">
                     <div className="card border-success">
                         <div className="card-body text-center">
-                            <h3 className="text-success">{grantedLoans.length}</h3>
+                            <h3 className="text-success">{grantedLoans && Array.isArray(grantedLoans) ? grantedLoans.length : 0}</h3>
                             <p className="mb-0 text-muted">Prêts accordés</p>
                         </div>
                     </div>
@@ -163,7 +186,7 @@ const TreasurerLoanDashboard = () => {
                 <div className="col-md-4 mb-3">
                     <div className="card border-primary">
                         <div className="card-body text-center">
-                            <h3 className="text-primary">{pendingGrants.length + grantedLoans.length}</h3>
+                            <h3 className="text-primary">{pendingGrants.length + (grantedLoans && Array.isArray(grantedLoans) ? grantedLoans.length : 0)}</h3>
                             <p className="mb-0 text-muted">Total à gérer</p>
                         </div>
                     </div>
@@ -251,11 +274,20 @@ const TreasurerLoanDashboard = () => {
                         <div className="card-header bg-success text-white">
                             <h5 className="mb-0">
                                 <i className="fas fa-hand-holding-usd me-2"></i>
-                                Prêts Accordés ({grantedLoans.length})
+                                Prêts Accordés ({grantedLoans && Array.isArray(grantedLoans) ? grantedLoans.length : 0})
                             </h5>
                         </div>
                         <div className="card-body">
-                            {grantedLoans.length === 0 ? (
+                            {(!grantedLoans || !Array.isArray(grantedLoans)) ? (
+                                <div className="text-center py-4 text-danger">
+                                    <i className="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                                    <p>Erreur de chargement des données des prêts accordés</p>
+                                    <button className="btn btn-primary mt-2" onClick={fetchTreasurerData}>
+                                        <i className="fas fa-refresh me-2"></i>
+                                        Réessayer
+                                    </button>
+                                </div>
+                            ) : grantedLoans.length === 0 ? (
                                 <div className="text-center py-4 text-muted">
                                     <i className="fas fa-money-bill-wave fa-2x mb-3"></i>
                                     <p>Aucun prêt accordé pour le moment</p>
@@ -301,6 +333,14 @@ const TreasurerLoanDashboard = () => {
                                                         >
                                                             <i className="fas fa-chart-line me-1"></i>
                                                             Suivi
+                                                        </button>
+                                                        <button
+                                                            className="btn btn-outline-danger btn-sm ms-1"
+                                                            onClick={() => handleCancelGrant(loan.id)}
+                                                            title="Annuler l'accord"
+                                                        >
+                                                            <i className="fas fa-times me-1"></i>
+                                                            Annuler
                                                         </button>
                                                     </td>
                                                 </tr>

@@ -39,7 +39,26 @@ const AddRepayment = () => {
                 }
             });
 
-            setActiveLoans(response.data);
+            // Gestion robuste de la réponse API
+            const responseData = response.data;
+            console.log('API Response structure:', responseData);
+            console.log('Type of response:', typeof responseData);
+            console.log('Is array?', Array.isArray(responseData));
+
+            if (Array.isArray(responseData)) {
+                setActiveLoans(responseData);
+            } else if (responseData && Array.isArray(responseData.loans)) {
+                setActiveLoans(responseData.loans);
+            } else if (responseData && responseData.content && Array.isArray(responseData.content)) {
+                setActiveLoans(responseData.content);
+            } else if (responseData && responseData.data && Array.isArray(responseData.data)) {
+                setActiveLoans(responseData.data);
+            } else {
+                console.warn('Unexpected API response structure:', responseData);
+                setActiveLoans([]);
+                setError('Structure de données inattendue du serveur');
+            }
+
         } catch (error) {
             console.error('Erreur lors du chargement des prêts:', error);
 
@@ -66,6 +85,8 @@ const AddRepayment = () => {
             }
 
             setError('Erreur lors du chargement des prêts actifs.');
+            // S'assurer que activeLoans reste un tableau vide en cas d'erreur
+            setActiveLoans([]);
         } finally {
             setLoading(false);
         }
@@ -158,7 +179,6 @@ const AddRepayment = () => {
             // Réinitialiser le formulaire
             setSelectedLoan('');
             setRepaymentData({
-                //amount: '',
                 amount: '',
                 repaymentDate: new Date().toISOString().split('T')[0],
                 dueDate: '',
@@ -176,7 +196,7 @@ const AddRepayment = () => {
             }, 1000);
 
         } catch (error) {
-            //  console.error('Erreur détaillée:', error);
+            console.error('Erreur détaillée:', error);
             toast.error('Erreur lors de l\'enregistrement du remboursement. Veuillez réessayer.', { autoClose: 10000 });
             let errorMessage = 'Erreur lors de l\'enregistrement du remboursement';
 
@@ -198,6 +218,9 @@ const AddRepayment = () => {
     };
 
     const getSelectedLoanDetails = () => {
+        if (!activeLoans || !Array.isArray(activeLoans)) {
+            return null;
+        }
         return activeLoans.find(loan => loan.id === parseInt(selectedLoan));
     };
 
@@ -229,8 +252,7 @@ const AddRepayment = () => {
     const generateInstallmentPlan = () => {
         if (!loanDetails) return;
 
-        //const remainingAmount = parseFloat(calculateRemainingAmount(loanDetails));
-        const remainingAmount = parseFloat((loanDetails.amount) || 0);
+        const remainingAmount = parseFloat(loanDetails.amount) || 0;
         const totalInstallments = parseInt(loanDetails.duration) || 12;
 
         const installmentAmount = (remainingAmount / totalInstallments).toFixed(0);
@@ -273,6 +295,10 @@ const AddRepayment = () => {
         }
     };
 
+    // Vérifier si activeLoans est un tableau valide
+    const isValidActiveLoans = activeLoans && Array.isArray(activeLoans);
+    const activeLoansCount = isValidActiveLoans ? activeLoans.length : 0;
+
     return (
         <div className="container mt-4">
             <div className="row justify-content-center">
@@ -283,7 +309,6 @@ const AddRepayment = () => {
                                 <i className="fas fa-money-bill-wave me-2"></i>
                                 Rembourser
                             </h3>
-                            
                         </div>
                         <div className="card-body">
                             {error && (
@@ -299,30 +324,51 @@ const AddRepayment = () => {
                                 </div>
                             )}
 
-                            {loading && activeLoans.length === 0 ? (
+                            {loading && !isValidActiveLoans ? (
                                 <div className="text-center">
                                     <div className="spinner-border text-primary" role="status">
                                         <span className="visually-hidden">Chargement...</span>
                                     </div>
                                     <p className="mt-2">Chargement des prêts actifs...</p>
                                 </div>
-                            ) : activeLoans.length === 0 ? (
+                            ) : !isValidActiveLoans ? (
+                                <div className="alert alert-danger">
+                                    <i className="fas fa-exclamation-circle me-2"></i>
+                                    Erreur de chargement des données des prêts.
+                                    <div className="mt-3">
+                                        <button
+                                            type="button"
+                                            className="btn btn-outline-primary"
+                                            onClick={fetchActiveLoans}
+                                        >
+                                            <i className="fas fa-refresh me-2"></i>
+                                            Réessayer
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="btn btn-outline-secondary ms-2"
+                                            onClick={() => navigate('/dashboard')}
+                                        >
+                                            <i className="fas fa-arrow-left me-2"></i>
+                                            Retour
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : activeLoansCount === 0 ? (
                                 <div className="alert alert-warning">
                                     <i className="fas fa-exclamation-circle me-2"></i>
                                     Aucun prêt actif disponible pour le remboursement.
-
-                                    <div className="mt-3"><button
-                                        type="button"
-                                        className="btn btn-outline-secondary btn-lg me-md-2"
-                                        onClick={() => navigate('/dashboard')}
-                                        disabled={loading}
-                                    >
-                                        <i className="fas me-2"></i>
-                                        Retour
-                                    </button></div>
-                                    
+                                    <div className="mt-3">
+                                        <button
+                                            type="button"
+                                            className="btn btn-outline-secondary"
+                                            onClick={() => navigate('/dashboard')}
+                                        >
+                                            <i className="fas fa-arrow-left me-2"></i>
+                                            Retour
+                                        </button>
+                                    </div>
                                 </div>
-
                             ) : (
                                 <form onSubmit={handleSubmit}>
                                     {/* Sélection du prêt */}
@@ -373,8 +419,7 @@ const AddRepayment = () => {
                                                         <div className="col-md-4">
                                                             <strong>Montant total à rembourser:</strong><br />
                                                             <span className="text-success fw-bold">
-                                                                {/* {calculateTotalAmount(loanDetails.amount)} FCFA*/}
-                                                                {loanDetails.amount?.toFixed(0) || '0000'} FCFA
+                                                                {calculateTotalAmount(loanDetails)} FCFA
                                                             </span>
                                                         </div>
                                                     </div>
@@ -383,7 +428,7 @@ const AddRepayment = () => {
                                                         <div className="col-md-4">
                                                             <strong>Montant restant:</strong><br />
                                                             <span className="text-warning fw-bold">
-                                                                {calculateRemainingAmount(loanDetails.amount)} FCFA
+                                                                {calculateRemainingAmount(loanDetails)} FCFA
                                                             </span>
                                                         </div>
                                                         <div className="col-md-4">

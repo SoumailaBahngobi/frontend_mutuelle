@@ -16,7 +16,6 @@ const MyLoanRequests = () => {
             const token = localStorage.getItem('token');
             console.log('[fetchMyLoanRequests] token present?', !!token);
             if (!token) {
-                //alert('Vous devez être connecté pour voir vos demandes');
                 toast.error('Vous devez être connecté pour voir vos demandes.', { autoClose: 7000 });
                 navigate('/login');
                 return;
@@ -41,22 +40,18 @@ const MyLoanRequests = () => {
             }
             
         } catch (error) {
-          //  console.error('Erreur fetching my loan requests:', error);
-          toast.error('Erreur lors de la récupération des demandes de prêt.', { autoClose: 7000 });
+            toast.error('Erreur lors de la récupération des demandes de prêt.', { autoClose: 7000 });
             const status = error.response?.status;
             const data = error.response?.data;
 
-           // console.error('[fetchMyLoanRequests] status:', status, 'data:', data);
-           toast.error('Erreur lors du chargement des demandes de prêt. Veuillez réessayer plus tard.', { autoClose: 7000 });
+            toast.error('Erreur lors du chargement des demandes de prêt. Veuillez réessayer plus tard.', { autoClose: 7000 });
 
             if (error.code === 'ERR_NETWORK' || (!error.response && error.request)) {
-               // alert('Impossible de joindre le serveur backend. Vérifiez qu\'il est démarré.');
                 toast.error('Impossible de joindre le serveur backend. Vérifiez qu\'il est démarré.', { autoClose: 7000 });
                 return;
             }
 
             if (status === 401) {
-                //alert('Non authentifié. Veuillez vous reconnecter.');
                 toast.error('Non authentifié. Veuillez vous reconnecter.', { autoClose: 7000 });
                 localStorage.removeItem('token');
                 localStorage.removeItem('currentUser');
@@ -69,7 +64,6 @@ const MyLoanRequests = () => {
                 return;
             }
 
-           // alert('Erreur lors du chargement des demandes');
             toast.error('Erreur lors du chargement des demandes de prêt. Veuillez réessayer plus tard.', { autoClose: 7000 });
             setLoanRequests([]); // ✅ S'assurer que c'est un tableau même en cas d'erreur
         } finally {
@@ -80,6 +74,267 @@ const MyLoanRequests = () => {
     useEffect(() => {
         fetchMyLoanRequests();
     }, [fetchMyLoanRequests]); // ✅ Maintenant fetchMyLoanRequests est stable grâce à useCallback
+
+    // Fonction d'exportation Excel améliorée
+    const exportToExcel = async () => {
+        const requests = Array.isArray(loanRequests) ? loanRequests : [];
+        
+        if (requests.length === 0) {
+            toast.info('Aucune donnée à exporter en Excel.', { autoClose: 5000 });
+            return;
+        }
+
+        setExportLoading(true);
+        try {
+            const XLSX = await import('xlsx');
+
+            // Préparer les données pour l'export
+            const exportData = requests.map(request => ({
+                'ID': request.id,
+                'Membre': getMemberName(request),
+                'Email': getMemberEmail(request),
+                'Montant Demandé (FCFA)': request.requestAmount || request.loanAmount,
+                'Montant Accordé (FCFA)': request.loanAmount || '',
+                'Durée (mois)': request.duration,
+                'Motif': request.reason,
+                'Statut': getStatusText(request.status),
+                'Prêt Accordé': request.loanGranted ? 'Oui' : 'Non',
+                'Date de demande': new Date(request.requestDate).toLocaleDateString(),
+                'Date d\'accord': request.loanGrantedDate ? new Date(request.loanGrantedDate).toLocaleDateString() : '',
+                'Président approuvé': request.presidentApproved ? 'Oui' : 'Non',
+                'Secrétaire approuvé': request.secretaryApproved ? 'Oui' : 'Non',
+                'Trésorier approuvé': request.treasurerApproved ? 'Oui' : 'Non',
+                'Commentaire président': request.presidentComment || '',
+                'Commentaire secrétaire': request.secretaryComment || '',
+                'Commentaire trésorier': request.treasurerComment || '',
+                'Raison du rejet': request.rejectionReason || '',
+                'Progression validation': getApprovalProgress(request)
+            }));
+
+            // Créer un workbook et une feuille
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Mes Demandes de Prêt');
+
+            // Ajouter une feuille de résumé
+            const summaryData = [
+                ['Statistiques des Demandes de Prêt'],
+                [''],
+                ['Total des demandes:', getTotalRequests()],
+                ['Demandes en attente:', getPendingCount()],
+                ['Demandes approuvées:', getApprovedCount()],
+                ['Prêts accordés:', getGrantedCount()],
+                [''],
+                ['Date d\'exportation:', new Date().toLocaleDateString()]
+            ];
+            
+            const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+            XLSX.utils.book_append_sheet(wb, wsSummary, 'Résumé');
+
+            // Générer le fichier Excel
+            const fileName = `mes_demandes_pret_${new Date().toISOString().split('T')[0]}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+
+            toast.success('Exportation Excel réussie !', { autoClose: 5000 });
+        } catch (error) {
+            console.error('Erreur lors de l\'exportation Excel:', error);
+            toast.error('Erreur lors de l\'exportation Excel. Veuillez réessayer.', { autoClose: 7000 });
+        } finally {
+            setExportLoading(false);
+        }
+    };
+
+    // Fonction d'exportation PDF améliorée
+    const exportToPDF = () => {
+        const requests = Array.isArray(loanRequests) ? loanRequests : [];
+        
+        if (requests.length === 0) {
+            toast.info('Aucune donnée à exporter en PDF.', { autoClose: 5000 });
+            return;
+        }
+
+        setExportLoading(true);
+        try {
+            // Créer le contenu HTML pour le PDF
+            const printContent = `
+                <html>
+                    <head>
+                        <title>Mes Demandes de Prêt</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; margin: 20px; }
+                            h1 { color: #2c3e50; text-align: center; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+                            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                            th { background-color: #f2f2f2; }
+                            .badge { padding: 4px 8px; border-radius: 4px; color: white; }
+                            .pending { background-color: #ffc107; }
+                            .approved { background-color: #28a745; }
+                            .rejected { background-color: #dc3545; }
+                            .in-review { background-color: #17a2b8; }
+                            .granted { background-color: #20c997; }
+                            .summary { margin-top: 30px; padding: 15px; background-color: #f8f9fa; border-radius: 5px; }
+                            .stat { display: inline-block; margin-right: 20px; padding: 10px; background-color: white; border-radius: 5px; }
+                        </style>
+                    </head>
+                    <body>
+                        <h1>📄 Mes Demandes de Prêt</h1>
+                        <p><strong>Date d'exportation:</strong> ${new Date().toLocaleDateString()}</p>
+                        
+                        <div class="summary">
+                            <h3>📊 Statistiques</h3>
+                            <div class="stat">
+                                <strong>Total:</strong> ${getTotalRequests()}
+                            </div>
+                            <div class="stat">
+                                <strong>En attente:</strong> ${getPendingCount()}
+                            </div>
+                            <div class="stat">
+                                <strong>Approuvées:</strong> ${getApprovedCount()}
+                            </div>
+                            <div class="stat">
+                                <strong>Accordées:</strong> ${getGrantedCount()}
+                            </div>
+                        </div>
+
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Montant</th>
+                                    <th>Durée</th>
+                                    <th>Motif</th>
+                                    <th>Date</th>
+                                    <th>Statut</th>
+                                    <th>Accord</th>
+                                    <th>Progression</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${requests.map(request => `
+                                    <tr>
+                                        <td><strong>${request.loanAmount || request.requestAmount} FCFA</strong></td>
+                                        <td>${request.duration} mois</td>
+                                        <td>${request.reason}</td>
+                                        <td>${new Date(request.requestDate).toLocaleDateString()}</td>
+                                        <td>
+                                            <span class="badge ${
+                                                request.status === 'PENDING' ? 'pending' :
+                                                request.status === 'APPROVED' ? 'approved' :
+                                                request.status === 'REJECTED' ? 'rejected' : 'in-review'
+                                            }">
+                                                ${request.status}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge ${
+                                                request.loanGranted ? 'granted' : 'pending'
+                                            }">
+                                                ${request.loanGranted ? 'Accordé' : 'En attente'}
+                                            </span>
+                                        </td>
+                                        <td>${getApprovalProgress(request)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                        
+                        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+                            <p><strong>Légende:</strong></p>
+                            <p><span class="badge pending">En attente</span> - Demande en cours de traitement</p>
+                            <p><span class="badge approved">Approuvé</span> - Demande approuvée par les responsables</p>
+                            <p><span class="badge granted">Accordé</span> - Prêt accordé par le trésorier</p>
+                            <p><span class="badge rejected">Rejeté</span> - Demande refusée</p>
+                        </div>
+                    </body>
+                </html>
+            `;
+
+            // Ouvrir une nouvelle fenêtre pour l'impression/PDF
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(printContent);
+            printWindow.document.close();
+            
+            // Attendre que le contenu soit chargé puis imprimer
+            printWindow.onload = function() {
+                printWindow.print();
+            };
+
+        } catch (error) {
+            console.error('Erreur lors de l\'export PDF:', error);
+            toast.error('Erreur lors de l\'exportation PDF. Veuillez réessayer.', { autoClose: 7000 });
+        } finally {
+            setExportLoading(false);
+        }
+    };
+
+    // Fonction d'exportation CSV améliorée
+    const exportToCSV = () => {
+        const requests = Array.isArray(loanRequests) ? loanRequests : [];
+        
+        if (requests.length === 0) {
+            toast.info('Aucune donnée à exporter en CSV.', { autoClose: 5000 });
+            return;
+        }
+
+        setExportLoading(true);
+        try {
+            // Préparer les données CSV
+            const headers = [
+                'ID', 'Membre', 'Email', 'Montant Demandé (FCFA)', 'Montant Accordé (FCFA)', 
+                'Durée (mois)', 'Motif', 'Statut', 'Prêt Accordé', 'Date de demande', 
+                'Date d\'accord', 'Président approuvé', 'Secrétaire approuvé', 'Trésorier approuvé',
+                'Progression validation'
+            ].join(',');
+
+            const csvData = requests.map(request => [
+                request.id,
+                `"${getMemberName(request)}"`,
+                `"${getMemberEmail(request)}"`,
+                request.requestAmount || request.loanAmount,
+                request.loanAmount || '',
+                request.duration,
+                `"${request.reason}"`,
+                getStatusText(request.status),
+                request.loanGranted ? 'Oui' : 'Non',
+                new Date(request.requestDate).toLocaleDateString(),
+                request.loanGrantedDate ? new Date(request.loanGrantedDate).toLocaleDateString() : '',
+                request.presidentApproved ? 'Oui' : 'Non',
+                request.secretaryApproved ? 'Oui' : 'Non',
+                request.treasurerApproved ? 'Oui' : 'Non',
+                getApprovalProgress(request)
+            ].join(','));
+
+            const csvContent = [headers, ...csvData].join('\n');
+            
+            // Créer et télécharger le fichier CSV
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `mes_demandes_pret_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            toast.success('Exportation CSV réussie !', { autoClose: 5000 });
+        } catch (error) {
+            console.error('Erreur lors de l\'export CSV:', error);
+            toast.error('Erreur lors de l\'exportation CSV. Veuillez réessayer.', { autoClose: 7000 });
+        } finally {
+            setExportLoading(false);
+        }
+    };
+
+    // Fonction utilitaire pour le texte du statut
+    const getStatusText = (status) => {
+        const statusConfig = {
+            PENDING: '⏳ En attente',
+            IN_REVIEW: '📋 En examen',
+            APPROVED: '✅ Approuvé',
+            REJECTED: '❌ Rejeté'
+        };
+        return statusConfig[status] || status;
+    };
 
     // ✅ CORRECTION : Fonctions sécurisées pour les statistiques
     const getTotalRequests = () => {
@@ -134,229 +389,6 @@ const MyLoanRequests = () => {
 
     const getMemberEmail = (request) => {
         return request.member?.email || 'Email non disponible';
-    };
-
-    // Fonction pour exporter en Excel (avec vérification de la dépendance)
-    const exportToExcel = async () => {
-        // ✅ CORRECTION : Vérifier que loanRequests est un tableau non vide
-        const requests = Array.isArray(loanRequests) ? loanRequests : [];
-        
-        if (requests.length === 0) {
-           // alert('Aucune donnée à exporter');
-           toast.info('Aucune donnée à exporter en Excel.', { autoClose: 5000 });
-            return;
-        }
-
-        setExportLoading(true);
-        try {
-            // Vérifier si xlsx est disponible
-            let XLSX;
-            try {
-                XLSX = await import('xlsx');
-            } catch (error) {
-               // console.error('Bibliothèque xlsx non disponible:', error);
-              //  alert('La fonctionnalité Excel nécessite l\'installation de la bibliothèque xlsx. Exécutez: npm install xlsx');
-              toast.error('La fonctionnalité Excel nécessite l\'installation de la bibliothèque xlsx. Exécutez: npm install xlsx', { autoClose: 10000 }); 
-              return;
-            }
-
-            // Préparer les données pour l'export
-            const exportData = requests.map(request => ({
-                'ID': request.id,
-                'Membre': getMemberName(request),
-                'Email': getMemberEmail(request),
-                'Montant (FCFA)': request.loanAmount || request.requestAmount,
-                'Durée (mois)': request.duration,
-                'Motif': request.reason,
-                'Statut': request.status,
-                'Statut Accord': request.loanGranted ? 'Accordé' : 'En attente',
-                'Date de demande': new Date(request.requestDate).toLocaleDateString(),
-                'Président approuvé': request.presidentApproved ? 'Oui' : 'Non',
-                'Secrétaire approuvé': request.secretaryApproved ? 'Oui' : 'Non',
-                'Trésorier approuvé': request.treasurerApproved ? 'Oui' : 'Non',
-                'Commentaire président': request.presidentComment || '',
-                'Commentaire secrétaire': request.secretaryComment || '',
-                'Commentaire trésorier': request.treasurerComment || '',
-                'Raison du rejet': request.rejectionReason || ''
-            }));
-
-            // Créer un workbook et une feuille
-            const ws = XLSX.utils.json_to_sheet(exportData);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'Demandes de Prêt');
-
-            // Générer le fichier Excel
-            const fileName = `demandes_pret_${new Date().toISOString().split('T')[0]}.xlsx`;
-            XLSX.writeFile(wb, fileName);
-
-           // alert('Exportation Excel réussie !');
-           toast.info('Exportation Excel réussie !', { autoClose: 5000 });
-        } catch (error) {
-           // console.error('Erreur lors de l\'exportation Excel:', error);
-           // alert('Erreur lors de l\'exportation Excel');
-           toast.error('Erreur lors de l\'exportation Excel. Veuillez réessayer.', { autoClose: 7000 });
-        } finally {
-            setExportLoading(false);
-        }
-    };
-
-    // Fonction pour exporter en PDF (version simple)
-    const exportToPDF = () => {
-        // ✅ CORRECTION : Vérifier que loanRequests est un tableau non vide
-        const requests = Array.isArray(loanRequests) ? loanRequests : [];
-        
-        if (requests.length === 0) {
-           // alert('Aucune donnée à exporter');
-            toast.info('Aucune donnée à exporter en PDF.', { autoClose: 5000 });
-            return;
-        }
-
-        setExportLoading(true);
-        try {
-            // Créer le contenu HTML pour le PDF
-            const printContent = `
-                <html>
-                    <head>
-                        <title>Demandes de Prêt</title>
-                        <style>
-                            body { font-family: Arial, sans-serif; margin: 20px; }
-                            h1 { color: #2c3e50; text-align: center; }
-                            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                            th { background-color: #f2f2f2; }
-                            .badge { padding: 4px 8px; border-radius: 4px; color: white; }
-                            .pending { background-color: #ffc107; }
-                            .approved { background-color: #28a745; }
-                            .rejected { background-color: #dc3545; }
-                            .in-review { background-color: #17a2b8; }
-                            .granted { background-color: #20c997; }
-                        </style>
-                    </head>
-                    <body>
-                        <h1>Demandes de Prêt</h1>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Membre</th>
-                                    <th>Email</th>
-                                    <th>Montant</th>
-                                    <th>Durée</th>
-                                    <th>Statut</th>
-                                    <th>Accord</th>
-                                    <th>Date</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${requests.map(request => `
-                                    <tr>
-                                        <td>${getMemberName(request)}</td>
-                                        <td>${getMemberEmail(request)}</td>
-                                        <td>${request.loanAmount || request.requestAmount} FCFA</td>
-                                        <td>${request.duration} mois</td>
-                                        <td>
-                                            <span class="badge ${
-                                                request.status === 'PENDING' ? 'pending' :
-                                                request.status === 'APPROVED' ? 'approved' :
-                                                request.status === 'REJECTED' ? 'rejected' : 'in-review'
-                                            }">
-                                                ${request.status}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <span class="badge ${
-                                                request.loanGranted ? 'granted' : 'pending'
-                                            }">
-                                                ${request.loanGranted ? 'Accordé' : 'En attente'}
-                                            </span>
-                                        </td>
-                                        <td>${new Date(request.requestDate).toLocaleDateString()}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                        <p style="margin-top: 20px; text-align: center; color: #666;">
-                            Généré le ${new Date().toLocaleDateString()}
-                        </p>
-                    </body>
-                </html>
-            `;
-
-            // Ouvrir une nouvelle fenêtre pour l'impression/PDF
-            const printWindow = window.open('', '_blank');
-            printWindow.document.write(printContent);
-            printWindow.document.close();
-            
-            // Attendre que le contenu soit chargé puis imprimer
-            printWindow.onload = function() {
-                printWindow.print();
-            };
-
-        } catch (error) {
-           // console.error('Erreur lors de l\'export PDF:', error);
-            //alert('Erreur lors de l\'export PDF');
-            toast.error('Erreur lors de l\'exportation PDF. Veuillez réessayer.', { autoClose: 7000 });
-        } finally {
-            setExportLoading(false);
-        }
-    };
-
-    // Fonction pour exporter en CSV
-    const exportToCSV = () => {
-        // ✅ CORRECTION : Vérifier que loanRequests est un tableau non vide
-        const requests = Array.isArray(loanRequests) ? loanRequests : [];
-        
-        if (requests.length === 0) {
-            //alert('Aucune donnée à exporter');
-            toast.info('Aucune donnée à exporter en CSV.', { autoClose: 5000 });
-            return;
-        }
-
-        setExportLoading(true);
-        try {
-            // Préparer les données CSV
-            const headers = [
-                'ID', 'Membre', 'Email', 'Montant (FCFA)', 'Durée (mois)', 
-                'Motif', 'Statut', 'Statut Accord', 'Date de demande', 'Président approuvé',
-                'Secrétaire approuvé', 'Trésorier approuvé'
-            ].join(',');
-
-            const csvData = requests.map(request => [
-                request.id,
-                `"${getMemberName(request)}"`,
-                `"${getMemberEmail(request)}"`,
-                request.loanAmount || request.requestAmount,
-                request.duration,
-                `"${request.reason}"`,
-                request.status,
-                request.loanGranted ? 'Accordé' : 'En attente',
-                new Date(request.requestDate).toLocaleDateString(),
-                request.presidentApproved ? 'Oui' : 'Non',
-                request.secretaryApproved ? 'Oui' : 'Non',
-                request.treasurerApproved ? 'Oui' : 'Non'
-            ].join(','));
-
-            const csvContent = [headers, ...csvData].join('\n');
-            
-            // Créer et télécharger le fichier CSV
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
-            link.setAttribute('download', `demandes_pret_${new Date().toISOString().split('T')[0]}.csv`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
-           // alert('Export CSV réussi !');
-           toast.info('Exportation CSV réussie !', { autoClose: 5000 });
-        } catch (error) {
-           // console.error('Erreur lors de l\'export CSV:', error);
-           // alert('Erreur lors de l\'export CSV');
-           toast.error('Erreur lors de l\'exportation CSV. Veuillez réessayer.', { autoClose: 7000 });
-        } finally {
-            setExportLoading(false);
-        }
     };
 
     if (loading) {

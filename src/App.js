@@ -32,6 +32,7 @@ import Footer from './pages/layout/Footer.js';
 
 
 
+
 ///mut/member/profile/update
 
 function App() {
@@ -73,6 +74,9 @@ function App() {
           {/* Routes administration */}
           <Route path="/members" element={<AddMember />} />
           <Route path="/repayment" element={<AddRepayment />} />
+          <Route path='/loans/repayment-history' element={<RepaymentList />} />
+          <Route path="/loans/list" element={<LoanList />} />
+          <Route path="/events/list" element={<EventList />} />
           <Route path="/contribution-period" element={<AddContributionPeriod />} />
 
           <Route path="/treasurer/loans" element={
