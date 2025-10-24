@@ -198,7 +198,7 @@ const AddLoanRequest = () => {
     // Récupérer les informations du membre connecté au chargement du composant
     useEffect(() => {
         // console.log(' Initialisation AddLoanRequest');
-        toast.info('ℹ️ Chargement des informations utilisateur...', { autoClose: 3000 });
+      //  toast.info('ℹ️ Chargement des informations utilisateur...', { autoClose: 3000 });
         fetchCurrentUser();
     }, [fetchCurrentUser]);
 
@@ -251,10 +251,10 @@ const AddLoanRequest = () => {
         }
 
         // Vérifier l'éligibilité avant soumission
-        if (!isEligible) {
+       /* if (!isEligible) {
             toast.error('Vous n\'êtes pas éligible pour un nouveau prêt. Vous avez déjà des demandes en attente de validation.', { autoClose: 7000 });
             return;
-        }
+        }*/
 
         setLoading(true);
         try {
@@ -267,7 +267,7 @@ const AddLoanRequest = () => {
                 // acceptTerms n'est pas envoyé au backend
             };
 
-            console.log('📤 Données envoyées:', loanRequestData);
+            //console.log('📤 Données envoyées:', loanRequestData);
 
             const response = await fetch('http://localhost:8080/mut/loan_request', {
                 method: 'POST',
@@ -279,7 +279,7 @@ const AddLoanRequest = () => {
             });
 
             const responseText = await response.text();
-            console.log('📥 Response:', response.status, responseText);
+        //    console.log('📥 Response:', response.status, responseText);
 
             if (response.ok) {
                 toast.success('✅ Demande de prêt soumise avec succès !', { autoClose: 3000 });
@@ -313,7 +313,7 @@ const AddLoanRequest = () => {
             }
         } catch (error) {
             // console.error('🚨 Erreur détaillée:', error);
-            toast.error(`❌ Erreur: ${error.message}`);
+          //  toast.error(`❌ Erreur: ${error.message}`);
         } finally {
             setLoading(false);
         }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
@@ -24,73 +24,134 @@ const AddRepayment = () => {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
-    useEffect(() => {
-        fetchActiveLoans();
-    }, []);
-
-    const fetchActiveLoans = async () => {
+    // CORRECTION : Utiliser useCallback pour mémoriser la fonction
+    const fetchActiveLoans = useCallback(async () => {
         try {
             setLoading(true);
+            setError('');
             const token = localStorage.getItem('token');
+            
             const response = await axios.get('http://localhost:8080/mut/loans/active', {
                 headers: {
                     Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json'
-                }
+                },
+                timeout: 10000
             });
 
-            // Gestion robuste de la réponse API
-            const responseData = response.data;
-            console.log('API Response structure:', responseData);
-            console.log('Type of response:', typeof responseData);
-            console.log('Is array?', Array.isArray(responseData));
+            console.log('API Response:', response);
+            console.log('API Response data:', response.data);
+            console.log('Type of response data:', typeof response.data);
 
+            // CORRECTION : La réponse peut être une chaîne JSON qui doit être parsée
+            let responseData = response.data;
+            
+            // Si c'est une chaîne, la parser en objet
+            if (typeof responseData === 'string') {
+                console.log('Parsing JSON string...');
+                try {
+                    responseData = JSON.parse(responseData);
+                } catch (parseError) {
+                    console.error('JSON parsing failed:', parseError);
+                    throw new Error('Format de réponse invalide du serveur');
+                }
+            }
+
+            // Maintenant traiter les données
             if (Array.isArray(responseData)) {
-                setActiveLoans(responseData);
-            } else if (responseData && Array.isArray(responseData.loans)) {
-                setActiveLoans(responseData.loans);
-            } else if (responseData && responseData.content && Array.isArray(responseData.content)) {
-                setActiveLoans(responseData.content);
-            } else if (responseData && responseData.data && Array.isArray(responseData.data)) {
-                setActiveLoans(responseData.data);
+                console.log('Setting activeLoans as array with', responseData.length, 'items');
+                
+                // Nettoyer les données pour éviter la récursion
+                const cleanedLoans = responseData.map(loan => {
+                    // Créer un objet nettoyé sans récursion
+                    const cleanLoan = {
+                        id: loan.id,
+                        amount: loan.amount,
+                        duration: loan.duration,
+                        beginDate: loan.beginDate,
+                        endDate: loan.endDate,
+                        interestRate: loan.interestRate,
+                        isRepaid: loan.isRepaid,
+                        member: loan.member ? {
+                            id: loan.member.id,
+                            name: loan.member.name,
+                            firstName: loan.member.firstName,
+                            email: loan.member.email
+                        } : null,
+                        loanRequest: loan.loanRequest ? {
+                            id: loan.loanRequest.id,
+                            requestAmount: loan.loanRequest.requestAmount,
+                            duration: loan.loanRequest.duration,
+                            status: loan.loanRequest.status
+                        } : null
+                    };
+
+                    // Traiter les remboursements sans récursion
+                    if (loan.repayments && Array.isArray(loan.repayments)) {
+                        cleanLoan.repayments = loan.repayments.map(repayment => ({
+                            id: repayment.id,
+                            amount: repayment.amount,
+                            status: repayment.status,
+                            repaymentDate: repayment.repaymentDate,
+                            dueDate: repayment.dueDate,
+                            installmentNumber: repayment.installmentNumber,
+                            totalInstallments: repayment.totalInstallments
+                            // Ne pas inclure loan pour éviter la récursion
+                        }));
+                    } else {
+                        cleanLoan.repayments = [];
+                    }
+
+                    return cleanLoan;
+                });
+                
+                setActiveLoans(cleanedLoans);
+                console.log('Cleaned loans:', cleanedLoans);
             } else {
-                console.warn('Unexpected API response structure:', responseData);
+                console.warn('Expected array but got:', typeof responseData, responseData);
                 setActiveLoans([]);
-                setError('Structure de données inattendue du serveur');
+                setError('Format de données inattendu du serveur');
             }
 
         } catch (error) {
             console.error('Erreur lors du chargement des prêts:', error);
-
-            if (error.code === 'ERR_NETWORK') {
-                setError('Impossible de joindre le serveur backend. Vérifiez que le serveur est démarré.');
-                return;
-            }
-
-            const status = error.response?.status;
-            if (status === 401) {
-                setError('Accès non autorisé — reconnectez-vous.');
-                localStorage.removeItem('token');
-                localStorage.removeItem('currentUser');
-                navigate('/login');
-                return;
-            }
-            if (status === 403) {
-                setError('Accès refusé — vous n\'avez pas la permission d\'accéder à ces prêts.');
-                return;
-            }
-            if (status === 404) {
-                setError('Endpoint non trouvé. Vérifiez la configuration du backend.');
-                return;
-            }
-
-            setError('Erreur lors du chargement des prêts actifs.');
-            // S'assurer que activeLoans reste un tableau vide en cas d'erreur
-            setActiveLoans([]);
+            handleFetchError(error);
         } finally {
             setLoading(false);
         }
+    }, []); // CORRECTION : Tableau de dépendances vide car la fonction ne dépend d'aucune variable externe
+
+    const handleFetchError = (error) => {
+        if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
+            setError('Impossible de joindre le serveur backend. Vérifiez que le serveur est démarré sur le port 8080.');
+            return;
+        }
+
+        const status = error.response?.status;
+        if (status === 401) {
+            setError('Accès non autorisé — reconnectez-vous.');
+            localStorage.removeItem('token');
+            localStorage.removeItem('currentUser');
+            navigate('/login');
+            return;
+        }
+        if (status === 403) {
+            setError('Accès refusé — vous n\'avez pas la permission d\'accéder à ces prêts.');
+            return;
+        }
+        if (status === 404) {
+            setError('Aucun endpoint de prêts actifs trouvé. Vérifiez la configuration du backend.');
+            return;
+        }
+
+        setError('Erreur lors du chargement des prêts actifs: ' + (error.message || 'Erreur inconnue'));
+        setActiveLoans([]);
     };
+
+    // CORRECTION : useEffect avec fetchActiveLoans dans les dépendances
+    useEffect(() => {
+        fetchActiveLoans();
+    }, [fetchActiveLoans]); // CORRECTION : Ajouter fetchActiveLoans comme dépendance
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -103,21 +164,38 @@ const AddRepayment = () => {
     const validateForm = () => {
         if (!selectedLoan) {
             setError('Veuillez sélectionner un prêt');
+            toast.error('Veuillez sélectionner un prêt');
             return false;
         }
 
         if (!repaymentData.amount || parseFloat(repaymentData.amount) <= 0) {
             setError('Le montant doit être supérieur à 0');
+            toast.error('Le montant doit être supérieur à 0');
             return false;
+        }
+
+        // Vérifier que le montant ne dépasse pas le montant restant
+        const loanDetails = getSelectedLoanDetails();
+        if (loanDetails) {
+            const remainingAmount = parseFloat(calculateRemainingAmount(loanDetails));
+            const repaymentAmount = parseFloat(repaymentData.amount);
+            
+            if (repaymentAmount > remainingAmount) {
+                setError(`Le montant du remboursement (${repaymentAmount} FCFA) dépasse le montant restant (${remainingAmount} FCFA)`);
+                toast.error('Le montant dépasse le montant restant du prêt');
+                return false;
+            }
         }
 
         if (paymentMode === 'installment') {
             if (!repaymentData.installmentNumber || !repaymentData.totalInstallments) {
                 setError('Pour un paiement échelonné, veuillez spécifier le numéro et le total des échéances');
+                toast.error('Renseignez le numéro et le total des échéances');
                 return false;
             }
         }
 
+        setError('');
         return true;
     };
 
@@ -133,45 +211,30 @@ const AddRepayment = () => {
         try {
             const token = localStorage.getItem('token');
             const submitData = {
-                ...repaymentData,
                 amount: parseFloat(repaymentData.amount),
-                installmentNumber: repaymentData.installmentNumber ? parseInt(repaymentData.installmentNumber) : null,
-                totalInstallments: repaymentData.totalInstallments ? parseInt(repaymentData.totalInstallments) : null,
+                repaymentDate: repaymentData.repaymentDate,
+                status: repaymentData.status,
                 loan: { id: parseInt(selectedLoan) }
             };
 
-            // Nettoyer les champs non remplis
-            if (!submitData.dueDate) delete submitData.dueDate;
-            if (!submitData.installmentNumber) delete submitData.installmentNumber;
-            if (!submitData.totalInstallments) delete submitData.totalInstallments;
-            if (!submitData.paymentMethod) delete submitData.paymentMethod;
-            if (!submitData.transactionReference) delete submitData.transactionReference;
-            if (!submitData.notes) delete submitData.notes;
+            // Ajouter les champs conditionnels
+            if (repaymentData.dueDate) submitData.dueDate = repaymentData.dueDate;
+            if (repaymentData.installmentNumber) submitData.installmentNumber = parseInt(repaymentData.installmentNumber);
+            if (repaymentData.totalInstallments) submitData.totalInstallments = parseInt(repaymentData.totalInstallments);
+            if (repaymentData.paymentMethod) submitData.paymentMethod = repaymentData.paymentMethod;
+            if (repaymentData.transactionReference) submitData.transactionReference = repaymentData.transactionReference;
+            if (repaymentData.notes) submitData.notes = repaymentData.notes;
 
             console.log('Données envoyées:', submitData);
 
-            // Essayer différents endpoints possibles
-            let response;
-            try {
-                response = await axios.post('http://localhost:8080/mut/repayment', submitData, {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-            } catch (endpointError) {
-                if (endpointError.response?.status === 404) {
-                    // Essayer un autre endpoint
-                    response = await axios.post('http://localhost:8080/mut/repayment', submitData, {
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        }
-                    });
-                } else {
-                    throw endpointError;
+            const response = await axios.post('http://localhost:8080/mut/repayment', submitData, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json'
                 }
-            }
+            });
+
+            console.log('Réponse du serveur:', response.data);
 
             setSuccess('Remboursement enregistré avec succès !');
             toast.success('Remboursement enregistré avec succès !');
@@ -189,6 +252,7 @@ const AddRepayment = () => {
                 transactionReference: '',
                 notes: ''
             });
+            setInstallments([]);
 
             // Recharger la liste des prêts actifs
             setTimeout(() => {
@@ -197,7 +261,6 @@ const AddRepayment = () => {
 
         } catch (error) {
             console.error('Erreur détaillée:', error);
-            toast.error('Erreur lors de l\'enregistrement du remboursement. Veuillez réessayer.', { autoClose: 10000 });
             let errorMessage = 'Erreur lors de l\'enregistrement du remboursement';
 
             if (error.response?.status === 403) {
@@ -205,7 +268,16 @@ const AddRepayment = () => {
             } else if (error.response?.status === 404) {
                 errorMessage = 'Endpoint non trouvé. Contactez l\'administrateur.';
             } else if (error.response?.data) {
-                errorMessage = error.response.data.message || error.response.data;
+                const errorData = error.response.data;
+                if (typeof errorData === 'string') {
+                    errorMessage = errorData;
+                } else if (errorData.message) {
+                    errorMessage = errorData.message;
+                } else {
+                    errorMessage = JSON.stringify(errorData);
+                }
+            } else if (error.code === 'ERR_NETWORK') {
+                errorMessage = 'Erreur réseau - Vérifiez la connexion au serveur';
             } else {
                 errorMessage = error.message || errorMessage;
             }
@@ -228,32 +300,41 @@ const AddRepayment = () => {
 
     // Calculer le montant total à rembourser
     const calculateTotalAmount = (loan) => {
-        if (!loan || !loan.amount || !loan.interestRate) return 0;
-
-        const principal = parseFloat(loan.amount);
-        const interestRate = parseFloat(loan.interestRate) / 100;
-        const total = principal + (principal * interestRate);
-
-        return total.toFixed(0);
+        if (!loan || !loan.amount) return 0;
+        return parseFloat(loan.amount);
     };
 
     // Calculer le montant restant
     const calculateRemainingAmount = (loan) => {
         if (!loan) return 0;
-
-        const totalAmount = parseFloat(calculateTotalAmount(loan));
-        const totalRepaid = loan.repayments?.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0) || 0;
-
+        const totalAmount = calculateTotalAmount(loan);
+        
+        // Calculer le total déjà remboursé
+        let totalRepaid = 0;
+        if (loan.repayments && Array.isArray(loan.repayments)) {
+            totalRepaid = loan.repayments.reduce((sum, repayment) => {
+                if (repayment.status === 'PAID') {
+                    return sum + (parseFloat(repayment.amount) || 0);
+                }
+                return sum;
+            }, 0);
+        }
+        
         const remaining = totalAmount - totalRepaid;
-        return remaining > 0 ? remaining.toFixed(2) : '0.00';
+        return remaining > 0 ? remaining : 0;
     };
 
     // Générer un plan d'échéances
     const generateInstallmentPlan = () => {
         if (!loanDetails) return;
 
-        const remainingAmount = parseFloat(loanDetails.amount) || 0;
+        const remainingAmount = calculateRemainingAmount(loanDetails);
         const totalInstallments = parseInt(loanDetails.duration) || 12;
+
+        if (remainingAmount <= 0) {
+            toast.info('Ce prêt est déjà entièrement remboursé');
+            return;
+        }
 
         const installmentAmount = (remainingAmount / totalInstallments).toFixed(0);
         const today = new Date();
@@ -271,6 +352,7 @@ const AddRepayment = () => {
         }
 
         setInstallments(plan);
+        toast.success(`Plan de ${totalInstallments} échéances généré`);
     };
 
     const handleUseInstallment = (installment) => {
@@ -283,6 +365,7 @@ const AddRepayment = () => {
             status: 'PENDING'
         }));
         setPaymentMode('installment');
+        toast.info(`Échéance ${installment.installmentNumber}/${installment.totalInstallments} sélectionnée`);
     };
 
     // Formater les dates
@@ -293,6 +376,15 @@ const AddRepayment = () => {
         } catch (error) {
             return 'Date invalide';
         }
+    };
+
+    // Formater la monnaie
+    const formatCurrency = (amount) => {
+        if (!amount && amount !== 0) return '0';
+        return new Intl.NumberFormat('fr-FR', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }).format(amount);
     };
 
     // Vérifier si activeLoans est un tableau valide
@@ -307,7 +399,7 @@ const AddRepayment = () => {
                         <div className="card-header bg-primary text-white">
                             <h3 className="card-title mb-0">
                                 <i className="fas fa-money-bill-wave me-2"></i>
-                                Rembourser
+                                Nouveau Remboursement
                             </h3>
                         </div>
                         <div className="card-body">
@@ -382,6 +474,7 @@ const AddRepayment = () => {
                                             onChange={(e) => {
                                                 setSelectedLoan(e.target.value);
                                                 setRepaymentData(prev => ({ ...prev, amount: '' }));
+                                                setInstallments([]);
                                             }}
                                             required
                                         >
@@ -389,8 +482,8 @@ const AddRepayment = () => {
                                             {activeLoans.map(loan => (
                                                 <option key={loan.id} value={loan.id}>
                                                     {loan.member?.name || 'N/A'} {loan.member?.firstName || ''} -
-                                                    Montant: {loan.amount?.toFixed(0) || ''} FCFA -
-                                                    Durée: {loan.duration} mois
+                                                    Montant: {formatCurrency(loan.amount)} FCFA -
+                                                    Restant: {formatCurrency(calculateRemainingAmount(loan))} FCFA
                                                 </option>
                                             ))}
                                         </select>
@@ -414,46 +507,48 @@ const AddRepayment = () => {
                                                         </div>
                                                         <div className="col-md-4">
                                                             <strong>Montant du prêt:</strong><br />
-                                                            {loanDetails.amount?.toFixed(0) || '0000'} FCFA
+                                                            {formatCurrency(loanDetails.amount)} FCFA
                                                         </div>
                                                         <div className="col-md-4">
-                                                            <strong>Montant total à rembourser:</strong><br />
-                                                            <span className="text-success fw-bold">
-                                                                {calculateTotalAmount(loanDetails)} FCFA
+                                                            <strong>Montant restant:</strong><br />
+                                                            <span className="text-warning fw-bold">
+                                                                {formatCurrency(calculateRemainingAmount(loanDetails))} FCFA
                                                             </span>
                                                         </div>
                                                     </div>
                                                     <hr />
                                                     <div className="row">
                                                         <div className="col-md-4">
-                                                            <strong>Montant restant:</strong><br />
-                                                            <span className="text-warning fw-bold">
-                                                                {calculateRemainingAmount(loanDetails)} FCFA
-                                                            </span>
-                                                        </div>
-                                                        <div className="col-md-4">
                                                             <strong>Durée:</strong><br />
-                                                            {loanDetails.duration} mois
+                                                            {loanDetails.duration || 'N/A'} mois
                                                         </div>
                                                         <div className="col-md-4">
                                                             <strong>Taux d'intérêt:</strong><br />
-                                                            {loanDetails.interestRate?.toFixed(0) || '00'}%
+                                                            {loanDetails.interestRate?.toFixed(0) || '0'}%
+                                                        </div>
+                                                        <div className="col-md-4">
+                                                            <strong>Remboursements:</strong><br />
+                                                            <span className="badge bg-info">
+                                                                {loanDetails.repayments?.length || 0} effectué(s)
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
 
                                             {/* Génération du plan d'échéances */}
-                                            <div className="mt-3">
-                                                <button
-                                                    type="button"
-                                                    className="btn btn-outline-primary btn-sm"
-                                                    onClick={generateInstallmentPlan}
-                                                >
-                                                    <i className="fas fa-calendar-alt me-2"></i>
-                                                    Générer le plan d'échéances
-                                                </button>
-                                            </div>
+                                            {calculateRemainingAmount(loanDetails) > 0 && (
+                                                <div className="mt-3">
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-outline-primary btn-sm"
+                                                        onClick={generateInstallmentPlan}
+                                                    >
+                                                        <i className="fas fa-calendar-alt me-2"></i>
+                                                        Générer le plan d'échéances
+                                                    </button>
+                                                </div>
+                                            )}
 
                                             {installments.length > 0 && (
                                                 <div className="mt-3">
@@ -472,7 +567,7 @@ const AddRepayment = () => {
                                                                 {installments.map((installment, index) => (
                                                                     <tr key={index}>
                                                                         <td>{installment.installmentNumber}/{installment.totalInstallments}</td>
-                                                                        <td>{installment.amount} FCFA</td>
+                                                                        <td>{formatCurrency(installment.amount)} FCFA</td>
                                                                         <td>{formatDate(installment.dueDate)}</td>
                                                                         <td>
                                                                             <button
@@ -511,6 +606,11 @@ const AddRepayment = () => {
                                                     required
                                                     placeholder="Montant à rembourser"
                                                 />
+                                                {selectedLoan && loanDetails && (
+                                                    <div className="form-text">
+                                                        Montant restant: <strong>{formatCurrency(calculateRemainingAmount(loanDetails))} FCFA</strong>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
 
@@ -533,7 +633,7 @@ const AddRepayment = () => {
 
                                     {/* Mode de paiement */}
                                     <div className="mb-3">
-                                        <label className="form-label"><strong>Mode de paiement</strong></label>
+                                        <label className="form-label"><strong>Type de remboursement</strong></label>
                                         <div>
                                             <div className="form-check form-check-inline">
                                                 <input
