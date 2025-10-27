@@ -15,8 +15,6 @@ const AddLoanRequest = () => {
     const [success, setSuccess] = useState(false);
     const [loading, setLoading] = useState(false);
     const [currentUser, setCurrentUser] = useState(null);
-    const [eligibilityChecked, setEligibilityChecked] = useState(false);
-    const [isEligible, setIsEligible] = useState(false);
 
     const navigate = useNavigate();
 
@@ -42,87 +40,6 @@ const AddLoanRequest = () => {
         { value: 6, label: '6 mois' }
     ];
 
-    // Fonction pour vérifier l'éligibilité
-    const checkEligibility = useCallback(async () => {
-        try {
-            const token = localStorage.getItem('token');
-            //console.log('🔐 Token:', token ? 'Present' : 'Missing');
-           // toast.info('ℹ️ Vérification de l\'éligibilité en cours...', { autoClose: 3000 });
-            
-            const response = await fetch('http://localhost:8080/mut/member/current/can-request-loan', {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-            
-            //console.log('📡 Response status:', response.status);
-          //  toast.info(`ℹ️ Vérification de l'éligibilité en cours...`, { autoClose: 3000 });
-            
-            if (response.ok) {
-                const canRequest = await response.json();
-              //  console.log(' Eligibility result:', canRequest);
-            //  toast.info(canRequest ? '✅ Vous êtes éligible pour un nouveau prêt.' : '❌ Vous avez des demandes de prêt en attente. Nouveau prêt non autorisé.');
-              
-                setIsEligible(canRequest);
-                setEligibilityChecked(true);
-                return canRequest;
-            } else {
-                //console.error(' Error response:', response.status, response.statusText);
-                toast.warn('⚠️ Impossible de vérifier l\'éligibilité via le service principal. Tentative de méthode alternative.', { autoClose: 5000 });
-                // Essayer l'endpoint alternatif
-                return await tryAlternativeEligibilityCheck(token);
-            }
-        } catch (error) {
-          //  console.error(' Erreur vérification éligibilité:', error);
-            setIsEligible(true); // Par défaut, autoriser à soumettre
-            setEligibilityChecked(true);
-            return true;
-        }
-    }, []);
-
-    // Méthode alternative si le premier endpoint échoue
-    const tryAlternativeEligibilityCheck = async (token) => {
-        try {
-            // Essayer de récupérer les demandes en cours
-            const response = await fetch('http://localhost:8080/mut/loan_request/my-requests', {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-            
-            if (response.ok) {
-                const myRequests = await response.json();
-               // console.log('📋 Mes demandes:', myRequests);
-              // toast.info('✅ Récupération de vos demandes de prêt en cours réussie.', { autoClose: 3000 });
-                
-                // Vérifier s'il y a des demandes PENDING ou IN_REVIEW
-                const pendingRequests = myRequests.filter(request => 
-                    request.status === 'PENDING' || request.status === 'IN_REVIEW'
-                );
-                
-                const isEligible = pendingRequests.length === 0;
-                toast.info(isEligible ?'✅ Vous êtes éligible pour un nouveau prêt.' :'❌ Vous avez des demandes de prêt en attente. Nouveau prêt non autorisé.',{ autoClose: 5000 }
-                );
-               // console.log('📊 Calcul éligibilité:', { pending: pendingRequests.length, isEligible });
-                
-                setIsEligible(isEligible);
-                setEligibilityChecked(true);
-                return isEligible;
-            }
-            
-            setIsEligible(true);
-            setEligibilityChecked(true);
-            return true;
-        } catch (error) {
-            console.error('Erreur méthode alternative:', error);
-            setIsEligible(true);
-            setEligibilityChecked(true);
-            return true;
-        }
-    };
-
     // Fonction pour extraire les infos utilisateur du token JWT
     const getCurrentUserFromToken = useCallback(() => {
         try {
@@ -132,8 +49,6 @@ const AddLoanRequest = () => {
             }
             
             const payload = JSON.parse(atob(token.split('.')[1]));
-           // console.log('👤 Token payload:', payload);
-          // toast.info('✅ Informations utilisateur chargées depuis le token.', { autoClose: 3000 });
             
             return {
                 id: payload.id || payload.userId || payload.sub,
@@ -142,8 +57,7 @@ const AddLoanRequest = () => {
                 email: payload.email || payload.sub
             };
         } catch (error) {
-           // console.error('Erreur décodage token:', error);
-           toast.error('Erreur lors de la lecture des informations utilisateur. Certaines fonctionnalités peuvent être limitées.', { autoClose: 7000 });
+            toast.error('Erreur lors de la lecture des informations utilisateur. Certaines fonctionnalités peuvent être limitées.', { autoClose: 7000 });
             return null;
         }
     }, []);
@@ -172,33 +86,24 @@ const AddLoanRequest = () => {
                 const userData = await response.json();
                 console.log('👤 User data:', userData);
                 setCurrentUser(userData);
-                
-                // Vérifier l'éligibilité après avoir récupéré l'utilisateur
-                await checkEligibility();
             } else {
-              //  console.warn(' Impossible de récupérer le profil, utilisation du token');
-              toast.warn('⚠️ Impossible de récupérer le profil complet. Certaines fonctionnalités peuvent être limitées.', { autoClose: 7000 });    
+                toast.warn('⚠️ Impossible de récupérer le profil complet. Certaines fonctionnalités peuvent être limitées.', { autoClose: 7000 });    
                 const userFromToken = getCurrentUserFromToken();
                 if (userFromToken) {
                     setCurrentUser(userFromToken);
-                    await checkEligibility();
                 }
             }
         } catch (error) {
-           // console.error(' Erreur récupération utilisateur:', error);
-              toast.error('❌ Erreur lors de la récupération des informations utilisateur. Certaines fonctionnalités peuvent être limitées.', { autoClose: 7000 }); 
+            toast.error('❌ Erreur lors de la récupération des informations utilisateur. Certaines fonctionnalités peuvent être limitées.', { autoClose: 7000 }); 
             const userFromToken = getCurrentUserFromToken();
             if (userFromToken) {
                 setCurrentUser(userFromToken);
-                await checkEligibility();
             }
         }
-    }, [getCurrentUserFromToken, checkEligibility]);
+    }, [getCurrentUserFromToken]);
 
     // Récupérer les informations du membre connecté au chargement du composant
     useEffect(() => {
-        // console.log(' Initialisation AddLoanRequest');
-      //  toast.info('ℹ️ Chargement des informations utilisateur...', { autoClose: 3000 });
         fetchCurrentUser();
     }, [fetchCurrentUser]);
 
@@ -250,12 +155,6 @@ const AddLoanRequest = () => {
             return;
         }
 
-        // Vérifier l'éligibilité avant soumission
-       /* if (!isEligible) {
-            toast.error('Vous n\'êtes pas éligible pour un nouveau prêt. Vous avez déjà des demandes en attente de validation.', { autoClose: 7000 });
-            return;
-        }*/
-
         setLoading(true);
         try {
             const token = localStorage.getItem('token');
@@ -264,10 +163,7 @@ const AddLoanRequest = () => {
                 requestAmount: parseFloat(formData.requestAmount),
                 duration: parseInt(formData.duration),
                 reason: formData.reason
-                // acceptTerms n'est pas envoyé au backend
             };
-
-            //console.log('📤 Données envoyées:', loanRequestData);
 
             const response = await fetch('http://localhost:8080/mut/loan_request', {
                 method: 'POST',
@@ -279,7 +175,6 @@ const AddLoanRequest = () => {
             });
 
             const responseText = await response.text();
-        //    console.log('📥 Response:', response.status, responseText);
 
             if (response.ok) {
                 toast.success('✅ Demande de prêt soumise avec succès !', { autoClose: 3000 });
@@ -291,9 +186,6 @@ const AddLoanRequest = () => {
                     reason: '',
                     acceptTerms: false
                 });
-                
-                // Re-vérifier l'éligibilité après soumission
-                await checkEligibility();
                 
                 // Redirection après succès
                 setTimeout(() => {
@@ -312,8 +204,7 @@ const AddLoanRequest = () => {
                 throw new Error(errorMessage);
             }
         } catch (error) {
-            // console.error('🚨 Erreur détaillée:', error);
-          //  toast.error(`❌ Erreur: ${error.message}`);
+            toast.error(`❌ Erreur: ${error.message}`);
         } finally {
             setLoading(false);
         }
@@ -388,48 +279,6 @@ const AddLoanRequest = () => {
                                 </div>
                             )}
 
-                            {/* Statut d'éligibilité */}
-                            {eligibilityChecked && (
-                                <div className={`alert ${isEligible ? 'alert-success' : 'alert-danger'}`}>
-                                    <div className="d-flex align-items-center">
-                                        <span className="me-2">
-                                            {isEligible ? '✅' : '❌'}
-                                        </span>
-                                        <strong>
-                                            {isEligible ? 'Vous êtes éligible pour un prêt' : 'Vous n\'êtes pas éligible pour un prêt'}
-                                        </strong>
-                                    </div>
-                                    
-                                    {!isEligible && (
-                                        <div className="mt-2">
-                                            <div className="small">
-                                                <strong>📋 Raison :</strong> Vous avez déjà une ou plusieurs demandes de prêt en attente de validation.
-                                                <br />
-                                                <strong>🚀 Action requise :</strong> Veuillez attendre la validation de vos demandes en cours avant d'en soumettre une nouvelle.
-                                            </div>
-                                            <button 
-                                                className="btn btn-outline-primary btn-sm mt-2"
-                                                onClick={viewMyRequests}
-                                                type="button"
-                                            >
-                                                📋 Voir mes demandes en cours
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {!eligibilityChecked && (
-                                <div className="alert alert-info">
-                                    <div className="d-flex align-items-center">
-                                        <div className="spinner-border spinner-border-sm me-2" role="status">
-                                            <span className="visually-hidden">Chargement...</span>
-                                        </div>
-                                        Vérification de votre éligibilité...
-                                    </div>
-                                </div>
-                            )}
-
                             {success && (
                                 <div className="alert alert-success">
                                     <div className="d-flex align-items-center">
@@ -458,7 +307,7 @@ const AddLoanRequest = () => {
                                             min="1000"
                                             step="500"
                                             placeholder="Entrez le montant"
-                                            disabled={!isEligible || loading}
+                                            disabled={loading}
                                         />
                                         {errors.requestAmount && (
                                             <div className="invalid-feedback d-block">
@@ -476,7 +325,7 @@ const AddLoanRequest = () => {
                                             className={`form-select ${errors.duration ? 'is-invalid' : ''}`}
                                             value={formData.duration}
                                             onChange={handleInputChange('duration')}
-                                            disabled={!isEligible || loading}
+                                            disabled={loading}
                                         >
                                             <option value="">Sélectionnez une durée</option>
                                             {durationOptions.map((option) => (
@@ -502,7 +351,7 @@ const AddLoanRequest = () => {
                                         className={`form-select ${errors.reason ? 'is-invalid' : ''}`}
                                         value={formData.reason}
                                         onChange={handleInputChange('reason')}
-                                        disabled={!isEligible || loading}
+                                        disabled={loading}
                                     >
                                         <option value="">Sélectionnez une raison</option>
                                         {reasons.map((reason) => (
@@ -519,7 +368,7 @@ const AddLoanRequest = () => {
                                 </div>
 
                                 {/* Détails du prêt calculés */}
-                                {loanDetails && isEligible && (
+                                {loanDetails && (
                                     <div className="card bg-light mb-4">
                                         <div className="card-body">
                                             <h6 className="card-title text-primary">📊 Détails du prêt calculés</h6>
@@ -547,7 +396,7 @@ const AddLoanRequest = () => {
                                             id="acceptTerms"
                                             checked={formData.acceptTerms}
                                             onChange={handleInputChange('acceptTerms')}
-                                            disabled={!isEligible || loading}
+                                            disabled={loading}
                                         />
                                         <label className="form-check-label" htmlFor="acceptTerms">
                                             J'accepte les conditions générales du prêt *
@@ -572,7 +421,7 @@ const AddLoanRequest = () => {
                                     <button 
                                         type="submit" 
                                         className="btn btn-primary btn-lg"
-                                        disabled={loading || !currentUser || !isEligible || !formData.acceptTerms}
+                                        disabled={loading || !currentUser || !formData.acceptTerms}
                                     >
                                         {loading ? (
                                             <>

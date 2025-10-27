@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -231,7 +230,7 @@ export default function Dashboard() {
       {/* Cartes de statistiques ultra compactes */}
       <div className="row mb-2">
         <div className="col-3 px-1">
-          <div className="card border-start-primary border-2 h-100">
+          <div>
             <div className="card-body p-2 text-center">
               <div className="text-xs fw-bold text-primary">Demandes</div>
               <div className="h6 mb-0 fw-bold">{stats.totalRequests}</div>
@@ -240,7 +239,7 @@ export default function Dashboard() {
         </div>
 
         <div className="col-3 px-1">
-          <div className="card border-start-success border-2 h-100">
+          <div>
             <div className="card-body p-2 text-center">
               <div className="text-xs fw-bold text-success">Prêts actifs</div>
               <div className="h6 mb-0 fw-bold">{stats.activeLoans}</div>
@@ -249,7 +248,7 @@ export default function Dashboard() {
         </div>
 
         <div className="col-3 px-1">
-          <div className="card border-start-warning border-2 h-100">
+          <div>
             <div className="card-body p-2 text-center">
               <div className="text-xs fw-bold text-warning">En attente</div>
               <div className="h6 mb-0 fw-bold">{stats.pendingApprovals}</div>
@@ -258,7 +257,7 @@ export default function Dashboard() {
         </div>
 
         <div className="col-3 px-1">
-          <div className="card border-start-info border-2 h-100">
+          <div>
             <div className="card-body p-2 text-center">
               <div className="text-xs fw-bold text-info">Cotisations</div>
               <div className="h6 mb-0 fw-bold">{stats.totalContributions}</div>
@@ -267,9 +266,13 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="row g-2">
+      <hr/>
+      <hr/>
+
+      {/* Ligne des cartes d'actions */}
+      <div className="row g-2 mb-2">
         {/* Panel de Prêt */}
-        <div className="col-md-3">
+        <div className="col-md-1">
           <div className="card shadow-sm h-100">
             <div className="card-header bg-primary text-white py-1 px-2">
               <small className="fw-bold">
@@ -278,16 +281,16 @@ export default function Dashboard() {
               </small>
             </div>
             <div className="card-body p-2">
-              <div className="d-grid gap-1">
+              <div>
                 <button
-                  className="btn btn-primary btn-sm"
+                  className="btn btn-sm"
                   onClick={() => navigate('/loans/request')}
                 >
-                  <i className="fas fa-plus me-1"></i>
                   Nouvelle
                 </button>
+                <hr/>
                 <button
-                  className="btn btn-outline-primary btn-sm"
+                  className="btn btn-sm"
                   onClick={() => navigate('/loans/requests')}
                 >
                   <i className="fas fa-list me-1"></i>
@@ -299,7 +302,7 @@ export default function Dashboard() {
         </div>
 
         {/* Panel de Remboursement */}
-        <div className="col-md-3">
+        <div className="col-md-1">
           <div className="card shadow-sm h-100">
             <div className="card-header bg-info text-white py-1 px-2">
               <small className="fw-bold">
@@ -307,18 +310,17 @@ export default function Dashboard() {
                 Remboursement
               </small>
             </div>
-            <div className="card-body p-2">
-              <div className="d-grid gap-1">
+            <div>
+              <div >
                 <button
-                  className="btn btn-info btn-sm text-white"
+                  className='btn btn-sm'
                   onClick={() => navigate('/loans/repayment')}
                 >
-                  <i className="fas fa-money-bill me-1"></i>
                   Faire un remboursement
                 </button>
-                {/* NOUVEAU BOUTON MES REMBOURSEMENTS */}
+                <hr/>
                 <button
-                  className="btn btn-outline-info btn-sm"
+                  className="btn btn-sm"
                   onClick={() => navigate('/loans/repayment-history')}
                 >
                   <i className="fas fa-history me-1"></i>
@@ -330,7 +332,7 @@ export default function Dashboard() {
         </div>
 
         {/* Panel de Cotisation */}
-        <div className="col-md-3">
+        <div className="col-md-1">
           <div className="card shadow-sm h-100">
             <div className="card-header bg-success text-white py-1 px-2">
               <small className="fw-bold">
@@ -341,14 +343,15 @@ export default function Dashboard() {
             <div className="card-body p-2">
               <div className="d-grid gap-1">
                 <button
-                  className="btn btn-success btn-sm"
+                  className="btn btn-sm"
                   onClick={() => setShowContributionModal(true)}
                 >
                   <i className="fas fa-plus me-1"></i>
                   Nouvelle
                 </button>
+                <hr/>
                 <button
-                  className="btn btn-outline-success btn-sm"
+                  className="btn btn-sm"
                   onClick={() => navigate('/mut/contribution/individual/my-contributions')}
                 >
                   <i className="fas fa-history me-1"></i>
@@ -360,7 +363,7 @@ export default function Dashboard() {
         </div>
 
         {/* Panel Événements */}
-        <div className="col-md-3">
+        <div className="col-md-1">
           <div className="card shadow-sm h-100">
             <div className="card-header bg-warning text-dark py-1 px-2">
               <small className="fw-bold">
@@ -368,20 +371,87 @@ export default function Dashboard() {
                 Événements
               </small>
             </div>
-            <div className="card-body p-2">
+            <div className="card-body p-1">
               <div className="d-grid gap-1">
-                <button className="btn btn-warning btn-sm text-dark"
+                <button 
+                className="btn btn-sm"
                   onClick={() => navigate('/mut/event')}>
                   <i className="fas fa-plus me-1"></i>
                   Nouvel Événement
                 </button>
+                <hr/>
                 <button
-                  className="btn btn-outline-warning btn-sm"
+                 className="btn btn-sm"
                   onClick={() => navigate('/mut/event/list')}
                 >
                   <i className="fas fa-list me-1"></i>
                   Voir Événements
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Cartes Dernières demandes et Prêts en cours alignées avec les autres */}
+        <div className="col-md-4">
+          <div className="row h-100 g-2">
+            {/* Carte Dernières demandes */}
+            <div className="col-md-6">
+              <div className="card shadow-sm h-100">
+                <div className="card-header py-1 px-2 bg-light">
+                  <small className="fw-bold text-muted">
+                    <i className="fas fa-history me-1"></i>
+                    Dernières demandes
+                  </small>
+                </div>
+                <div className="card-body p-1">
+                  {myLoanRequests.length === 0 ? (
+                    <p className="text-muted small mb-0 text-center">Aucune demande</p>
+                  ) : (
+                    <div className="small">
+                      {myLoanRequests.slice(0, 3).map(request => (
+                        <div key={request.id} className="d-flex justify-content-between align-items-center border-bottom py-1">
+                          <div>
+                            <div className="fw-medium">{formatCurrency(request.requestAmount)}</div>
+                            <small className="text-muted">{request.reason?.substring(0, 30)}...</small>
+                          </div>
+                          {getStatusBadge(request.status)}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Carte Prêts en cours */}
+            <div className="col-md-6">
+              <div className="card shadow-sm h-100">
+                <div className="card-header py-1 px-2 bg-light">
+                  <small className="fw-bold text-muted">
+                    <i className="fas fa-chart-line me-1"></i>
+                    Prêts en cours
+                  </small>
+                </div>
+                <div className="card-body p-2">
+                  {myLoans.filter(loan => !loan.isRepaid).length === 0 ? (
+                    <p className="text-muted small mb-0 text-center">Aucun prêt en cours</p>
+                  ) : (
+                    <div className="small">
+                      {myLoans.filter(loan => !loan.isRepaid).slice(0, 3).map(loan => (
+                        <div key={loan.id} className="d-flex justify-content-between align-items-center border-bottom py-1">
+                          <div>
+                            <div className="fw-medium">{formatCurrency(loan.amount)}</div>
+                            <small className="text-muted">
+                              Échéance: {loan.endDate ? new Date(loan.endDate).toLocaleDateString() : 'N/A'}
+                            </small>
+                          </div>
+                          <span className="badge bg-warning text-dark">En cours</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -458,67 +528,6 @@ export default function Dashboard() {
             </div>
           </div>
         )}
-      </div>
-
-      {/* Aperçu rapide des prêts */}
-      <div className="row mt-2">
-        <div className="col-md-6">
-          <div className="card shadow-sm">
-            <div className="card-header py-1 px-2 bg-light">
-              <small className="fw-bold text-muted">
-                <i className="fas fa-history me-1"></i>
-                Dernières demandes
-              </small>
-            </div>
-            <div className="card-body p-2">
-              {myLoanRequests.length === 0 ? (
-                <p className="text-muted small mb-0 text-center">Aucune demande</p>
-              ) : (
-                <div className="small">
-                  {myLoanRequests.slice(0, 3).map(request => (
-                    <div key={request.id} className="d-flex justify-content-between align-items-center border-bottom py-1">
-                      <div>
-                        <div className="fw-medium">{formatCurrency(request.requestAmount)}</div>
-                        <small className="text-muted">{request.reason?.substring(0, 30)}...</small>
-                      </div>
-                      {getStatusBadge(request.status)}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="col-md-6">
-          <div className="card shadow-sm">
-            <div className="card-header py-1 px-2 bg-light">
-              <small className="fw-bold text-muted">
-                <i className="fas fa-chart-line me-1"></i>
-                Prêts en cours
-              </small>
-            </div>
-            <div className="card-body p-2">
-              {myLoans.filter(loan => !loan.isRepaid).length === 0 ? (
-                <p className="text-muted small mb-0 text-center">Aucun prêt en cours</p>
-              ) : (
-                <div className="small">
-                  {myLoans.filter(loan => !loan.isRepaid).slice(0, 3).map(loan => (
-                    <div key={loan.id} className="d-flex justify-content-between align-items-center border-bottom py-1">
-                      <div>
-                        <div className="fw-medium">{formatCurrency(loan.amount)}</div>
-                        <small className="text-muted">
-                          Échéance: {loan.endDate ? new Date(loan.endDate).toLocaleDateString() : 'N/A'}
-                        </small>
-                      </div>
-                      <span className="badge bg-warning text-dark">En cours</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Panel des notifications */}
