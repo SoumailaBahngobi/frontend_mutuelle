@@ -24,9 +24,7 @@ const LoanRequestsValidator = () => {
             });
             setLoanRequests(response.data);
         } catch (error) {
-            //console.error('Erreur:', error);
-           // alert('Erreur lors du chargement des demandes');
-           toast.error('Erreur lors du chargement des demandes de prêt. Veuillez réessayer plus tard.', { autoClose: 7000 });   
+            toast.error('Erreur lors du chargement des demandes de prêt. Veuillez réessayer plus tard.', { autoClose: 7000 });   
         } finally {
             setLoading(false);
         }
@@ -40,8 +38,7 @@ const LoanRequestsValidator = () => {
             });
             setStats(response.data);
         } catch (error) {
-           // console.error('Erreur stats:', error);
-           toast.error('Erreur lors du chargement des statistiques. Veuillez réessayer plus tard.', { autoClose: 7000 });
+            toast.error('Erreur lors du chargement des statistiques. Veuillez réessayer plus tard.', { autoClose: 7000 });
         }
     };
 
@@ -100,16 +97,13 @@ const LoanRequestsValidator = () => {
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
-            //console.log('[handleApprove] response status:', response.status, 'data:', response.data);
             toast.info('✅ Approbation en cours de traitement...', { autoClose: 3000 });
 
-            // Accept any 2xx as success
             if (response.status >= 200 && response.status < 300) {
-               // alert('Demande approuv\u00e9e avec succ\u00e8s !');
-               toast.success('Demande approuvée avec succès !', { autoClose: 5000 });
+                toast.success('Demande approuvée avec succès !', { autoClose: 5000 });
                 setApprovalComment('');
 
-                // Update selectedRequest optimistically so the modal shows the new approval immediately
+                // Mettre à jour l'état local
                 setLoanRequests((prev) => prev.map((r) => {
                     if (r.id === requestId) {
                         const updated = { ...r };
@@ -117,38 +111,36 @@ const LoanRequestsValidator = () => {
                         if (role === 'SECRETARY') updated.secretaryApproved = true;
                         if (role === 'TREASURER') updated.treasurerApproved = true;
 
-                        // If all three are true, set status to APPROVED locally (backend should do this too)
+                        // Si tous ont approuvé, le prêt est automatiquement créé
                         if (updated.presidentApproved && updated.secretaryApproved && updated.treasurerApproved) {
                             updated.status = 'APPROVED';
+                            updated.loanGranted = true;
+                            toast.info('✅ Prêt accordé automatiquement !', { autoClose: 5000 });
+                        } else if (updated.presidentApproved || updated.secretaryApproved || updated.treasurerApproved) {
+                            updated.status = 'IN_REVIEW';
                         }
                         return updated;
                     }
                     return r;
                 }));
 
-                // Refresh server-side state but don't rely solely on it for UI feedback
                 fetchAllLoanRequests();
                 fetchValidatorStats();
                 setSelectedRequest(null);
             }
         } catch (error) {
-            //console.error('Erreur approbation:', error);
-            toast.error('Erreur lors de l\'approbation. Veuillez r\u00e9essayer.', { autoClose: 7000 });
-            // Show clearer message depending on response
+            toast.error('Erreur lors de l\'approbation. Veuillez réessayer.', { autoClose: 7000 });
             const status = error.response?.status;
             if (status === 401) {
-               // alert('Non authentifi\u00e9. Veuillez vous reconnecter.');
-               toast.error('Non authentifié. Veuillez vous reconnecter.');
+                toast.error('Non authentifié. Veuillez vous reconnecter.');
                 localStorage.removeItem('token');
                 navigate('/login');
                 return;
             }
             if (status === 403) {
-               // alert('Acc\u00e8s refus\u00e9. Vous n\'avez pas les droits pour approuver.');
-               toast.error('Accès refusé. Vous n\'avez pas les droits pour approuver.');
+                toast.error('Accès refusé. Vous n\'avez pas les droits pour approuver.');
                 return;
             }
-            alert("Erreur lors de l'approbation (voir console)");
         }
     };
 
@@ -158,27 +150,27 @@ const LoanRequestsValidator = () => {
 
         try {
             const token = localStorage.getItem('token');
-            // Déterminer le rôle de l'utilisateur pour le rejet
-            const userRole = 'PRESIDENT'; // À remplacer par le rôle réel de l'utilisateur
-
             const response = await axios.post(
                 `http://localhost:8080/mut/loan_request/${requestId}/reject`,
                 { 
-                    rejectionReason: rejectionReason,
-                    rejectedByRole: userRole
+                    rejectionReason: rejectionReason
                 },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
             if (response.status === 200) {
-                alert('Demande rejetée avec succès !');
+                toast.success('Demande rejetée avec succès !', { autoClose: 5000 });
                 fetchAllLoanRequests();
                 fetchValidatorStats();
             }
         } catch (error) {
-            console.error('Erreur rejet:', error);
-            alert('Erreur lors du rejet');
+            toast.error('Erreur lors du rejet. Veuillez réessayer.', { autoClose: 7000 });
         }
+    };
+
+    // Ajouter une colonne pour montrer si le prêt a été accordé
+    const isLoanGranted = (request) => {
+        return request.loanGranted ? '✅ Accordé' : '❌ En attente';
     };
 
     if (loading) {
@@ -266,6 +258,7 @@ const LoanRequestsValidator = () => {
                                         <th>Président</th>
                                         <th>Secrétaire</th>
                                         <th>Trésorier</th>
+                                        <th>Prêt Accordé</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -298,6 +291,7 @@ const LoanRequestsValidator = () => {
                                             <td>{getApprovalStatus(request, 'PRESIDENT')}</td>
                                             <td>{getApprovalStatus(request, 'SECRETARY')}</td>
                                             <td>{getApprovalStatus(request, 'TREASURER')}</td>
+                                            <td>{isLoanGranted(request)}</td>
                                             <td>
                                                 <div className="btn-group">
                                                     <button 
@@ -358,6 +352,7 @@ const LoanRequestsValidator = () => {
                                         <p><strong>Raison:</strong> {selectedRequest.reason}</p>
                                         <p><strong>Date demande:</strong> {new Date(selectedRequest.requestDate).toLocaleDateString()}</p>
                                         <p><strong>Statut:</strong> {getStatusBadge(selectedRequest.status)}</p>
+                                        <p><strong>Prêt accordé:</strong> {isLoanGranted(selectedRequest)}</p>
                                     </div>
                                 </div>
                                 

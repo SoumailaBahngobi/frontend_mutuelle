@@ -39,7 +39,7 @@ export default function LoanApprovalList() {
       
       setLoanRequests(res.data);
     } catch (err) {
-      console.error('Erreur chargement demandes:', err);
+     // console.error('Erreur chargement demandes:', err);
       setError('Impossible de charger les demandes de prêt');
     } finally {
       setLoading(false);
@@ -191,7 +191,7 @@ export default function LoanApprovalList() {
       alert('Demande rejetée avec succès!');
       fetchLoanRequests(); // Rafraîchir la liste
     } catch (err) {
-      console.error('Erreur rejet:', err);
+     // console.error('Erreur rejet:', err);
       alert('Erreur lors du rejet: ' + (err.response?.data?.message || err.message));
     }
   };

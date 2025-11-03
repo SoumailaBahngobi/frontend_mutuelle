@@ -226,7 +226,6 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
-
       {/* Cartes de statistiques ultra compactes */}
       <div className="row mb-2">
         <div className="col-3 px-1">

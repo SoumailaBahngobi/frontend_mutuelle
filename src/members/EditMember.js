@@ -42,7 +42,7 @@ function EditMember() {
                 role: member.role || ''
             });
         } catch (error) {
-            console.error('Erreur lors du chargement du membre:', error);
+           // console.error('Erreur lors du chargement du membre:', error);
             toast.error('Erreur lors du chargement du membre');
             navigate('/members');
         } finally {
