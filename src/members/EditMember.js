@@ -296,7 +296,7 @@ function EditMember() {
                                         ) : (
                                             <>
                                                 <i className="bi bi-check-lg me-2"></i>
-                                                Modifier le membre
+                                                Enregistrer les modifications
                                             </>
                                         )}
                                     </button>

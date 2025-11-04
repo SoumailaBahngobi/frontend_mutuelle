@@ -199,7 +199,7 @@ export default function Dashboard() {
                   <h6 className="mb-0 fw-bold">{user.firstName} {user.name}</h6>
                   <div className="text-muted small">
                     <span className="me-2">Email:{user.email}</span>
-                    <span className="badge bg-primary small"> Rôle:{user.role}</span>
+                    <span className="badge bg-primary small">{user.role}</span>
                   </div>
                 </div>
                 <div className="col-auto">
