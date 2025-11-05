@@ -69,12 +69,12 @@ function EventList() {
 
   const getCategoryBadge = (category) => {
     const badgeClasses = {
-      'COTISATION': 'bg-primary',
+      // 'COTISATION': 'bg-primary',
       'REUNION': 'bg-info',
       'ASSEMBLEE_GENERALE': 'bg-warning text-dark',
       'FORMATION': 'bg-success',
-      'EVENEMENT_SOCIAL': 'bg-purple text-white',
-      'PROJET_COMMUN': 'bg-orange text-white',
+      'EVENEMENT_SOCIAL': 'bg-info',
+      'PROJET_COMMUN': 'bg-orange',
       'AUTRE': 'bg-secondary'
     };
 
@@ -167,7 +167,7 @@ function EventList() {
                     onChange={(e) => setFilter(e.target.value)}
                   >
                     <option value="all">Tous les événements</option>
-                    <option value="COTISATION">Cotisations</option>
+                    {/* <option value="COTISATION">Cotisations</option> */}
                     <option value="REUNION">Réunions</option>
                     <option value="ASSEMBLEE_GENERALE">Assemblées Générales</option>
                     <option value="FORMATION">Formations</option>
@@ -194,7 +194,7 @@ function EventList() {
                       <th>Montant</th>
                       <th>Date</th>
                       <th>Participants</th>
-                      <th>Actions</th>
+                      {/* <th>Actions</th> */}
                     </tr>
                   </thead>
                   <tbody>
@@ -239,7 +239,7 @@ function EventList() {
                               {event.members ? event.members.length : 0} membre(s)
                             </span>
                           </td>
-                          <td>
+                          {/* <td>
                             <div className="btn-group btn-group-sm">
                               <button
                                 className="btn btn-outline-primary"
@@ -263,7 +263,7 @@ function EventList() {
                                 <i className="fas fa-trash"></i>
                               </button>
                             </div>
-                          </td>
+                          </td> */}
                         </tr>
                       ))
                     )}
@@ -272,7 +272,7 @@ function EventList() {
               </div>
 
               {/* Statistiques */}
-              <div className="row mt-4">
+              <div className="row mt-6">
                 <div className="col-md-3">
                   <div className="card bg-light">
                     <div className="card-body text-center">
@@ -291,7 +291,7 @@ function EventList() {
                     </div>
                   </div>
                 </div>
-                <div className="col-md-3">
+                {/* <div className="col-md-3">
                   <div className="card bg-light">
                     <div className="card-body text-center">
                       <h5 className="text-info">
@@ -300,7 +300,7 @@ function EventList() {
                       <small className="text-muted">Cotisations</small>
                     </div>
                   </div>
-                </div>
+                </div> */}
                 <div className="col-md-3">
                   <div className="card bg-light">
                     <div className="card-body text-center">

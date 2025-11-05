@@ -309,10 +309,10 @@ const LoanList = () => {
                                 <div className="col">
                                     <h2 className="h4 mb-2">
                                         <i className="fas fa-list-check me-2 text-primary"></i>
-                                        Liste des de toutes les Prêts
+                                        Statistique des Prêts
                                     </h2>
                                     <p className="text-muted mb-0">
-                                        Gestion et suivi des approbations de prêt - Système d'accord par le trésorier
+                                        Système de gestion de mutuelle de solidarité
                                     </p>
                                 </div>
                                 <div className="col-auto">

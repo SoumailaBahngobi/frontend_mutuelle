@@ -125,12 +125,13 @@ function AddEvent() {
 
   const getCategoryLabel = (category) => {
     const labels = {
-      'COTISATION': 'Cotisation',
+      // 'COTISATION': 'Cotisation',
       'REUNION': 'Réunion',
       'ASSEMBLEE_GENERALE': 'Assemblée Générale',
       'FORMATION': 'Formation',
       'EVENEMENT_SOCIAL': 'Événement Social',
       'PROJET_COMMUN': 'Projet Commun',
+      'AFTER_WORK': 'After Work',
       'AUTRE': 'Autre'
     };
     return labels[category] || category;
@@ -209,9 +210,9 @@ function AddEvent() {
                       name="amount"
                       value={formData.amount}
                       onChange={handleInputChange}
-                      placeholder="0.00"
+                      placeholder="10000"
                       min="0"
-                      step="0.01"
+                      step="1000"
                     />
                     <div className="form-text">
                       Laissez 0 si l'événement n'a pas de coût financier

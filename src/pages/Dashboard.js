@@ -265,8 +265,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <hr/>
-      <hr/>
+      <hr />
+      <hr />
 
       {/* Ligne des cartes d'actions */}
       <div className="row g-2 mb-2">
@@ -287,7 +287,7 @@ export default function Dashboard() {
                 >
                   Nouvelle
                 </button>
-                <hr/>
+                <hr />
                 <button
                   className="btn btn-sm"
                   onClick={() => navigate('/loans/requests')}
@@ -317,7 +317,7 @@ export default function Dashboard() {
                 >
                   Faire un remboursement
                 </button>
-                <hr/>
+                <hr />
                 <button
                   className="btn btn-sm"
                   onClick={() => navigate('/loans/repayment-history')}
@@ -348,7 +348,7 @@ export default function Dashboard() {
                   <i className="fas fa-plus me-1"></i>
                   Nouvelle
                 </button>
-                <hr/>
+                <hr />
                 <button
                   className="btn btn-sm"
                   onClick={() => navigate('/mut/contribution/individual/my-contributions')}
@@ -372,15 +372,15 @@ export default function Dashboard() {
             </div>
             <div className="card-body p-1">
               <div className="d-grid gap-1">
-                <button 
-                className="btn btn-sm"
+                <button
+                  className="btn btn-sm"
                   onClick={() => navigate('/mut/event')}>
                   <i className="fas fa-plus me-1"></i>
                   Nouvel Événement
                 </button>
-                <hr/>
+                <hr />
                 <button
-                 className="btn btn-sm"
+                  className="btn btn-sm"
                   onClick={() => navigate('/mut/event/list')}
                 >
                   <i className="fas fa-list me-1"></i>
@@ -488,6 +488,14 @@ export default function Dashboard() {
                   >
                     <i className="fas fa-calendar-alt me-1"></i>
                     Périodes
+                  </button>
+
+                  <button
+                    className="btn btn-outline-secondary btn-sm"
+                    onClick={() => navigate('/loans/list')}
+                  >
+                    <i className="fas fa-calendar-alt me-1"></i>
+                    Statistiques des Prêts
                   </button>
 
                   {/* NOUVEAUX BOUTONS GESTION DES MEMBRES */}
