@@ -33,7 +33,7 @@ import Footer from './pages/layout/Footer.js';
 
 
 
-///mut/member/profile/update
+///mutuelle/member/profile/update
 
 function App() {
   return (
@@ -52,11 +52,11 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
 
           {/* Routes cotisations */}
-          <Route path="/mut/contribution_period" element={<AddContributionPeriod />} />
-          <Route path="/mut/contribution/individual" element={<AddIndividualContribution />} />
-          <Route path="/mut/contribution/group" element={<AddGroupContribution />} />
-          <Route path="/mut/contribution/individual/my-contributions" element={<ContributionHistory />} />
-          <Route path="/mut/event" element={<AddEvent />} />
+          <Route path="/mutuelle/contribution_period" element={<AddContributionPeriod />} />
+          <Route path="/mutuelle/contribution/individual" element={<AddIndividualContribution />} />
+          <Route path="/mutuelle/contribution/group" element={<AddGroupContribution />} />
+          <Route path="/mutuelle/contribution/individual/my-contributions" element={<ContributionHistory />} />
+          <Route path="/mutuelle/event" element={<AddEvent />} />
 
           {/* Routes prêts */}
           <Route path="/loans/request" element={<AddLoanRequest />} />
@@ -67,9 +67,9 @@ function App() {
           <Route path="/loans/requests" element={<MyLoanRequests />} />
           <Route path="/loans/my-loans" element={<MyLoans />} />
 
-          <Route path='/mut/repayments/view' element={<RepaymentList />} />
-          <Route path='/mut/loan-list' element={<LoanList />} />
-          <Route path='/mut/event/list' element={<EventList />} />
+          <Route path='/mutuelle/repayments/view' element={<RepaymentList />} />
+          <Route path='/mutuelle/loan-list' element={<LoanList />} />
+          <Route path='/mutuelle/event/list' element={<EventList />} />
 
           {/* Routes administration */}
           <Route path="/members" element={<AddMember />} />

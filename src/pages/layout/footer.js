@@ -569,7 +569,7 @@ export default function Footer() {
                         min-height: 220px;
                     }
                 }
-                
+                    
                 @media (max-width: 768px) {
                     .footer-complete {
                         min-height: auto;
