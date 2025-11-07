@@ -13,7 +13,7 @@ const LoanHistory = () => {
     const fetchLoans = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await axios.get('http://localhost:8080/mut/loan', {
+            const response = await axios.get('http://localhost:8080/mutuelle/loan', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setLoans(response.data);

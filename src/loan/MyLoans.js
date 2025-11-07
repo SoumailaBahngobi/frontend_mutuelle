@@ -16,7 +16,7 @@ export default function MyLoans() {
   const fetchMyLoans = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get('http://localhost:8080/mut/loan_request/my-requests', {
+      const res = await axios.get('http://localhost:8080/mutuelle/loan_request/my-requests', {
         headers: { Authorization: `Bearer ${token}` }
       });
       

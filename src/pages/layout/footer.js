@@ -129,14 +129,14 @@ export default function Footer() {
                                     </a>
                                 </li>
                                 <li>
-                                    <a href="/mut/contribution/individual" className="footer-link">
+                                    <a href="/mutuelle/contribution/individual" className="footer-link">
                                         <FontAwesomeIcon icon={faCoins} className="link-icon" />
                                         Cotisations
                                     </a>
                                 </li>
                                
                                 <li>
-                                    <a href="/mut/event/list" className="footer-link">
+                                    <a href="/mutuelle/event/list" className="footer-link">
                                         <FontAwesomeIcon icon={faCalendarAlt} className="link-icon" />
                                         Événements
                                     </a>

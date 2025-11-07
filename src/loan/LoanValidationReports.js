@@ -22,7 +22,7 @@ export default function LoanValidationReports() {
   const fetchUserProfile = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8080/mut/member/profile', {
+      const response = await axios.get('http://localhost:8080/mutuelle/member/profile', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUser(response.data);
@@ -39,13 +39,13 @@ export default function LoanValidationReports() {
       const token = localStorage.getItem('token');
       
       // Récupérer les statistiques
-      const statsRes = await axios.get('http://localhost:8080/mut/loan-validator/dashboard', {
+      const statsRes = await axios.get('http://localhost:8080/mutuelle/loan-validator/dashboard', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setStats(statsRes.data);
 
       // Récupérer l'historique des validations
-      const historyRes = await axios.get('http://localhost:8080/mut/loan-validator/my-approval-history', {
+      const historyRes = await axios.get('http://localhost:8080/mutuelle/loan-validator/my-approval-history', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setValidationHistory(historyRes.data);

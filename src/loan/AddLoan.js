@@ -18,7 +18,7 @@ const AddLoan = () => {
     const fetchApprovedRequests = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await axios.get('http://localhost:8080/mut/loan_request/approved', {
+            const response = await axios.get('http://localhost:8080/mutuelle/loan_request/approved', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             
@@ -58,7 +58,7 @@ const AddLoan = () => {
             console.log('Création du prêt pour la demande ID:', selectedRequest);
             
             const response = await axios.post(
-                `http://localhost:8080/mut/loans/from-request/${selectedRequest}`, 
+                `http://localhost:8080/mutuelle/loans/from-request/${selectedRequest}`, 
                 {},
                 { 
                     headers: { 

@@ -20,7 +20,7 @@ export default function ViewMember() {
         try {
             setLoading(true);
             const token = localStorage.getItem('token');
-            const response = await axios.get("http://localhost:8080/mut/member", {
+            const response = await axios.get("http://localhost:8080/mutuelle/member", {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setMembers(response.data);
@@ -261,7 +261,7 @@ export default function ViewMember() {
         if (window.confirm(`Êtes-vous sûr de vouloir supprimer le membre "${memberName}" ? Cette action est irréversible.`)) {
             try {
                 const token = localStorage.getItem('token');
-                await axios.delete(`http://localhost:8080/mut/member/${memberId}`, {
+                await axios.delete(`http://localhost:8080/mutuelle/member/${memberId}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 toast.success('Membre supprimé avec succès');

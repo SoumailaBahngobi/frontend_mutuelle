@@ -18,12 +18,12 @@ const MemberLoanHistory = () => {
             const token = localStorage.getItem('token');
             
             // Récupérer mes demandes
-            const requestsRes = await axios.get('http://localhost:8080/mut/loan_request/my-requests', {
+            const requestsRes = await axios.get('http://localhost:8080/mutuelle/loan_request/my-requests', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             
             // Récupérer mes prêts
-            const loansRes = await axios.get('http://localhost:8080/mut/loan', {
+            const loansRes = await axios.get('http://localhost:8080/mutuelle/loan', {
                 headers: { Authorization: `Bearer ${token}` }
             });
 

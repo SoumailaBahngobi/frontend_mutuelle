@@ -65,7 +65,7 @@ function AddMember() {
         setLoading(true);
         
         try {
-            const response = await axios.post('http://localhost:8080/mut/register', form);
+            const response = await axios.post('http://localhost:8080/mutuelle/register', form);
             
             if (response.status === 200 || response.status === 201) {
                // alert('Membre inscrit avec succès !');

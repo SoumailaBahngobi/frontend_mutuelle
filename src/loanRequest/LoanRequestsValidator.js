@@ -19,7 +19,7 @@ const LoanRequestsValidator = () => {
     const fetchAllLoanRequests = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await axios.get('http://localhost:8080/mut/loan_request/all', {
+            const response = await axios.get('http://localhost:8080/mutuelle/loan_request/all', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setLoanRequests(response.data);
@@ -33,7 +33,7 @@ const LoanRequestsValidator = () => {
     const fetchValidatorStats = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await axios.get('http://localhost:8080/mut/loan_request/validator-stats', {
+            const response = await axios.get('http://localhost:8080/mutuelle/loan_request/validator-stats', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setStats(response.data);
@@ -92,7 +92,7 @@ const LoanRequestsValidator = () => {
             }
 
             const response = await axios.post(
-                `http://localhost:8080/mut/loan_request/${requestId}/approve/${endpoint}`,
+                `http://localhost:8080/mutuelle/loan_request/${requestId}/approve/${endpoint}`,
                 { comment: approvalComment },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -151,7 +151,7 @@ const LoanRequestsValidator = () => {
         try {
             const token = localStorage.getItem('token');
             const response = await axios.post(
-                `http://localhost:8080/mut/loan_request/${requestId}/reject`,
+                `http://localhost:8080/mutuelle/loan_request/${requestId}/reject`,
                 { 
                     rejectionReason: rejectionReason
                 },

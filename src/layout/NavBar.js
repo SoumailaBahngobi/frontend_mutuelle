@@ -148,19 +148,19 @@ export default function Navbar() {
                   </a>
                   <ul className="dropdown-menu">
                     <li>
-                      <Link className="dropdown-item" to="/mut/contribution/individual">
+                      <Link className="dropdown-item" to="/mutuelle/contribution/individual">
                         <i className="fas fa-user me-2"></i>
                         Cotisation individuelle
                       </Link>
                     </li>
                     <li>
-                      <Link className="dropdown-item" to="/mut/contribution/group">
+                      <Link className="dropdown-item" to="/mutuelle/contribution/group">
                         <i className="fas fa-users me-2"></i>
                         Cotisation groupe
                       </Link>
                     </li>
                     <li>
-                      <Link className="dropdown-item" to="/mut/contribution/individual/my-contributions">
+                      <Link className="dropdown-item" to="/mutuelle/contribution/individual/my-contributions">
                         <i className="fas fa-history me-2"></i>
                         Historique
                       </Link>
@@ -171,7 +171,7 @@ export default function Navbar() {
                       <>
                         <li><hr className="dropdown-divider" /></li>
                         <li>
-                          <Link className="dropdown-item" to="/mut/contribution_period">
+                          <Link className="dropdown-item" to="/mutuelle/contribution_period">
                             <i className="fas fa-calendar-alt me-2"></i>
                             Périodes cotisation
                           </Link>
@@ -207,7 +207,7 @@ export default function Navbar() {
                         </Link>
                       </li>
                       <li>
-                        <Link className="dropdown-item" to="/mut/contribution_period">
+                        <Link className="dropdown-item" to="/mutuelle/contribution_period">
                           <i className="fas fa-calendar me-2"></i>
                           Périodes
                         </Link>

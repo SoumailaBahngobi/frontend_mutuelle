@@ -31,7 +31,7 @@ export default function Dashboard() {
           return;
         }
 
-        const res = await axios.get('http://localhost:8080/mut/member/profile', {
+        const res = await axios.get('http://localhost:8080/mutuelle/member/profile', {
           headers: { Authorization: `Bearer ${token}` }
         });
 
@@ -61,7 +61,7 @@ export default function Dashboard() {
 
   const fetchNotifications = async (token) => {
     try {
-      const response = await axios.get('http://localhost:8080/mut/notification', {
+      const response = await axios.get('http://localhost:8080/mutuelle/notification', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setNotifications(response.data);
@@ -81,14 +81,14 @@ export default function Dashboard() {
 
   const fetchLoanData = async (token, userId) => {
     try {
-      const requestsRes = await axios.get('http://localhost:8080/mut/loan_request/my-requests', {
+      const requestsRes = await axios.get('http://localhost:8080/mutuelle/loan_request/my-requests', {
         headers: { Authorization: `Bearer ${token}` }
       });
 
       const loanRequests = Array.isArray(requestsRes.data) ? requestsRes.data : [];
       setMyLoanRequests(loanRequests);
 
-      const loansRes = await axios.get('http://localhost:8080/mut/loans', {
+      const loansRes = await axios.get('http://localhost:8080/mutuelle/loans', {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -119,9 +119,9 @@ export default function Dashboard() {
 
   const handleContributionType = (type) => {
     if (type === 'individuelle') {
-      navigate('/mut/contribution/individual');
+      navigate('/mutuelle/contribution/individual');
     } else if (type === 'groupe') {
-      navigate('/mut/contribution/group');
+      navigate('/mutuelle/contribution/group');
     }
     setShowContributionModal(false);
   };
@@ -351,7 +351,7 @@ export default function Dashboard() {
                 <hr />
                 <button
                   className="btn btn-sm"
-                  onClick={() => navigate('/mut/contribution/individual/my-contributions')}
+                  onClick={() => navigate('/mutuelle/contribution/individual/my-contributions')}
                 >
                   <i className="fas fa-history me-1"></i>
                   Historique
@@ -374,14 +374,14 @@ export default function Dashboard() {
               <div className="d-grid gap-1">
                 <button
                   className="btn btn-sm"
-                  onClick={() => navigate('/mut/event')}>
+                  onClick={() => navigate('/mutuelle/event')}>
                   <i className="fas fa-plus me-1"></i>
                   Nouvel Événement
                 </button>
                 <hr />
                 <button
                   className="btn btn-sm"
-                  onClick={() => navigate('/mut/event/list')}
+                  onClick={() => navigate('/mutuelle/event/list')}
                 >
                   <i className="fas fa-list me-1"></i>
                   Voir Événements
@@ -484,7 +484,7 @@ export default function Dashboard() {
                   </button>
                   <button
                     className="btn btn-outline-secondary btn-sm"
-                    onClick={() => navigate('/mut/contribution_period')}
+                    onClick={() => navigate('/mutuelle/contribution_period')}
                   >
                     <i className="fas fa-calendar-alt me-1"></i>
                     Périodes

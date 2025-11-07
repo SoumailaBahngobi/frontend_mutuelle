@@ -31,7 +31,7 @@ const AddRepayment = () => {
             setError('');
             const token = localStorage.getItem('token');
             
-            const response = await axios.get('http://localhost:8080/mut/loans/active', {
+            const response = await axios.get('http://localhost:8080/mutuelle/loans/active', {
                 headers: {
                     Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json'
@@ -227,7 +227,7 @@ const AddRepayment = () => {
 
             console.log('Données envoyées:', submitData);
 
-            const response = await axios.post('http://localhost:8080/mut/repayment', submitData, {
+            const response = await axios.post('http://localhost:8080/mutuelle/repayment', submitData, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json'

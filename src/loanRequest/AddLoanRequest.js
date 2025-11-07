@@ -75,7 +75,7 @@ const AddLoanRequest = () => {
                 return;
             }
 
-            let response = await fetch('http://localhost:8080/mut/member/profile', {
+            let response = await fetch('http://localhost:8080/mutuelle/member/profile', {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
@@ -165,7 +165,7 @@ const AddLoanRequest = () => {
                 reason: formData.reason
             };
 
-            const response = await fetch('http://localhost:8080/mut/loan_request', {
+            const response = await fetch('http://localhost:8080/mutuelle/loan_request', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,

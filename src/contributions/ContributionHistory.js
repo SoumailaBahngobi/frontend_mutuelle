@@ -67,12 +67,12 @@ function ContributionHistory() {
             setError('');
             
             const headers = getAuthHeaders();
-            let url = 'http://localhost:8080/mut/contribution/my-contributions';
+            let url = 'http://localhost:8080/mutuelle/contribution/my-contributions';
             
             if (filter === 'INDIVIDUAL') {
-                url = 'http://localhost:8080/mut/contribution/individual/my-contributions';
+                url = 'http://localhost:8080/mutuelle/contribution/individual/my-contributions';
             } else if (filter === 'GROUP') {
-                url = 'http://localhost:8080/mut/contribution/group/my-contributions';
+                url = 'http://localhost:8080/mutuelle/contribution/group/my-contributions';
             }
 
             console.log('🔍 Fetching from:', url);
@@ -118,7 +118,7 @@ function ContributionHistory() {
     const fetchContributionPeriods = async () => {
         try {
             const headers = getAuthHeaders();
-            const response = await axios.get('http://localhost:8080/mut/contribution_period', {
+            const response = await axios.get('http://localhost:8080/mutuelle/contribution_period', {
                 headers: headers
             });
             setContributionPeriods(Array.isArray(response.data) ? response.data : []);
@@ -595,13 +595,13 @@ function ContributionHistory() {
                                 <div className="d-flex flex-column align-items-center gap-2 mt-2">
                                     <button
                                         className="btn btn-outline-primary"
-                                        onClick={() => navigate('/mut/contribution/individual')}
+                                        onClick={() => navigate('/mutuelle/contribution/individual')}
                                     >
                                         Cotisation individuelle
                                     </button>
                                     <button
                                         className="btn btn-outline-warning"
-                                        onClick={() => navigate('/mut/contribution/group')}
+                                        onClick={() => navigate('/mutuelle/contribution/group')}
                                     >
                                         Cotisation groupée
                                     </button>

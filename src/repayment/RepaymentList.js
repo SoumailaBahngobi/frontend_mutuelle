@@ -19,7 +19,7 @@ const RepaymentList = () => {
             
             // D'abord tester l'endpoint
             try {
-                const testResponse = await axios.get('http://localhost:8080/mut/repayment', {
+                const testResponse = await axios.get('http://localhost:8080/mutuelle/repayment', {
                     headers: { 
                         Authorization: `Bearer ${token}`,
                         'Content-Type': 'application/json'
@@ -31,7 +31,7 @@ const RepaymentList = () => {
             }
 
             // Essayer d'abord l'endpoint simplifié
-            let url = 'http://localhost:8080/mut/repayment/simple';
+            let url = 'http://localhost:8080/mutuelle/repayment/simple';
             
             console.log('Chargement des remboursements depuis:', url);
 

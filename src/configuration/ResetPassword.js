@@ -27,12 +27,12 @@ export default function ResetPassword() {
 
       try {
         // Valider le token
-        const response = await axios.get(`http://localhost:8080/mut/member/validate-reset-token?token=${token}`);
+        const response = await axios.get(`http://localhost:8080/mutuelle/member/validate-reset-token?token=${token}`);
         if (response.status === 200) {
           setTokenValid(true);
           
           // Récupérer les informations du membre
-          const memberResponse = await axios.get(`http://localhost:8080/mut/member/member-by-token?token=${token}`);
+          const memberResponse = await axios.get(`http://localhost:8080/mutuelle/member/member-by-token?token=${token}`);
           setMemberInfo(memberResponse.data);
         }
       } catch (error) {
@@ -72,7 +72,7 @@ export default function ResetPassword() {
     setLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:8080/mut/member/reset-password', {
+      const response = await axios.post('http://localhost:8080/mutuelle/member/reset-password', {
         token: token,
         newPassword: form.newPassword
       });

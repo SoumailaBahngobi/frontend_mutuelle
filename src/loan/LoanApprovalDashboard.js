@@ -21,7 +21,7 @@ export default function LoanApprovalDashboard() {
   const fetchLoanRequests = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get('http://localhost:8080/mut/loan_request', {
+      const res = await axios.get('http://localhost:8080/mutuelle/loan_request', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setLoanRequests(res.data);
@@ -36,7 +36,7 @@ export default function LoanApprovalDashboard() {
   const handleApprove = async (requestId, role) => {
     try {
       const token = localStorage.getItem('token');
-      const endpoint = `http://localhost:8080/mut/loan_request/${requestId}/approve/${role.toLowerCase()}`;
+      const endpoint = `http://localhost:8080/mutuelle/loan_request/${requestId}/approve/${role.toLowerCase()}`;
 
       const response = await axios.post(endpoint,
         { comment },
@@ -60,7 +60,7 @@ export default function LoanApprovalDashboard() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.post(`http://localhost:8080/mut/loan_request/${requestId}/reject`,
+      const response = await axios.post(`http://localhost:8080/mutuelle/loan_request/${requestId}/reject`,
         {
           rejectionReason: reason,
           rejectedByRole: role
@@ -139,7 +139,7 @@ export default function LoanApprovalDashboard() {
   const fetchDetailedStats = async () => {
   try {
     const token = localStorage.getItem('token');
-    const res = await axios.get('http://localhost:8080/mut/loan-validator/dashboard', {
+    const res = await axios.get('http://localhost:8080/mutuelle/loan-validator/dashboard', {
       headers: { Authorization: `Bearer ${token}` }
     });
     return res.data;
@@ -350,7 +350,7 @@ const sortRequests = (requests, sortBy) => {
                               {request.status === 'APPROVED' && !request.loanCreated && (
                                 <button
                                   className="btn btn-outline-warning"
-                                  onClick={() => axios.post(`http://localhost:8080/mut/loan_request/${request.id}/force-create-loan`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(res => { console.log('force create', res.status); fetchLoanRequests(); }).catch(err => console.error(err))}
+                                  onClick={() => axios.post(`http://localhost:8080/mutuelle/loan_request/${request.id}/force-create-loan`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(res => { console.log('force create', res.status); fetchLoanRequests(); }).catch(err => console.error(err))}
                                   title="Forcer création prêt"
                                 >
                                   <i className="fas fa-bolt"></i>

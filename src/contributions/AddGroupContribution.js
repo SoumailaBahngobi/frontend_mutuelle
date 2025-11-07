@@ -61,7 +61,7 @@ function AddGroupContribution() {
     const fetchContributionPeriods = async () => {
         try {
             setLoading(true);
-            const response = await axios.get('http://localhost:8080/mut/contribution_period');
+            const response = await axios.get('http://localhost:8080/mutuelle/contribution_period');
             setContributionPeriods(response.data);
         } catch (error) {
             console.error('Erreur lors de la récupération des campagnes de cotisation', error);
@@ -75,7 +75,7 @@ function AddGroupContribution() {
         try {
             setMembersLoading(true);
             const token = localStorage.getItem('token');
-            const response = await axios.get('http://localhost:8080/mut/member', {
+            const response = await axios.get('http://localhost:8080/mutuelle/member', {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
@@ -141,7 +141,7 @@ function AddGroupContribution() {
             formData.append('file', file);
             
             const response = await axios.post(
-                'http://localhost:8080/mut/contribution/upload/payment-proof', 
+                'http://localhost:8080/mutuelle/contribution/upload/payment-proof', 
                 formData,
                 {
                     headers: {
@@ -227,7 +227,7 @@ function AddGroupContribution() {
             console.log('📤 Données envoyées pour cotisation groupée:', groupContributionData);
 
             const response = await axios.post(
-                'http://localhost:8080/mut/contribution/group', 
+                'http://localhost:8080/mutuelle/contribution/group', 
                 groupContributionData,
                 {
                     headers: {

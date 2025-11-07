@@ -33,7 +33,7 @@ export default function ResetPassword() {
     setLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:8080/mut/member/reset-password', {
+      const response = await axios.post('http://localhost:8080/mutuelle/member/reset-password', {
         token: token,
         newPassword: password
       });

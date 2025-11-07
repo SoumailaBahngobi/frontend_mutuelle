@@ -36,7 +36,7 @@ function AddEvent() {
   const fetchMembers = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8080/mut/member', {
+      const response = await axios.get('http://localhost:8080/mutuelle/member', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setMembers(response.data);
@@ -91,7 +91,7 @@ function AddEvent() {
         members: selectedMembers.map(id => ({ id }))
       };
 
-      const response = await axios.post('http://localhost:8080/mut/event', eventData, {
+      const response = await axios.post('http://localhost:8080/mutuelle/event', eventData, {
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'

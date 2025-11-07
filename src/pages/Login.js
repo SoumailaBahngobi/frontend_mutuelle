@@ -34,7 +34,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const res = await axios.post('http://localhost:8080/mut/login', form);
+      const res = await axios.post('http://localhost:8080/mutuelle/login', form);
       
       if (res.data && res.data.token) {
         localStorage.setItem('token', res.data.token);
@@ -78,7 +78,7 @@ export default function Login() {
 
   const fetchUserProfile = async (token) => {
     try {
-      const response = await axios.get('http://localhost:8080/mut/member/profile', {
+      const response = await axios.get('http://localhost:8080/mutuelle/member/profile', {
         headers: { Authorization: `Bearer ${token}` }
       });
       return response.data;
@@ -114,7 +114,7 @@ export default function Login() {
     setForgotPasswordLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:8080/mut/member/forgot-password', {
+      const response = await axios.post('http://localhost:8080/mutuelle/member/forgot-password', {
         email: forgotPasswordEmail
       });
 
