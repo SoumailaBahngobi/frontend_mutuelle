@@ -22,7 +22,7 @@ const TreasurerLoanDashboard = () => {
             
             // Récupérer les demandes approuvées en attente d'accord
             const pendingResponse = await axios.get(
-                'http://localhost:8080/mut/loan_request/treasurer/pending-grant',
+                'http://localhost:8080/mutuelle/loan_request/treasurer/pending-grant',
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             // Ensure we're setting an array
@@ -30,7 +30,7 @@ const TreasurerLoanDashboard = () => {
 
             // Récupérer les prêts déjà accordés
             const grantedResponse = await axios.get(
-                'http://localhost:8080/mut/loan_request/treasurer/granted-loans',
+                'http://localhost:8080/mutuelle/loan_request/treasurer/granted-loans',
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             
@@ -70,7 +70,7 @@ const TreasurerLoanDashboard = () => {
             const token = localStorage.getItem('token');
             
             const response = await axios.post(
-                `http://localhost:8080/mut/loan_request/${loanRequestId}/treasurer/grant`,
+                `http://localhost:8080/mutuelle/loan_request/${loanRequestId}/treasurer/grant`,
                 { comment: grantComment },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -94,7 +94,7 @@ const TreasurerLoanDashboard = () => {
             const token = localStorage.getItem('token');
             
             await axios.post(
-                `http://localhost:8080/mut/loan_request/${loanRequestId}/treasurer/cancel-grant`,
+                `http://localhost:8080/mutuelle/loan_request/${loanRequestId}/treasurer/cancel-grant`,
                 { reason },
                 { headers: { Authorization: `Bearer ${token}` } }
             );

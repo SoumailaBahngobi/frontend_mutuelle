@@ -38,7 +38,6 @@ export default function Login() {
       
       if (res.data && res.data.token) {
         localStorage.setItem('token', res.data.token);
-        
         let userData = null;
         if (res.data.user) {
           userData = res.data.user;

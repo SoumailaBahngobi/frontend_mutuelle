@@ -20,7 +20,7 @@ const LoanList = () => {
     const fetchUserProfile = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.get('http://localhost:8080/mut/member/profile', {
+            const res = await axios.get('http://localhost:8080/mutuelle/member/profile', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setUserRole(res.data.role);
@@ -34,7 +34,7 @@ const LoanList = () => {
             setLoading(true);
             const token = localStorage.getItem('token');
             
-            const res = await axios.get('http://localhost:8080/mut/loan_request/all-with-approval', {
+            const res = await axios.get('http://localhost:8080/mutuelle/loan_request/all-with-approval', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             
@@ -233,7 +233,7 @@ const LoanList = () => {
     const handleApprove = async (loanRequestId) => {
         try {
             const token = localStorage.getItem('token');
-            const endpoint = `http://localhost:8080/mut/loan_request/${loanRequestId}/approve/${userRole.toLowerCase()}`;
+            const endpoint = `http://localhost:8080/mutuelle/loan_request/${loanRequestId}/approve/${userRole.toLowerCase()}`;
             
             const comment = prompt('Ajouter un commentaire (optionnel):');
             
@@ -265,7 +265,7 @@ const LoanList = () => {
                 return;
             }
             
-            await axios.post(`http://localhost:8080/mut/loan_request/${loanRequestId}/reject`, 
+            await axios.post(`http://localhost:8080/mutuelle/loan_request/${loanRequestId}/reject`, 
                 { 
                     rejectionReason: reason,
                     rejectedByRole: userRole

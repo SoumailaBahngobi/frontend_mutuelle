@@ -301,8 +301,8 @@ export default function Dashboard() {
         </div>
 
         {/* Panel de Remboursement */}
-        <div className="col-md-1">
-          <div className="card shadow-sm h-100">
+        <div className="col-md-2">
+          <div className="card shadow-sm h-100 ">
             <div className="card-header bg-info text-white py-1 px-2">
               <small className="fw-bold">
                 <i className="fas fa-credit-card me-1"></i>
