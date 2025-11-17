@@ -3,6 +3,7 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 
 function ContributionHistory() {
     const [contributions, setContributions] = useState([]);
@@ -357,11 +358,13 @@ function ContributionHistory() {
             const fileName = `cotisations_${currentUser.name}_${new Date().toISOString().split('T')[0]}.pdf`;
             doc.save(fileName);
             
-            console.log('✅ PDF généré avec style !');
+            //console.log('✅ PDF généré avec style !');
+            toast.success('PDF des cotisations généré avec succès !');
             
         } catch (error) {
-            console.error('❌ Erreur génération PDF:', error);
-            alert('Erreur lors de la génération du PDF: ' + error.message);
+           // console.error('❌ Erreur génération PDF:', error);
+            //alert('Erreur lors de la génération du PDF: ' + error.message);
+            toast.error('Erreur lors de la génération du PDF: ' + error.message);
         }
     };
 
