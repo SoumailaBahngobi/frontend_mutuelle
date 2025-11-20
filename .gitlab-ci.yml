@@ -1,0 +1,52 @@
+# GitLab CI configuration for the React frontend
+# NOTE: This pipeline sets a CI variable `ENABLE_GPT5_MINI=true` so downstream
+# jobs can detect and (if implemented) enable GPT-5 mini features for clients.
+# The backend/services must explicitly read and act on this variable — the
+# variable here alone doesn't change any external service behavior.
+
+image: node:18
+
+stages:
+  - install
+  - test
+  - build
+
+variables:
+  NODE_ENV: "production"
+  # Custom flag to indicate GPT-5 mini should be enabled for clients
+  ENABLE_GPT5_MINI: "true"
+
+cache:
+  key: "${CI_COMMIT_REF_SLUG}"
+  paths:
+    - node_modules/
+
+# Install dependencies in a dedicated job (keeps output explicit)
+install:
+  stage: install
+  script:
+    - npm ci
+  cache:
+    key: "${CI_COMMIT_REF_SLUG}"
+    paths:
+      - node_modules/
+
+test:
+  stage: test
+  script:
+    - npm test -- --watchAll=false
+  only:
+    - branches
+  allow_failure: false
+
+build:
+  stage: build
+  script:
+    - npm run build
+  artifacts:
+    paths:
+      - build/
+    expire_in: 1 week
+  only:
+    - branches
+
