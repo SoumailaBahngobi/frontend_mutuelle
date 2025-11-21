@@ -1,0 +1,17 @@
+node_modules
+build
+dist
+.git
+.gitignore
+Dockerfile
+.dockerignore
+.env
+npm-debug.log
+yarn-error.log
+.vscode
+.idea
+coverage
+
+# Mac/Windows system files
+.DS_Store
+Thumbs.db
