@@ -1,0 +1,43 @@
+/* Styles SB Admin 2 personnalisés */
+.sidebar {
+  width: 250px;
+  min-height: 100vh;
+}
+
+.bg-gradient-primary {
+  background: linear-gradient(87deg, #4e73df 0, #224abe 100%) !important;
+}
+
+.sidebar .nav-item.active .nav-link {
+  color: #fff;
+  font-weight: 600;
+}
+
+.card {
+  border: 1px solid #e3e6f0;
+  border-radius: 0.35rem;
+}
+
+.shadow {
+  box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15) !important;
+}
+
+.text-primary {
+  color: #4e73df !important;
+}
+
+.border-left-primary {
+  border-left: 0.25rem solid #4e73df !important;
+}
+
+.border-left-success {
+  border-left: 0.25rem solid #1cc88a !important;
+}
+
+.border-left-info {
+  border-left: 0.25rem solid #36b9cc !important;
+}
+
+.border-left-warning {
+  border-left: 0.25rem solid #f6c23e !important;
+}
