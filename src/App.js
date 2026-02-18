@@ -32,19 +32,12 @@ import Footer from './pages/layout/Footer.js';
 import Keycloak from './keycloak/keycloak.js';
 
 import { useEffect, useState } from "react";
-
-
-
-
-
 ///mutuelle/member/profile/update
 
 function App() {
 
  
   return (
-
-    
     <div className="d-flex flex-column min-vh-100">
       <Navbar />
 

@@ -194,7 +194,7 @@ export default function Footer() {
                                 </div>
                                 <div className="contact-item">
                                     <FontAwesomeIcon icon={faClock} className="contact-icon" />
-                                    <span>Lun - Ven: 8h - 18h</span>
+                                    <span>Lun - Dim: 24h/24h</span>
                                 </div>
                             </div>
                         </div>
