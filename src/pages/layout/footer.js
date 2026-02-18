@@ -31,10 +31,11 @@ import {
     faCalendarAlt
 } from '@fortawesome/free-solid-svg-icons';
 
+//la fonction footer
 export default function Footer() {
     const location = useLocation();
     
-    // Masquer le footer sur certaines pages
+    // Masquer le footer sur certaines pages 
     const hideFooterPaths = ['/login', '/register', '/reset-password'];
     if (hideFooterPaths.includes(location.pathname)) {
         return null;
