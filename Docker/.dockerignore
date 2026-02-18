@@ -1,0 +1,8 @@
+# frontend_mutuelle/.dockerignore
+node_modules
+build
+.git
+.env.local
+.env.development
+.DS_Store
+npm-debug.log
