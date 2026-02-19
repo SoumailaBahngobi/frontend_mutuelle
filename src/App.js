@@ -28,7 +28,7 @@ import ViewMember from './members/ViewMember.js';
 import EditMember from './members/EditMember.js';
 import ResetPassword from './configuration/ResetPassword.js';
 import EmailHandler from './configuration/EmailHandler.js';
-import Footer from './pages/layout/Footer.js';
+import Footer from './pages/layout/footer.js';
 import Keycloak from './keycloak/keycloak.js';
 
 import { useEffect, useState } from "react";
