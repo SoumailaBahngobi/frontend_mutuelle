@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from "react";
-import jsPDF from "jspdf";
-import "jspdf-autotable";
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from 'react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 
-function ContributionHistory() {
+function ContributionHistory() 
+{
   const [contributions, setContributions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
@@ -145,49 +147,135 @@ function ContributionHistory() {
   // EXPORT PDF
   // ===========================
   const exportPDF = () => {
-    if (contributions.length === 0) return;
+    try {
+      if (contributions.length === 0) return;
 
-    const doc = new jsPDF();
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
 
-    doc.setFontSize(16);
-    doc.text("Historique des cotisations", 14, 20);
+      doc.setFontSize(16);
+      doc.text("Historique des cotisations", 14, 20);
 
-    const rows = contributions.map((c) => [
-      formatDate(c.paymentDate),
-      c.contributionType === "INDIVIDUAL"
-        ? "Individuelle"
-        : "Groupée",
-      c.contributionPeriod?.description || "N/A",
-      formatAmount(c.amount),
-      getPaymentModeText(c.paymentMode),
-    ]);
+      const tableColumn = ["Date", "Type", "Période", "Montant", "Paiement"];
+      const tableRows = contributions.map((c) => ({
+        0: formatDate(c.paymentDate),
+        1: c.contributionType === "INDIVIDUAL" ? "Individuelle" : "Groupée",
+        2: c.contributionPeriod?.description || "N/A",
+        3: formatAmount(c.amount),
+        4: getPaymentModeText(c.paymentMode),
+      }));
 
-    doc.autoTable({
-      head: [["Date", "Type", "Période", "Montant", "Paiement"]],
-      body: rows,
-      startY: 30,
-    });
+      doc.autoTable({
+        startY: 30,
+        head: [tableColumn],
+        body: tableRows.map(row => tableColumn.map((_, i) => row[i])),
+        styles: {
+          fontSize: 9,
+          cellPadding: 4,
+          lineColor: [200, 200, 200],
+          lineWidth: 0.1
+        },
+        headStyles: {
+          fillColor: [52, 152, 219],
+          textColor: 255,
+          fontStyle: 'bold',
+          fontSize: 10,
+          cellPadding: 5
+        },
+        alternateRowStyles: {
+          fillColor: [248, 248, 248]
+        },
+        margin: { top: 10 }
+      });
 
-    doc.save("historique_cotisations.pdf");
+      const finalY = doc.lastAutoTable.finalY + 15;
+
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.5);
+      doc.line(14, finalY, pageWidth - 14, finalY);
+
+      doc.setFontSize(12);
+      doc.setTextColor(41, 128, 185);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`TOTAL GÉNÉRAL: ${formatAmountNoSlash(getTotalAmount())}`, 14, finalY + 10);
+
+      const signatureY = finalY + 30;
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text('Document généré automatiquement - Mutuelle WBF', pageWidth / 2, signatureY, { align: 'center' });
+
+      const fileName = `cotisations_${currentUser.name}_${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
+
+      toast.success('PDF des cotisations généré avec succès !');
+    } catch (error) {
+      console.error('Erreur génération PDF:', error);
+      toast.error('Erreur lors de la génération du PDF: ' + error.message);
+    }
   };
 
-  if (!currentUser) return null;
+  const formatAmountNoSlash = (amount) => {
+    const numAmount = parseFloat(amount) || 0;
+    return `${numAmount.toFixed(2)} FCFA`;
+  };
 
-  // ===========================
-  // RENDER
-  // ===========================
-  return (
-    <div className="container mt-4">
-      <div className="card shadow">
-        <div className="card-header bg-primary text-white d-flex justify-content-between">
-          <h5>Historique de mes cotisations</h5>
-          <button
-            className="btn btn-light btn-sm"
-            onClick={() => navigate("/dashboard")}
-          >
-            Retour
-          </button>
-        </div>
+    const handleRetry = () => {
+      setError('');
+      fetchContributions();
+    };
+  
+    const handleReconnect = () => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('currentUser');
+      navigate('/login');
+    };
+  
+    const getStatusColor = (status) => {
+      return [100, 100, 100];
+    };
+  
+    const getStatusText = (contribution) => {
+      return 'en attente';
+    };
+
+    if (!currentUser) {
+        return (
+            <div className="container text-center">
+                <div className="spinner-border text-primary" role="status">
+                    <span className="visually-hidden">Chargement...</span>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="container">
+            <div className="card shadow">
+                <div className="card-header bg-primary text-white">
+                    <div className="d-flex justify-content-between align-items-center">
+                        <h4 className="mb-0">
+                            <i className="bi bi-clock-history me-2"></i>
+                            Historique de mes Cotisations
+                        </h4>
+                        <div>
+                            <button 
+                                className="btn btn-success btn-sm me-2"
+                                onClick={exportPDF}
+                                disabled={contributions.length === 0}
+                            >
+                                <i className="bi bi-file-earmark-pdf me-1"></i>
+                                Exporter PDF
+                            </button>
+                            <button 
+                                className="btn btn-light btn-sm"
+                                onClick={() => navigate('/dashboard')}
+                            >
+                                <i className="bi bi-arrow-left me-1"></i>
+                                Retour
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
         <div className="card-body">
 

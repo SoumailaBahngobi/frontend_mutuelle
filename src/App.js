@@ -28,14 +28,10 @@ import ViewMember from './members/ViewMember.js';
 import EditMember from './members/EditMember.js';
 import ResetPassword from './configuration/ResetPassword.js';
 import EmailHandler from './configuration/EmailHandler.js';
-import Footer from './pages/layout/Footer.js';
-import Keycloak from './keycloak/keycloak.js';
+import Footer from './layout/Footer.js';
 
-///mutuelle/member/profile/update
 
 function App() {
-
- 
   return (
     <div className="d-flex flex-column min-vh-100">
       <Navbar />

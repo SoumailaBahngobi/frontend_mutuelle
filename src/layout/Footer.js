@@ -31,10 +31,11 @@ import {
     faCalendarAlt
 } from '@fortawesome/free-solid-svg-icons';
 
+//la fonction footer
 export default function Footer() {
     const location = useLocation();
     
-    // Masquer le footer sur certaines pages
+    // Masquer le footer sur certaines pages 
     const hideFooterPaths = ['/login', '/register', '/reset-password'];
     if (hideFooterPaths.includes(location.pathname)) {
         return null;
@@ -194,7 +195,7 @@ export default function Footer() {
                                 </div>
                                 <div className="contact-item">
                                     <FontAwesomeIcon icon={faClock} className="contact-icon" />
-                                    <span>Lun - Ven: 8h - 18h</span>
+                                    <span>Lun - Dim: 24h/24h</span>
                                 </div>
                             </div>
                         </div>
