@@ -1,278 +1,113 @@
-// src/layout/Navbar.js
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import 'bootstrap/dist/css/bootstrap.min.css';
+// src/layout/NavBar.js
+import React from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useKeycloak } from '@react-keycloak/web';
 
 export default function Navbar() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState(null);
+  const { keycloak } = useKeycloak();
   const navigate = useNavigate();
-  const location = useLocation();
-
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('currentUser');
-    
-    if (token && userData) {
-      setIsAuthenticated(true);
-      setUser(JSON.parse(userData));
-    } else {
-      setIsAuthenticated(false);
-      setUser(null);
-    }
-  }, [location]);
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('currentUser');
-    setIsAuthenticated(false);
-    setUser(null);
-    navigate('/');
+    keycloak.logout({
+      redirectUri: window.location.origin
+    });
   };
 
-  const isAdmin = user && (user.role === 'ADMIN' || user.role === 'PRESIDENT' || user.role === 'SECRETARY' || user.role === 'TREASURER');
+  const getUserInfo = () => {
+    if (keycloak.authenticated) {
+      return {
+        name: keycloak.tokenParsed?.given_name || keycloak.tokenParsed?.name,
+        email: keycloak.tokenParsed?.email,
+        roles: keycloak.tokenParsed?.realm_access?.roles || []
+      };
+    }
+    return null;
+  };
+
+  const userInfo = getUserInfo();
 
   return (
-    <nav className="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
-      <div className="container">
-        {/* Brand */}
-        <Link className="navbar-brand fw-bold" to="/">
-          <i className="fas fa-hand-holding-heart me-2"></i>
+    <nav className="navbar navbar-expand-lg navbar-dark bg-primary">
+      <div className="container-fluid">
+        <Link className="navbar-brand" to="/">
+          <i className="bi bi-shield-lock me-2"></i>
           Mutuelle
         </Link>
-
-        {/* Mobile toggle */}
-        <button
-          className="navbar-toggler"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarContent"
-        >
+        
+        <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
           <span className="navbar-toggler-icon"></span>
         </button>
-
-        {/* Navbar content */}
-        <div className="collapse navbar-collapse" id="navbarContent">
-          {/* Navigation links */}
+        
+        <div className="collapse navbar-collapse" id="navbarNav">
           <ul className="navbar-nav me-auto">
             <li className="nav-item">
-              <Link 
-                className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}
-                to="/"
-              >
-                <i className="fas fa-home me-1"></i>
-                Accueil
+              <Link className="nav-link" to="/dashboard">
+                <i className="bi bi-speedometer2 me-1"></i>
+                Tableau de bord
               </Link>
             </li>
-
-            {isAuthenticated && (
-              <>
-                <li className="nav-item">
-                  <Link 
-                    className={`nav-link ${location.pathname === '/dashboard' ? 'active' : ''}`}
-                    to="/dashboard"
-                  >
-                    <i className="fas fa-tachometer-alt me-1"></i>
-                    Tableau de bord
-                  </Link>
-                </li>
-
-                {/* Menu Prêts */}
-                <li className="nav-item dropdown">
-                  <a
-                    className="nav-link dropdown-toggle"
-                    href="#"
-                    role="button"
-                    data-bs-toggle="dropdown"
-                  >
-                    <i className="fas fa-hand-holding-usd me-1"></i>
-                    Prêts
-                  </a>
-                  <ul className="dropdown-menu">
-                    <li>
-                      <Link className="dropdown-item" to="/loans/request">
-                        <i className="fas fa-plus-circle me-2"></i>
-                        Nouvelle demande
-                      </Link>
-                    </li>
-                    <li>
-                      <Link className="dropdown-item" to="/loans/requests">
-                        <i className="fas fa-list me-2"></i>
-                        Mes demandes
-                      </Link>
-                    </li>
-                    <li>
-                      <Link className="dropdown-item" to="/loans/my-loans">
-                        <i className="fas fa-file-invoice me-2"></i>
-                        Mes prêts
-                      </Link>
-                    </li>
-                    <li>
-                      <Link className="dropdown-item" to="/loans/repayment">
-                        <i className="fas fa-credit-card me-2"></i>
-                        Remboursement
-                      </Link>
-                    </li>
-                    
-                    {/* Options admin pour les prêts */}
-                    {isAdmin && (
-                      <>
-                        <li><hr className="dropdown-divider" /></li>
-                        <li>
-                          <Link className="dropdown-item" to="/loans/approval-dashboard">
-                            <i className="fas fa-check-double me-2"></i>
-                            Approbation prêts
-                          </Link>
-                        </li>
-                        <li>
-                          <Link className="dropdown-item" to="/loans/create">
-                            <i className="fas fa-plus me-2"></i>
-                            Créer prêt
-                          </Link>
-                        </li>
-                      </>
-                    )}
-                  </ul>
-                </li>
-
-                {/* Menu Cotisations */}
-                <li className="nav-item dropdown">
-                  <a
-                    className="nav-link dropdown-toggle"
-                    href="#"
-                    role="button"
-                    data-bs-toggle="dropdown"
-                  >
-                    <i className="fas fa-money-bill-wave me-1"></i>
-                    Cotisations
-                  </a>
-                  <ul className="dropdown-menu">
-                    <li>
-                      <Link className="dropdown-item" to="/mutuelle/contribution/individual">
-                        <i className="fas fa-user me-2"></i>
-                        Cotisation individuelle
-                      </Link>
-                    </li>
-                    <li>
-                      <Link className="dropdown-item" to="/mutuelle/contribution/group">
-                        <i className="fas fa-users me-2"></i>
-                        Cotisation groupe
-                      </Link>
-                    </li>
-                    <li>
-                      <Link className="dropdown-item" to="/mutuelle/contribution/individual/my-contributions">
-                        <i className="fas fa-history me-2"></i>
-                        Historique
-                      </Link>
-                    </li>
-                    
-                    {/* Options admin pour les cotisations */}
-                    {isAdmin && (
-                      <>
-                        <li><hr className="dropdown-divider" /></li>
-                        <li>
-                          <Link className="dropdown-item" to="/mutuelle/contribution_period">
-                            <i className="fas fa-calendar-alt me-2"></i>
-                            Périodes cotisation
-                          </Link>
-                        </li>
-                      </>
-                    )}
-                  </ul>
-                </li>
-
-                {/* Menu Administration */}
-                {isAdmin && (
-                  <li className="nav-item dropdown">
-                    <a
-                      className="nav-link dropdown-toggle"
-                      href="#"
-                      role="button"
-                      data-bs-toggle="dropdown"
-                    >
-                      <i className="fas fa-user-shield me-1"></i>
-                      Administration
-                    </a>
-                    <ul className="dropdown-menu">
-                      <li>
-                        <Link className="dropdown-item" to="/members">
-                          <i className="fas fa-user-plus me-2"></i>
-                          Gestion membres
-                        </Link>
-                      </li>
-                      <li>
-                        <Link className="dropdown-item" to="/loans/approval">
-                          <i className="fas fa-check-circle me-2"></i>
-                          Validation prêts
-                        </Link>
-                      </li>
-                      <li>
-                        <Link className="dropdown-item" to="/mutuelle/contribution_period">
-                          <i className="fas fa-calendar me-2"></i>
-                          Périodes
-                        </Link>
-                      </li>
-                    </ul>
-                  </li>
-                )}
-              </>
-            )}
-          </ul>
-
-          {/* User section */}
-          <ul className="navbar-nav ms-auto">
-            {isAuthenticated ? (
-              <li className="nav-item dropdown">
-                <a
-                  className="nav-link dropdown-toggle d-flex align-items-center"
-                  href="#"
-                  role="button"
-                  data-bs-toggle="dropdown"
-                >
-                  {user?.photo ? (
-                    <img
-                      src={user.photo}
-                      alt="Profil"
-                      className="rounded-circle me-2"
-                      width="32"
-                      height="32"
-                      style={{ objectFit: 'cover' }}
-                    />
-                  ) : (
-                    <i className="fas fa-user-circle me-2"></i>
-                  )}
-                  <span>{user?.firstName} {user?.name}</span>
-                </a>
-                <ul className="dropdown-menu dropdown-menu-end">
-                  <li>
-                    <Link className="dropdown-item" to="/dashboard">
-                      <i className="fas fa-tachometer-alt me-2"></i>
-                      Tableau de bord
-                    </Link>
-                  </li>
-                  <li>
-                    <Link className="dropdown-item" to="/profile">
-                      <i className="fas fa-user me-2"></i>
-                      Mon profil
-                    </Link>
-                  </li>
-                  <li><hr className="dropdown-divider" /></li>
-                  <li>
-                    <button className="dropdown-item text-danger" onClick={handleLogout}>
-                      <i className="fas fa-sign-out-alt me-2"></i>
-                      Déconnexion
-                    </button>
-                  </li>
-                </ul>
-              </li>
-            ) : (
+            
+            {userInfo?.roles.includes('TREASURER') && (
               <li className="nav-item">
-                <Link className="btn btn-outline-light btn-sm" to="/login">
-                  <i className="fas fa-sign-in-alt me-1"></i>
-                  Connexion
+                <Link className="nav-link" to="/treasurer/loans">
+                  <i className="bi bi-cash-coin me-1"></i>
+                  Gestion trésorier
                 </Link>
               </li>
             )}
+            
+            <li className="nav-item dropdown">
+              <a className="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                Cotisations
+              </a>
+              <ul className="dropdown-menu">
+                <li><Link className="dropdown-item" to="/mutuelle/contribution/individual">Cotisation individuelle</Link></li>
+                <li><Link className="dropdown-item" to="/mutuelle/contribution/group">Cotisation groupe</Link></li>
+                <li><hr className="dropdown-divider" /></li>
+                <li><Link className="dropdown-item" to="/mutuelle/contribution/individual/my-contributions">Mes cotisations</Link></li>
+              </ul>
+            </li>
+            
+            <li className="nav-item dropdown">
+              <a className="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                Prêts
+              </a>
+              <ul className="dropdown-menu">
+                <li><Link className="dropdown-item" to="/loans/request">Demander un prêt</Link></li>
+                <li><Link className="dropdown-item" to="/loans/my-loans">Mes prêts</Link></li>
+                <li><Link className="dropdown-item" to="/loans/requests">Mes demandes</Link></li>
+                {userInfo?.roles.some(role => ['PRESIDENT', 'SECRETARY', 'TREASURER'].includes(role)) && (
+                  <>
+                    <li><hr className="dropdown-divider" /></li>
+                    <li><Link className="dropdown-item" to="/loans/approval-dashboard">Approbations</Link></li>
+                  </>
+                )}
+              </ul>
+            </li>
+            
+            <li className="nav-item">
+              <Link className="nav-link" to="/members/list">
+                <i className="bi bi-people me-1"></i>
+                Membres
+              </Link>
+            </li>
+          </ul>
+          
+          <ul className="navbar-nav">
+            <li className="nav-item dropdown">
+              <a className="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                <i className="bi bi-person-circle me-1"></i>
+                {userInfo?.name || 'Profil'}
+              </a>
+              <ul className="dropdown-menu dropdown-menu-end">
+                <li><span className="dropdown-item-text text-muted small">{userInfo?.email}</span></li>
+                <li><hr className="dropdown-divider" /></li>
+                <li><button className="dropdown-item text-danger" onClick={handleLogout}>
+                  <i className="bi bi-box-arrow-right me-2"></i>
+                  Déconnexion
+                </button></li>
+              </ul>
+            </li>
           </ul>
         </div>
       </div>

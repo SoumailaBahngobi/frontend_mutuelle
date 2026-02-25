@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Vérification SSO</title>
+</head>
+<body>
+    <script>
+        // Script minimal pour la vérification silencieuse
+        (function() {
+            try {
+                if (window.opener) {
+                    window.opener.postMessage({ type: 'SILENT_CHECK_SSO' }, window.location.origin);
+                } else {
+                    window.parent.postMessage({ type: 'SILENT_CHECK_SSO' }, window.location.origin);
+                }
+            } catch (e) {
+                console.error('Erreur SSO:', e);
+            }
+        })();
+    </script>
+</body>
+</html>

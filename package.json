@@ -15,14 +15,17 @@
     "@testing-library/user-event": "^13.5.0",
     "axios": "^1.12.2",
     "bootstrap": "^5.3.8",
+    "bootstrap-icons": "^1.13.1",
     "jspdf": "^2.5.1",
     "jspdf-autotable": "^3.5.28",
-    "keycloak-js": "^26.2.1",
+    "keycloak-js": "^26.2.3",
     "kkiapay": "^2.0.23",
+    "oidc-client-ts": "^3.4.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-hot-toast": "^2.6.0",
-    "react-router-dom": "^7.9.5",
+    "react-oidc-context": "^3.3.0",
+    "react-router-dom": "^7.13.0",
     "react-scripts": "^5.0.1",
     "react-toastify": "^11.0.5",
     "web-vitals": "^2.1.4",
@@ -51,5 +54,10 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.2.0",
+    "daisyui": "^5.5.1-beta.2",
+    "tailwindcss": "^4.2.0"
   }
 }
