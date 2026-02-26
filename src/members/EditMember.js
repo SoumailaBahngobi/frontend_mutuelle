@@ -44,7 +44,7 @@ function EditMember() {
         } catch (error) {
            // console.error('Erreur lors du chargement du membre:', error);
             toast.error('Erreur lors du chargement du membre');
-            navigate('/members');
+            navigate('/members/list');
         } finally {
             setLoadingMember(false);
         }
@@ -97,7 +97,7 @@ function EditMember() {
             
             if (response.status === 200) {
                 toast.success('Membre modifié avec succès !');
-                navigate('/members');
+                navigate('/members/list');
             }
         } catch (error) {
             console.error('Erreur de modification:', error);

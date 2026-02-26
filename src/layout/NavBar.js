@@ -1,36 +1,40 @@
 // src/layout/Navbar.js
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useKeycloak } from '../context/KeycloakContext';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 export default function Navbar() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState(null);
+  const { authenticated, userProfile, logout, loading } = useKeycloak();
   const navigate = useNavigate();
   const location = useLocation();
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('currentUser');
-    
-    if (token && userData) {
-      setIsAuthenticated(true);
-      setUser(JSON.parse(userData));
-    } else {
-      setIsAuthenticated(false);
-      setUser(null);
-    }
-  }, [location]);
-
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('currentUser');
-    setIsAuthenticated(false);
-    setUser(null);
-    navigate('/');
+    logout();
   };
 
-  const isAdmin = user && (user.role === 'ADMIN' || user.role === 'PRESIDENT' || user.role === 'SECRETARY' || user.role === 'TREASURER');
+  if (loading) {
+    return (
+      <nav className="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+        <div className="container">
+          <Link className="navbar-brand fw-bold" to="/">
+            <i className="fas fa-hand-holding-heart me-2"></i>
+            Mutuelle
+          </Link>
+          <div className="ms-auto">
+            <span className="text-white">Chargement...</span>
+          </div>
+        </div>
+      </nav>
+    );
+  }
+
+  // Déterminer le rôle pour les menus admin
+  const isAdmin = userProfile && 
+    (userProfile.role === 'ADMIN' || 
+     userProfile.role === 'PRESIDENT' || 
+     userProfile.role === 'SECRETARY' || 
+     userProfile.role === 'TREASURER');
 
   return (
     <nav className="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
@@ -65,7 +69,7 @@ export default function Navbar() {
               </Link>
             </li>
 
-            {isAuthenticated && (
+            {authenticated && (
               <>
                 <li className="nav-item">
                   <Link 
@@ -111,6 +115,12 @@ export default function Navbar() {
                       <Link className="dropdown-item" to="/loans/repayment">
                         <i className="fas fa-credit-card me-2"></i>
                         Remboursement
+                      </Link>
+                    </li>
+                    <li>
+                      <Link className="dropdown-item" to="/loans/repayment-history">
+                        <i className="fas fa-history me-2"></i>
+                        Historique remboursements
                       </Link>
                     </li>
                     
@@ -195,7 +205,7 @@ export default function Navbar() {
                     </a>
                     <ul className="dropdown-menu">
                       <li>
-                        <Link className="dropdown-item" to="/members">
+                        <Link className="dropdown-item" to="/members/list">
                           <i className="fas fa-user-plus me-2"></i>
                           Gestion membres
                         </Link>
@@ -221,7 +231,7 @@ export default function Navbar() {
 
           {/* User section */}
           <ul className="navbar-nav ms-auto">
-            {isAuthenticated ? (
+            {authenticated ? (
               <li className="nav-item dropdown">
                 <a
                   className="nav-link dropdown-toggle d-flex align-items-center"
@@ -229,9 +239,9 @@ export default function Navbar() {
                   role="button"
                   data-bs-toggle="dropdown"
                 >
-                  {user?.photo ? (
+                  {userProfile?.photo ? (
                     <img
-                      src={user.photo}
+                      src={userProfile.photo}
                       alt="Profil"
                       className="rounded-circle me-2"
                       width="32"
@@ -239,9 +249,9 @@ export default function Navbar() {
                       style={{ objectFit: 'cover' }}
                     />
                   ) : (
-                    <i className="fas fa-user-circle me-2"></i>
+                    <i className="fas fa-user-circle me-2 fs-5"></i>
                   )}
-                  <span>{user?.firstName} {user?.name}</span>
+                  <span>{userProfile?.firstName} {userProfile?.lastName}</span>
                 </a>
                 <ul className="dropdown-menu dropdown-menu-end">
                   <li>

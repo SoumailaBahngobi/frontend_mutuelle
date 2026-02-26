@@ -1,7 +1,9 @@
-// apiConfig.js
+// src/config/apiConfig.js
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8080';
+// Utilisez la variable d'environnement avec fallback à 8081 (pas 8080)
+// leave baseURL blank so we rely on CRA proxy configuration
+const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
 // Créer une instance Axios avec configuration par défaut
 const apiClient = axios.create({
@@ -30,7 +32,7 @@ apiClient.interceptors.request.use(
       config.headers['Pragma'] = 'no-cache';
     }
     
-    console.log(`Making ${config.method?.toUpperCase()} request to: ${config.url}`);
+    console.log(`Making ${config.method?.toUpperCase()} request to: ${config.baseURL}${config.url}`);
     return config;
   },
   (error) => {
@@ -49,11 +51,11 @@ apiClient.interceptors.response.use(
     
     if (error.response?.status === 304) {
       console.log('304 Not Modified - C\'est normal pour les requêtes conditionnelles');
-      // Renvoyer les données cached si disponible
       return Promise.resolve(error.response);
     }
     
     if (error.response?.status === 401) {
+      console.log('Token expiré ou invalide, redirection vers login');
       localStorage.removeItem('token');
       localStorage.removeItem('currentUser');
       window.location.href = '/login';

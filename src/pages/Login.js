@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import apiClient from '../apiConfig'; // use shared axios instance
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
@@ -34,7 +35,9 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const res = await axios.post('http://localhost:8080/mutuelle/login', form);
+      // try the authentication endpoint consistent with registration
+      const res = await apiClient.post('/mutuelle/auth/login', form);
+      console.log('login response', res);
       
       if (res.data && res.data.token) {
         localStorage.setItem('token', res.data.token);
@@ -77,7 +80,7 @@ export default function Login() {
 
   const fetchUserProfile = async (token) => {
     try {
-      const response = await axios.get('http://localhost:8080/mutuelle/member/profile', {
+      const response = await apiClient.get('/mutuelle/member/profile', {
         headers: { Authorization: `Bearer ${token}` }
       });
       return response.data;
@@ -113,7 +116,7 @@ export default function Login() {
     setForgotPasswordLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:8080/mutuelle/member/forgot-password', {
+      const response = await apiClient.post('/mutuelle/member/forgot-password', {
         email: forgotPasswordEmail
       });
 

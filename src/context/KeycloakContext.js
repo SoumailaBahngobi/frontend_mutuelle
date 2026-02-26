@@ -1,6 +1,6 @@
 // src/context/KeycloakContext.js
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { initializeKeycloak } from '../keycloak/keycloak'; 
+import { initializeKeycloak } from '../keycloak/keycloak';
 
 const KeycloakContext = createContext();
 
@@ -38,12 +38,6 @@ export const KeycloakProvider = ({ children }) => {
                             setUserProfile(profile);
                             localStorage.setItem('token', result.keycloak.token);
                             localStorage.setItem('currentUser', JSON.stringify(profile));
-                            
-                            // Vérifier si l'utilisateur vient de s'inscrire
-                            const urlParams = new URLSearchParams(window.location.search);
-                            if (urlParams.get('kc_action') === 'register') {
-                                window.history.replaceState({}, document.title, window.location.pathname);
-                            }
                         }
                     } catch (profileError) {
                         console.error('Erreur chargement profil:', profileError);
@@ -55,7 +49,6 @@ export const KeycloakProvider = ({ children }) => {
                             const refreshed = await result.keycloak.updateToken(70);
                             if (refreshed && mounted) {
                                 localStorage.setItem('token', result.keycloak.token);
-                                console.log('Token rafraîchi');
                             }
                         } catch (refreshError) {
                             console.error('Erreur rafraîchissement token:', refreshError);
@@ -91,7 +84,7 @@ export const KeycloakProvider = ({ children }) => {
     const logout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('currentUser');
-        keycloak?.logout({ redirectUri: window.location.origin + '/login' });
+        keycloak?.logout({ redirectUri: window.location.origin + '/' });
     };
 
     const getToken = () => {
