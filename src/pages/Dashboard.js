@@ -1,13 +1,14 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useKeycloak } from '../context/KeycloakContext';
 import axios from 'axios';
-import 'bootstrap/dist/css/bootstrap.min.css';
 import { toast } from 'react-toastify';
+import 'bootstrap/dist/css/bootstrap.min.css';
 
 export default function Dashboard() {
+  const { authenticated, userProfile, getToken, logout, loading: keycloakLoading } = useKeycloak();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [myLoanRequests, setMyLoanRequests] = useState([]);
   const [myLoans, setMyLoans] = useState([]);
   const [notifications, setNotifications] = useState([]);
@@ -19,65 +20,57 @@ export default function Dashboard() {
     totalContributions: 0
   });
   const [showContributionModal, setShowContributionModal] = useState(false);
-
+  const fileInputRef = useRef();
   const navigate = useNavigate();
 
+  // Calculer isAdmin et unreadCount
+  const isAdmin = user && (user.role === 'ADMIN' || user.role === 'PRESIDENT' || user.role === 'SECRETARY' || user.role === 'TREASURER');
+  const unreadCount = notifications.filter(notif => !notif.read).length;
+
   useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          navigate('/login');
-          return;
+    if (!authenticated && !keycloakLoading) {
+      navigate('/login');
+    }
+  }, [authenticated, keycloakLoading, navigate]);
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (authenticated && getToken()) {
+        try {
+          // Utiliser le profil Keycloak
+          if (userProfile) {
+            setUser({
+              ...userProfile,
+              firstName: userProfile.firstName,
+              name: userProfile.lastName,
+              email: userProfile.email
+            });
+          }
+
+          // Synchroniser avec votre backend si nécessaire
+          const response = await axios.get('http://localhost:8080/mutuelle/auth/user-info', {
+            headers: { Authorization: `Bearer ${getToken()}` }
+          });
+          
+          if (response.data) {
+            setUser(prev => ({ ...prev, ...response.data }));
+            if (response.data.id) {
+              await fetchLoanData(getToken(), response.data.id);
+              await fetchNotifications(getToken());
+            }
+          }
+        } catch (error) {
+          toast.error('Erreur lors du chargement du profil');
+        } finally {
+          setLoading(false);
         }
-
-        const res = await axios.get('http://localhost:8080/mutuelle/member/profile', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-
-        setUser(res.data);
-        await fetchLoanData(token, res.data.id);
-        await fetchNotifications(token);
-
-      } catch (err) {
-        console.error('Erreur chargement profil:', err);
-        let backendMsg = '';
-        if (err.response) {
-          backendMsg = ` (Code: ${err.response.status})`;
-        }
-        setError("Impossible de charger le profil utilisateur." + backendMsg);
-
-        if (err.response?.status === 401) {
-          localStorage.removeItem('token');
-          navigate('/login');
-        }
-      } finally {
+      } else {
         setLoading(false);
       }
     };
 
-    fetchProfile();
-  }, [navigate]);
-
-  const fetchNotifications = async (token) => {
-    try {
-      const response = await axios.get('http://localhost:8080/mutuelle/notification', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setNotifications(response.data);
-    } catch (error) {
-      setNotifications([
-        {
-          id: 1,
-          title: 'Bienvenue sur votre dashboard',
-          message: 'Vous pouvez consulter ici toutes vos activités récentes',
-          type: 'INFO',
-          read: false,
-          createdDate: new Date()
-        }
-      ]);
-    }
-  };
+    fetchUserProfile();
+  }, [authenticated, getToken, userProfile]);
 
   const fetchLoanData = async (token, userId) => {
     try {
@@ -117,6 +110,26 @@ export default function Dashboard() {
     }
   };
 
+  const fetchNotifications = async (token) => {
+    try {
+      const response = await axios.get('http://localhost:8080/mutuelle/notification', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setNotifications(response.data);
+    } catch (error) {
+      setNotifications([
+        {
+          id: 1,
+          title: 'Bienvenue sur votre dashboard',
+          message: 'Vous pouvez consulter ici toutes vos activités récentes',
+          type: 'INFO',
+          read: false,
+          createdDate: new Date()
+        }
+      ]);
+    }
+  };
+
   const handleContributionType = (type) => {
     if (type === 'individuelle') {
       navigate('/mutuelle/contribution/individual');
@@ -127,9 +140,7 @@ export default function Dashboard() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('currentUser');
-    navigate('/login');
+    logout();
   };
 
   const getStatusBadge = (status) => {
@@ -155,32 +166,15 @@ export default function Dashboard() {
     }).format(amount);
   };
 
-  const unreadCount = notifications.filter(notif => !notif.read).length;
-  const isAdmin = user && (user.role === 'ADMIN' || user.role === 'PRESIDENT' || user.role === 'SECRETARY' || user.role === 'TREASURER');
-
-  if (loading) {
+  if (keycloakLoading || loading) {
     return (
-      <div className="container mt-4 d-flex justify-content-center align-items-center" style={{ minHeight: '60vh' }}>
+      <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '60vh' }}>
         <div className="text-center">
           <div className="spinner-border text-primary" role="status">
             <span className="visually-hidden">Chargement...</span>
           </div>
-          <p className="mt-2 text-muted">Chargement de votre tableau de bord...</p>
+          <p className="mt-3">Chargement de votre tableau de bord...</p>
         </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="container mt-4">
-        <div className="alert alert-danger d-flex align-items-center" role="alert">
-          <i className="fas fa-exclamation-triangle me-2"></i>
-          <div>{error}</div>
-        </div>
-        <button className="btn btn-primary" onClick={() => window.location.reload()}>
-          Réessayer
-        </button>
       </div>
     );
   }
@@ -226,10 +220,11 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
-      {/* Cartes de statistiques ultra compactes */}
+
+      {/* Cartes de statistiques */}
       <div className="row mb-2">
         <div className="col-3 px-1">
-          <div>
+          <div className="card">
             <div className="card-body p-2 text-center">
               <div className="text-xs fw-bold text-primary">Demandes</div>
               <div className="h6 mb-0 fw-bold">{stats.totalRequests}</div>
@@ -238,7 +233,7 @@ export default function Dashboard() {
         </div>
 
         <div className="col-3 px-1">
-          <div>
+          <div className="card">
             <div className="card-body p-2 text-center">
               <div className="text-xs fw-bold text-success">Prêts actifs</div>
               <div className="h6 mb-0 fw-bold">{stats.activeLoans}</div>
@@ -247,7 +242,7 @@ export default function Dashboard() {
         </div>
 
         <div className="col-3 px-1">
-          <div>
+          <div className="card">
             <div className="card-body p-2 text-center">
               <div className="text-xs fw-bold text-warning">En attente</div>
               <div className="h6 mb-0 fw-bold">{stats.pendingApprovals}</div>
@@ -256,7 +251,7 @@ export default function Dashboard() {
         </div>
 
         <div className="col-3 px-1">
-          <div>
+          <div className="card">
             <div className="card-body p-2 text-center">
               <div className="text-xs fw-bold text-info">Cotisations</div>
               <div className="h6 mb-0 fw-bold">{stats.totalContributions}</div>
