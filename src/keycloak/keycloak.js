@@ -2,13 +2,14 @@
 import Keycloak from 'keycloak-js';
 
 const keycloakConfig = {
-    url: 'http://localhost:8088',  // CORRIGÉ: 8088 au lieu de 9090
-    realm: 'mutuelle-realm',     // Votre realm
-    clientId: 'mutuelle-client'   // Votre client
+    url: process.env.REACT_APP_KEYCLOAK_URL || 'http://localhost:8088',
+    realm: process.env.REACT_APP_KEYCLOAK_REALM || 'mutuelle-realm',
+    clientId: process.env.REACT_APP_KEYCLOAK_CLIENT_ID || 'mutuelle-client'
 };
 
 // Pattern Singleton pour éviter les instances multiples
 let keycloakInstance = null;
+let initPromise = null;
 
 const initKeycloak = () => {
     if (!keycloakInstance) {
@@ -18,13 +19,30 @@ const initKeycloak = () => {
     return keycloakInstance;
 };
 
-// Configuration d'initialisation optimisée
+// Configuration d'initialisation
 export const keycloakInitOptions = {
-    onLoad: 'check-sso',           // Vérifie la session SSO au chargement
-    checkLoginIframe: false,       // Évite les timeouts
-    pkceMethod: 'S256',            // PKCE pour plus de sécurité
-    flow: 'standard',              // Standard OpenID Connect
-    silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html' // Optionnel
+    onLoad: 'check-sso',
+    checkLoginIframe: false,
+    pkceMethod: 'S256',
+    flow: 'standard'
+};
+
+// ✅ NOUVEAU: Fonction d'initialisation avec promesse unique
+export const initializeKeycloak = () => {
+    if (!initPromise) {
+        const keycloak = initKeycloak();
+        initPromise = keycloak.init(keycloakInitOptions)
+            .then((auth) => {
+                console.log('Keycloak initialisé, authentifié:', auth);
+                return { keycloak, auth };
+            })
+            .catch((error) => {
+                console.error('Erreur init Keycloak:', error);
+                initPromise = null; // Reset pour réessayer
+                throw error;
+            });
+    }
+    return initPromise;
 };
 
 // Exporter l'instance initialisée
@@ -35,5 +53,4 @@ export const getKeycloak = () => {
     return keycloakInstance;
 };
 
-// Exporter la fonction d'initialisation
 export default initKeycloak;

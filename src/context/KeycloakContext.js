@@ -1,6 +1,6 @@
 // src/context/KeycloakContext.js
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import initKeycloak, { keycloakInitOptions } from '../keycloak/keycloak';
+import { initializeKeycloak } from '../keycloak/keycloak'; 
 
 const KeycloakContext = createContext();
 
@@ -19,46 +19,69 @@ export const KeycloakProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const keycloakInstance = initKeycloak();
+        let mounted = true;
+        let tokenRefreshInterval;
 
-        keycloakInstance.init(keycloakInitOptions)
-            .then((auth) => {
-                setAuthenticated(auth);
-                setKeycloak(keycloakInstance);
+        const init = async () => {
+            try {
+                const result = await initializeKeycloak();
+                
+                if (!mounted) return;
 
-                if (auth) {
-                    keycloakInstance.loadUserProfile()
-                        .then((profile) => {
+                setKeycloak(result.keycloak);
+                setAuthenticated(result.auth);
+
+                if (result.auth) {
+                    try {
+                        const profile = await result.keycloak.loadUserProfile();
+                        if (mounted) {
                             setUserProfile(profile);
-                            localStorage.setItem('token', keycloakInstance.token);
+                            localStorage.setItem('token', result.keycloak.token);
                             localStorage.setItem('currentUser', JSON.stringify(profile));
-                        })
-                        .catch(console.error);
+                            
+                            // Vérifier si l'utilisateur vient de s'inscrire
+                            const urlParams = new URLSearchParams(window.location.search);
+                            if (urlParams.get('kc_action') === 'register') {
+                                window.history.replaceState({}, document.title, window.location.pathname);
+                            }
+                        }
+                    } catch (profileError) {
+                        console.error('Erreur chargement profil:', profileError);
+                    }
 
-                    setInterval(() => {
-                        keycloakInstance.updateToken(70)
-                            .then((refreshed) => {
-                                if (refreshed) {
-                                    localStorage.setItem('token', keycloakInstance.token);
-                                }
-                            })
-                            .catch(() => {
-                                keycloakInstance.logout();
-                            });
+                    // Rafraîchir le token
+                    tokenRefreshInterval = setInterval(async () => {
+                        try {
+                            const refreshed = await result.keycloak.updateToken(70);
+                            if (refreshed && mounted) {
+                                localStorage.setItem('token', result.keycloak.token);
+                                console.log('Token rafraîchi');
+                            }
+                        } catch (refreshError) {
+                            console.error('Erreur rafraîchissement token:', refreshError);
+                        }
                     }, 60000);
                 } else {
                     localStorage.removeItem('token');
                     localStorage.removeItem('currentUser');
                 }
-            })
-            .catch((error) => {
+            } catch (error) {
                 console.error('Erreur d\'initialisation Keycloak:', error);
-            })
-            .finally(() => {
-                setLoading(false);
-            });
+            } finally {
+                if (mounted) {
+                    setLoading(false);
+                }
+            }
+        };
 
-        return () => {};
+        init();
+
+        return () => {
+            mounted = false;
+            if (tokenRefreshInterval) {
+                clearInterval(tokenRefreshInterval);
+            }
+        };
     }, []);
 
     const login = () => {
@@ -68,7 +91,7 @@ export const KeycloakProvider = ({ children }) => {
     const logout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('currentUser');
-        keycloak?.logout({ redirectUri: window.location.origin });
+        keycloak?.logout({ redirectUri: window.location.origin + '/login' });
     };
 
     const getToken = () => {
