@@ -14,7 +14,7 @@ const LoanRequestDetails = () => {
         const fetchRequest = async () => {
             try {
                 const token = localStorage.getItem('token');
-                const res = await axios.get(`http://localhost:8080/mutuelle/loan_request/${id}`, {
+                const res = await axios.get(`http://localhost:8081/mutuelle/loan_request/${id}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 setRequest(res.data);
@@ -46,7 +46,6 @@ const LoanRequestDetails = () => {
                     <p><strong>Durée :</strong> {request.duration} mois</p>
                     <p><strong>Motif :</strong> {request.reason}</p>
                     <p><strong>Statut :</strong> {request.status}</p>
-                    {/* ajouter plus de champs si nécessaire */}
                 </div>
             </div>
         </div>
