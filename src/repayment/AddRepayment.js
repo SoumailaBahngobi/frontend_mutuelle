@@ -31,7 +31,7 @@ const AddRepayment = () => {
             setError('');
             const token = localStorage.getItem('token');
             
-            const response = await axios.get('http://localhost:8080/mutuelle/loans/active', {
+            const response = await axios.get('http://localhost:8081/mutuelle/loans/active', {
                 headers: {
                     Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json'
@@ -123,7 +123,7 @@ const AddRepayment = () => {
 
     const handleFetchError = (error) => {
         if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
-            setError('Impossible de joindre le serveur backend. Vérifiez que le serveur est démarré sur le port 8080.');
+            setError('Impossible de joindre le serveur backend. Vérifiez que le serveur est démarré sur le port 8081.');
             return;
         }
 
@@ -227,7 +227,7 @@ const AddRepayment = () => {
 
             console.log('Données envoyées:', submitData);
 
-            const response = await axios.post('http://localhost:8080/mutuelle/repayment', submitData, {
+            const response = await axios.post('http://localhost:8081/mutuelle/repayment', submitData, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json'

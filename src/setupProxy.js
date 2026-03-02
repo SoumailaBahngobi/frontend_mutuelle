@@ -11,11 +11,11 @@ module.exports = function(app) {
     })
   );
 
-  // All other backend calls to port 8080
+  // All other backend calls to port 8081
   app.use(
     '/mutuelle',
     createProxyMiddleware({
-      target: 'http://localhost:8080',
+      target: 'http://localhost:8081',
       changeOrigin: true,
       secure: false
     })

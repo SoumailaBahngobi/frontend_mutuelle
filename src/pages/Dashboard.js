@@ -48,7 +48,7 @@ export default function Dashboard() {
           }
 
           // Synchroniser avec votre backend si nécessaire
-          const response = await axios.get('http://localhost:8080/mutuelle/auth/user-info', {
+          const response = await axios.get('http://localhost:8081/mutuelle/auth/user-info', {
             headers: { Authorization: `Bearer ${getToken()}` }
           });
           
@@ -74,14 +74,14 @@ export default function Dashboard() {
 
   const fetchLoanData = async (token, userId) => {
     try {
-      const requestsRes = await axios.get('http://localhost:8080/mutuelle/loan_request/my-requests', {
+      const requestsRes = await axios.get('http://localhost:8081/mutuelle/loan_request/my-requests', {
         headers: { Authorization: `Bearer ${token}` }
       });
 
       const loanRequests = Array.isArray(requestsRes.data) ? requestsRes.data : [];
       setMyLoanRequests(loanRequests);
 
-      const loansRes = await axios.get('http://localhost:8080/mutuelle/loans', {
+      const loansRes = await axios.get('http://localhost:8081/mutuelle/loans', {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -112,7 +112,7 @@ export default function Dashboard() {
 
   const fetchNotifications = async (token) => {
     try {
-      const response = await axios.get('http://localhost:8080/mutuelle/notification', {
+      const response = await axios.get('http://localhost:8081/mutuelle/notification', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setNotifications(response.data);
