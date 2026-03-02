@@ -16,8 +16,12 @@ const AddContributionPeriod = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [authChecked, setAuthChecked] = useState(false);
+    const [success, setSuccess] = useState('');
 
     const navigate = useNavigate();
+
+    // URL de base de l'API
+    const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8081';
 
     useEffect(() => {
         checkAuthentication();
@@ -45,6 +49,34 @@ const AddContributionPeriod = () => {
         });
     };
 
+    const validateForm = () => {
+        if (!form.startDate) {
+            setError('La date de début est obligatoire');
+            return false;
+        }
+        if (!form.endDate) {
+            setError('La date de fin est obligatoire');
+            return false;
+        }
+        if (new Date(form.startDate) >= new Date(form.endDate)) {
+            setError('La date de fin doit être postérieure à la date de début');
+            return false;
+        }
+        if (!form.amount || parseFloat(form.amount) <= 0) {
+            setError('Le montant doit être supérieur à 0');
+            return false;
+        }
+        if (!form.status) {
+            setError('Le statut est obligatoire');
+            return false;
+        }
+        if (!form.description.trim()) {
+            setError('La description est obligatoire');
+            return false;
+        }
+        return true;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         
@@ -52,8 +84,13 @@ const AddContributionPeriod = () => {
             return;
         }
 
+        if (!validateForm()) {
+            return;
+        }
+
         setLoading(true);
         setError('');
+        setSuccess('');
 
         try {
             const token = localStorage.getItem('token');
@@ -63,19 +100,22 @@ const AddContributionPeriod = () => {
                 setLoading(false);
                 return;
             }
-            // ✅ CORRECTION : individualAmount au lieu de amount
+
+            // Préparation des données pour l'API
             const apiData = {
                 startDate: form.startDate,
                 endDate: form.endDate,
-                individualAmount: parseFloat(form.amount), // 🔥 Changement ici
+                name: form.name || `Campagne ${new Date(form.startDate).toLocaleDateString()} - ${new Date(form.endDate).toLocaleDateString()}`,
+                individualAmount: parseFloat(form.amount),
                 status: form.status,
                 description: form.description
             };
 
             console.log('📤 Données envoyées:', apiData);
 
+            // ✅ CORRECTION : Utilisation du bon endpoint et de l'URL de base
             const response = await axios.post(
-                'http://localhost:8081/mut/contribution_period', 
+                `${API_URL}/mutuelle/contribution_period`,  // ← CORRIGÉ : /mutuelle/ au lieu de /mut/
                 apiData,
                 {
                     headers: {
@@ -87,7 +127,9 @@ const AddContributionPeriod = () => {
             
             console.log('✅ Réponse reçue:', response.data);
             
-            alert('Campagne de cotisation ajoutée avec succès !');
+            setSuccess('Campagne de cotisation ajoutée avec succès !');
+            
+            // Réinitialiser le formulaire
             setForm({
                 startDate: '', 
                 endDate: '',
@@ -96,7 +138,11 @@ const AddContributionPeriod = () => {
                 status: '',
                 description: ''
             });
-            navigate('/dashboard');
+
+            // Redirection après 2 secondes
+            setTimeout(() => {
+                navigate('/dashboard');
+            }, 2000);
             
         } catch (error) {
             console.error('❌ Erreur détaillée:', error);
@@ -110,14 +156,20 @@ const AddContributionPeriod = () => {
                 return;
             }
             
+            if (error.response?.status === 403) {
+                setError('Vous n\'avez pas les permissions nécessaires pour créer une campagne de cotisation.');
+                return;
+            }
+            
             let errorMessage = 'Erreur lors de l\'ajout de la campagne de cotisation';
             
             if (error.response?.data) {
-                // Afficher le message d'erreur spécifique du backend
                 if (typeof error.response.data === 'string') {
                     errorMessage = error.response.data;
                 } else if (error.response.data.message) {
                     errorMessage = error.response.data.message;
+                } else if (error.response.data.error) {
+                    errorMessage = error.response.data.error;
                 } else {
                     errorMessage = JSON.stringify(error.response.data);
                 }
@@ -154,14 +206,27 @@ const AddContributionPeriod = () => {
         <div className="container mt-4">
             <div className="row justify-content-center">
                 <div className="col-md-8">
-                    <div className="card">
+                    <div className="card shadow">
                         <div className="card-header bg-primary text-white">
-                            <h3 className="mb-0">Ajouter une campagne de Cotisation</h3>
+                            <h3 className="mb-0">
+                                <i className="bi bi-calendar-plus me-2"></i>
+                                Ajouter une campagne de Cotisation
+                            </h3>
                         </div>
-                        <div className="card-body">
+                        <div className="card-body p-4">
                             {error && (
-                                <div className="alert alert-danger" role="alert">
+                                <div className="alert alert-danger alert-dismissible fade show" role="alert">
+                                    <i className="bi bi-exclamation-triangle-fill me-2"></i>
                                     <strong>Erreur:</strong> {error}
+                                    <button type="button" className="btn-close" onClick={() => setError('')}></button>
+                                </div>
+                            )}
+                            
+                            {success && (
+                                <div className="alert alert-success alert-dismissible fade show" role="alert">
+                                    <i className="bi bi-check-circle-fill me-2"></i>
+                                    <strong>Succès:</strong> {success}
+                                    <button type="button" className="btn-close" onClick={() => setSuccess('')}></button>
                                 </div>
                             )}
                             
@@ -169,8 +234,8 @@ const AddContributionPeriod = () => {
                                 <div className="row">
                                     <div className="col-md-6">
                                         <div className="form-group mb-3">
-                                            <label htmlFor="startDate" className="form-label">
-                                                Date de Début *
+                                            <label htmlFor="startDate" className="form-label fw-semibold">
+                                                Date de Début <span className="text-danger">*</span>
                                             </label>
                                             <input 
                                                 type="date" 
@@ -180,13 +245,15 @@ const AddContributionPeriod = () => {
                                                 value={form.startDate} 
                                                 onChange={handleChange} 
                                                 required 
+                                                disabled={loading}
                                             />
+                                            <small className="text-muted">Date de début de la campagne</small>
                                         </div>
                                     </div>
                                     <div className="col-md-6">
                                         <div className="form-group mb-3">
-                                            <label htmlFor="endDate" className="form-label">
-                                                Date de Fin *
+                                            <label htmlFor="endDate" className="form-label fw-semibold">
+                                                Date de Fin <span className="text-danger">*</span>
                                             </label>
                                             <input 
                                                 type="date" 
@@ -196,13 +263,15 @@ const AddContributionPeriod = () => {
                                                 value={form.endDate} 
                                                 onChange={handleChange} 
                                                 required 
+                                                disabled={loading}
                                             />  
+                                            <small className="text-muted">Date de fin de la campagne</small>
                                         </div>
                                     </div>
                                 </div>
 
                                 <div className="form-group mb-3">
-                                    <label htmlFor="name" className="form-label">
+                                    <label htmlFor="name" className="form-label fw-semibold">
                                         Nom de la campagne
                                     </label>
                                     <input 
@@ -212,34 +281,41 @@ const AddContributionPeriod = () => {
                                         name="name" 
                                         value={form.name} 
                                         onChange={handleChange} 
-                                        placeholder="Campane de Cotisation du premier trimestre"
+                                        placeholder="Ex: Campagne du premier trimestre 2024"
+                                        disabled={loading}
                                     />
+                                    <small className="text-muted">Optionnel - Si vide, un nom sera généré automatiquement</small>
                                 </div>
 
                                 <div className="row">
                                     <div className="col-md-6">
                                         <div className="form-group mb-3">
-                                            <label htmlFor="amount" className="form-label">
-                                                Montant Individuel * {/* ✅ Mise à jour du label */}
+                                            <label htmlFor="amount" className="form-label fw-semibold">
+                                                Montant Individuel (FCFA) <span className="text-danger">*</span>
                                             </label>
-                                            <input 
-                                                type="number" 
-                                                step="0.01"
-                                                min="0"
-                                                className="form-control" 
-                                                id="amount" 
-                                                name="amount" 
-                                                value={form.amount} 
-                                                onChange={handleChange} 
-                                                placeholder="0.00" 
-                                                required
-                                            />
+                                            <div className="input-group">
+                                                <span className="input-group-text">FCFA</span>
+                                                <input 
+                                                    type="number" 
+                                                    step="100"
+                                                    min="100"
+                                                    className="form-control" 
+                                                    id="amount" 
+                                                    name="amount" 
+                                                    value={form.amount} 
+                                                    onChange={handleChange} 
+                                                    placeholder="1000" 
+                                                    required
+                                                    disabled={loading}
+                                                />
+                                            </div>
+                                            <small className="text-muted">Montant que chaque membre doit payer</small>
                                         </div>
                                     </div>
                                     <div className="col-md-6">
                                         <div className="form-group mb-3">
-                                            <label htmlFor="status" className="form-label">
-                                                Statut *
+                                            <label htmlFor="status" className="form-label fw-semibold">
+                                                Statut <span className="text-danger">*</span>
                                             </label>
                                             <select 
                                                 className="form-control" 
@@ -248,19 +324,21 @@ const AddContributionPeriod = () => {
                                                 value={form.status}
                                                 onChange={handleChange}
                                                 required
+                                                disabled={loading}
                                             >
                                                 <option value="">Sélectionner le statut</option>
                                                 <option value="ACTIVE">Active</option>
                                                 <option value="INACTIVE">Inactive</option>
                                                 <option value="PENDING">En attente</option>
                                             </select>
+                                            <small className="text-muted">Statut de la campagne</small>
                                         </div>
                                     </div>
                                 </div>
                                 
                                 <div className="form-group mb-4">
-                                    <label htmlFor="description" className="form-label">
-                                        Description *
+                                    <label htmlFor="description" className="form-label fw-semibold">
+                                        Description <span className="text-danger">*</span>
                                     </label>
                                     <textarea 
                                         className="form-control" 
@@ -268,24 +346,27 @@ const AddContributionPeriod = () => {
                                         name="description" 
                                         value={form.description} 
                                         onChange={handleChange} 
-                                        placeholder="Description de la période de cotisation..." 
+                                        placeholder="Description détaillée de la campagne de cotisation..." 
                                         rows="3"
                                         required
+                                        disabled={loading}
                                     />
+                                    <small className="text-muted">Description claire de l'objectif de la campagne</small>
                                 </div>
                                 
                                 <div className="d-grid gap-2 d-md-flex justify-content-md-end">
                                     <button 
                                         type="button" 
-                                        className="btn btn-secondary me-md-2"
+                                        className="btn btn-outline-secondary me-md-2 px-4"
                                         onClick={() => navigate('/dashboard')}
                                         disabled={loading}
                                     >
+                                        <i className="bi bi-x-circle me-2"></i>
                                         Annuler
                                     </button>
                                     <button 
                                         type="submit" 
-                                        className="btn btn-primary"
+                                        className="btn btn-primary px-4"
                                         disabled={loading}
                                     >
                                         {loading ? (
@@ -294,11 +375,20 @@ const AddContributionPeriod = () => {
                                                 Ajout en cours...
                                             </>
                                         ) : (
-                                            'Ajouter la campagne de Cotisation'
+                                            <>
+                                                <i className="bi bi-check-circle me-2"></i>
+                                                Ajouter la campagne
+                                            </>
                                         )}
                                     </button>
                                 </div>
                             </form>
+
+                            {/* Instructions */}
+                            <div className="alert alert-info mt-4 mb-0">
+                                <i className="bi bi-info-circle-fill me-2"></i>
+                                <strong>Note :</strong> Une fois la campagne créée, les membres pourront effectuer leurs cotisations pendant la période définie.
+                            </div>
                         </div>
                     </div>
                 </div>

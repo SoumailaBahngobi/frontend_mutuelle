@@ -20,7 +20,7 @@ function EventList() {
   const fetchEvents = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8080/mutuelle/event', {
+      const response = await axios.get('http://localhost:8081/mutuelle/event', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setEvents(response.data);
@@ -40,7 +40,7 @@ function EventList() {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:8080/mutuelle/event/${eventId}`, {
+      await axios.delete(`http://localhost:8081/mutuelle/event/${eventId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       

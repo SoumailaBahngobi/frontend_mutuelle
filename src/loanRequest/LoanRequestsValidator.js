@@ -151,7 +151,7 @@ const LoanRequestsValidator = () => {
         try {
             const token = localStorage.getItem('token');
             const response = await axios.post(
-                `http://localhost:8080/mutuelle/loan_request/${requestId}/reject`,
+                `http://localhost:8081/mutuelle/loan_request/${requestId}/reject`,
                 { 
                     rejectionReason: rejectionReason
                 },
