@@ -1,11 +1,7 @@
-// src/config/apiConfig.js
 import axios from 'axios';
 
-// Utilisez la variable d'environnement avec fallback à 8081 (pas 8080)
-// leave baseURL blank so we rely on CRA proxy configuration
-const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8081';
 
-// Créer une instance Axios avec configuration par défaut
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
@@ -14,7 +10,6 @@ const apiClient = axios.create({
   },
 });
 
-// Intercepteur pour les requêtes
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -22,11 +17,10 @@ apiClient.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
     
-    // Empêcher le cache pour les requêtes GET
     if (config.method === 'get') {
       config.params = {
         ...config.params,
-        _t: Date.now(), // Timestamp pour éviter le cache
+        _t: Date.now(),
       };
       config.headers['Cache-Control'] = 'no-cache';
       config.headers['Pragma'] = 'no-cache';
@@ -40,24 +34,19 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Intercepteur pour les réponses
 apiClient.interceptors.response.use(
   (response) => {
     console.log(`Response received: ${response.status} from ${response.config.url}`);
     return response;
   },
-  (error) => {
+  async (error) => {
     console.error('API Error:', error.response?.status, error.response?.data);
-    
-    if (error.response?.status === 304) {
-      console.log('304 Not Modified - C\'est normal pour les requêtes conditionnelles');
-      return Promise.resolve(error.response);
-    }
     
     if (error.response?.status === 401) {
       console.log('Token expiré ou invalide, redirection vers login');
       localStorage.removeItem('token');
       localStorage.removeItem('currentUser');
+      localStorage.removeItem('userInfo');
       window.location.href = '/login';
     }
     

@@ -1,6 +1,5 @@
-// src/context/KeycloakContext.js
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { initializeKeycloak } from '../keycloak/keycloak';
+import authService from '../service/authService';
 
 const KeycloakContext = createContext();
 
@@ -13,94 +12,61 @@ export const useKeycloak = () => {
 };
 
 export const KeycloakProvider = ({ children }) => {
-    const [keycloak, setKeycloak] = useState(null);
     const [authenticated, setAuthenticated] = useState(false);
-    const [userProfile, setUserProfile] = useState(null);
+    const [userInfo, setUserInfo] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        let mounted = true;
-        let tokenRefreshInterval;
-
-        const init = async () => {
+        const checkAuth = () => {
             try {
-                const result = await initializeKeycloak();
+                const isAuth = authService.isAuthenticated();
+                setAuthenticated(isAuth);
                 
-                if (!mounted) return;
-
-                setKeycloak(result.keycloak);
-                setAuthenticated(result.auth);
-
-                if (result.auth) {
-                    try {
-                        const profile = await result.keycloak.loadUserProfile();
-                        if (mounted) {
-                            setUserProfile(profile);
-                            localStorage.setItem('token', result.keycloak.token);
-                            localStorage.setItem('currentUser', JSON.stringify(profile));
-                        }
-                    } catch (profileError) {
-                        console.error('Erreur chargement profil:', profileError);
-                    }
-
-                    // Rafraîchir le token
-                    tokenRefreshInterval = setInterval(async () => {
-                        try {
-                            const refreshed = await result.keycloak.updateToken(70);
-                            if (refreshed && mounted) {
-                                localStorage.setItem('token', result.keycloak.token);
-                            }
-                        } catch (refreshError) {
-                            console.error('Erreur rafraîchissement token:', refreshError);
-                        }
-                    }, 60000);
-                } else {
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('currentUser');
+                if (isAuth) {
+                    const user = authService.getCurrentUser();
+                    setUserInfo(user);
                 }
             } catch (error) {
-                console.error('Erreur d\'initialisation Keycloak:', error);
+                console.error('Erreur de vérification d\'authentification:', error);
+                setAuthenticated(false);
             } finally {
-                if (mounted) {
-                    setLoading(false);
-                }
+                setLoading(false);
             }
         };
 
-        init();
-
-        return () => {
-            mounted = false;
-            if (tokenRefreshInterval) {
-                clearInterval(tokenRefreshInterval);
-            }
-        };
+        checkAuth();
     }, []);
 
-    const login = () => {
-        keycloak?.login();
+    const login = async (email, password) => {
+        const result = await authService.login(email, password);
+        
+        if (result.success) {
+            setAuthenticated(true);
+            setUserInfo(result.data.userInfo);
+            return { success: true };
+        }
+        
+        return result;
     };
 
     const logout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('currentUser');
-        keycloak?.logout({ redirectUri: window.location.origin + '/' });
-    };
-
-    const getToken = () => {
-        return keycloak?.token;
+        authService.logout();
+        setAuthenticated(false);
+        setUserInfo(null);
     };
 
     const hasRole = (role) => {
-        if (!keycloak || !keycloak.tokenParsed) return false;
-        const realmRoles = keycloak.tokenParsed.realm_access?.roles || [];
-        return realmRoles.includes(role);
+        if (!userInfo) return false;
+        return userInfo.role === role;
+    };
+
+    const getToken = () => {
+        return authService.getToken();
     };
 
     const value = {
-        keycloak,
         authenticated,
-        userProfile,
+        userInfo,
         loading,
         login,
         logout,

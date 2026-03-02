@@ -1,4 +1,3 @@
-// src/keycloak/keycloak.js
 import Keycloak from 'keycloak-js';
 
 const keycloakConfig = {
@@ -7,7 +6,6 @@ const keycloakConfig = {
     clientId: process.env.REACT_APP_KEYCLOAK_CLIENT_ID || 'mutuelle-client'
 };
 
-// Pattern Singleton pour éviter les instances multiples
 let keycloakInstance = null;
 let initPromise = null;
 
@@ -19,15 +17,13 @@ const initKeycloak = () => {
     return keycloakInstance;
 };
 
-// Configuration d'initialisation
 export const keycloakInitOptions = {
-    onLoad: 'check-sso',
+    onLoad: 'login-required',
     checkLoginIframe: false,
     pkceMethod: 'S256',
-    flow: 'standard'
+    flow: 'standard',
 };
 
-// ✅ NOUVEAU: Fonction d'initialisation avec promesse unique
 export const initializeKeycloak = () => {
     if (!initPromise) {
         const keycloak = initKeycloak();
@@ -38,14 +34,13 @@ export const initializeKeycloak = () => {
             })
             .catch((error) => {
                 console.error('Erreur init Keycloak:', error);
-                initPromise = null; // Reset pour réessayer
+                initPromise = null;
                 throw error;
             });
     }
     return initPromise;
 };
 
-// Exporter l'instance initialisée
 export const getKeycloak = () => {
     if (!keycloakInstance) {
         throw new Error('Keycloak non initialisé. Appelez initKeycloak() d\'abord.');
