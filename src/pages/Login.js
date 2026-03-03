@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import apiClient from '../apiConfig'; // use shared axios instance
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
 export default function Login() {
-  const [form, setForm] = useState({ 
-    email: '', 
-    password: '' 
+  const [form, setForm] = useState({
+    email: '',
+    password: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -25,7 +26,7 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    
+
     if (!form.email || !form.password) {
       toast.error('Veuillez remplir tous les champs');
       return;
@@ -34,8 +35,10 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const res = await axios.post('http://localhost:8080/mutuelle/login', form);
-      
+      // try the authentication endpoint consistent with registration
+      const res = await apiClient.post('/mutuelle/auth/login', form);
+      console.log('login response', res);
+
       if (res.data && res.data.token) {
         localStorage.setItem('token', res.data.token);
         let userData = null;
@@ -46,7 +49,7 @@ export default function Login() {
         } else {
           userData = await fetchUserProfile(res.data.token);
         }
-        
+
         if (userData) {
           localStorage.setItem('currentUser', JSON.stringify(userData));
           toast.success('Connexion réussie !');
@@ -77,7 +80,7 @@ export default function Login() {
 
   const fetchUserProfile = async (token) => {
     try {
-      const response = await axios.get('http://localhost:8080/mutuelle/member/profile', {
+      const response = await apiClient.get('/mutuelle/member/profile', {
         headers: { Authorization: `Bearer ${token}` }
       });
       return response.data;
@@ -89,7 +92,7 @@ export default function Login() {
 
   const handleForgotPassword = async (e) => {
     e.preventDefault();
-    
+
     // Validation de l'email
     if (!forgotPasswordEmail) {
       toast.error('Veuillez entrer votre adresse email');
@@ -113,7 +116,7 @@ export default function Login() {
     setForgotPasswordLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:8080/mutuelle/member/forgot-password', {
+      const response = await apiClient.post('/mutuelle/member/forgot-password', {
         email: forgotPasswordEmail
       });
 
@@ -128,7 +131,7 @@ export default function Login() {
       }
     } catch (error) {
       console.error('Erreur mot de passe oublié:', error);
-      
+
       // Gestion détaillée des erreurs
       if (error.response?.status === 404) {
         toast.error('Aucun compte trouvé avec cette adresse email');
@@ -154,7 +157,7 @@ export default function Login() {
       <div className="container">
         <div className="row justify-content-center">
           <div className="col-md-6 col-lg-5">
-            
+
             {/* Modal Mot de passe oublié */}
             {showForgotPassword && (
               <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} tabIndex="-1">
@@ -184,11 +187,11 @@ export default function Login() {
                           <label htmlFor="forgotPasswordEmail" className="form-label">
                             Email
                           </label>
-                          <input 
-                            type="email" 
+                          <input
+                            type="email"
                             className="form-control"
-                            id="forgotPasswordEmail" 
-                            value={forgotPasswordEmail} 
+                            id="forgotPasswordEmail"
+                            value={forgotPasswordEmail}
                             onChange={(e) => setForgotPasswordEmail(e.target.value)}
                             placeholder="votre@email.com"
                             required
@@ -196,8 +199,8 @@ export default function Login() {
                           />
                         </div>
                         <div className="d-grid gap-2">
-                          <button 
-                            type="submit" 
+                          <button
+                            type="submit"
                             className="btn btn-primary"
                             disabled={forgotPasswordLoading}
                           >
@@ -213,8 +216,8 @@ export default function Login() {
                               </>
                             )}
                           </button>
-                          <button 
-                            type="button" 
+                          <button
+                            type="button"
                             className="btn btn-outline-secondary"
                             onClick={() => {
                               setShowForgotPassword(false);
@@ -234,14 +237,13 @@ export default function Login() {
 
             {/* Carte de connexion principale */}
             <div className="card shadow-lg border-0 rounded-3">
-              
+
               <div className="card-header bg-primary text-white text-center py-3 rounded-top-3">
                 <h4 className="fw-bold mb-0">
                   <i className="bi bi-shield-lock me-2"></i>
                   Connexion
                 </h4>
               </div>
-              
               <div className="card-body p-4 p-md-5">
                 <form onSubmit={handleSubmit} noValidate>
                   <div className="form-group mb-3">
@@ -249,12 +251,12 @@ export default function Login() {
                       <i className="bi bi-envelope me-2"></i>
                       Email
                     </label>
-                    <input 
-                      type="email" 
+                    <input
+                      type="email"
                       className={`form-control ${error ? 'is-invalid' : ''}`}
-                      id="email" 
-                      name="email" 
-                      value={form.email} 
+                      id="email"
+                      name="email"
+                      value={form.email}
                       onChange={handleChange}
                       placeholder="votre@email.com"
                       required
@@ -267,20 +269,18 @@ export default function Login() {
                       <i className="bi bi-lock me-2"></i>
                       Mot de passe
                     </label>
-                    <input 
-                      type="password" 
+                    <input
+                      type="password"
                       className={`form-control ${error ? 'is-invalid' : ''}`}
-                      id="password" 
-                      name="password" 
-                      value={form.password} 
+                      id="password"
+                      name="password"
+                      value={form.password}
                       onChange={handleChange}
                       placeholder="Votre mot de passe"
                       required
                       disabled={loading}
                     />
                   </div>
-
-                  {/* Lien Mot de passe oublié */}
                   <div className="text-end mb-4">
                     <button
                       type="button"
@@ -315,8 +315,8 @@ export default function Login() {
                   )}
 
                   <div className="d-grid mb-4">
-                    <button 
-                      type="submit" 
+                    <button
+                      type="submit"
                       className="btn btn-primary fw-semibold py-2"
                       disabled={loading}
                     >
@@ -336,8 +336,8 @@ export default function Login() {
 
                   <div className="text-center">
                     <p className="mb-3 text-muted small">Vous n'avez pas de compte ?</p>
-                    <Link 
-                      to="/register" 
+                    <Link
+                      to="/register"
                       className="btn btn-outline-primary btn-sm"
                       disabled={loading}
                     >
@@ -347,7 +347,6 @@ export default function Login() {
                   </div>
                 </form>
               </div>
-              
               <div className="card-footer text-center py-2 bg-light rounded-bottom-3">
                 <small className="text-muted">
                   <i className="bi bi-shield-check me-1"></i>

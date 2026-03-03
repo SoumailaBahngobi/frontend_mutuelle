@@ -28,7 +28,7 @@ function EditMember() {
         try {
             setLoadingMember(true);
             const token = localStorage.getItem('token');
-            const response = await axios.get(`http://localhost:8080/mutuelle/member/${id}`, {
+            const response = await axios.get(`http://localhost:8081/mutuelle/member/${id}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             const member = response.data;
@@ -44,7 +44,7 @@ function EditMember() {
         } catch (error) {
            // console.error('Erreur lors du chargement du membre:', error);
             toast.error('Erreur lors du chargement du membre');
-            navigate('/members');
+            navigate('/members/list');
         } finally {
             setLoadingMember(false);
         }
@@ -91,13 +91,13 @@ function EditMember() {
         
         try {
             const token = localStorage.getItem('token');
-            const response = await axios.put(`http://localhost:8080/mutuelle/member/${id}`, form, {
+            const response = await axios.put(`http://localhost:8081/mutuelle/member/${id}`, form, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             
             if (response.status === 200) {
                 toast.success('Membre modifié avec succès !');
-                navigate('/members');
+                navigate('/members/list');
             }
         } catch (error) {
             console.error('Erreur de modification:', error);

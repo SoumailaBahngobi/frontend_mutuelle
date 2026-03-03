@@ -1,32 +1,46 @@
-// keycloak.js
 import Keycloak from 'keycloak-js';
 
 const keycloakConfig = {
-    url: 'http://localhost:9090/',
-    realm: 'frontend_mutuelle',
-    clientId: 'mutuelle-frontend'
+    url: process.env.REACT_APP_KEYCLOAK_URL || 'http://localhost:8088',
+    realm: process.env.REACT_APP_KEYCLOAK_REALM || 'mutuelle-realm',
+    clientId: process.env.REACT_APP_KEYCLOAK_CLIENT_ID || 'mutuelle-client'
 };
 
-// Pattern Singleton pour éviter les instances multiples
 let keycloakInstance = null;
+let initPromise = null;
 
 const initKeycloak = () => {
     if (!keycloakInstance) {
         keycloakInstance = new Keycloak(keycloakConfig);
-        console.log('Nouvelle instance Keycloak créée');
+        console.log('Nouvelle instance Keycloak créée avec URL:', keycloakConfig.url);
     }
     return keycloakInstance;
 };
 
-// Configuration d'initialisation optimisée
 export const keycloakInitOptions = {
-    onLoad: 'check-sso',
-    checkLoginIframe: false, // Désactiver la vérification iframe qui cause le timeout
+    onLoad: 'login-required',
+    checkLoginIframe: false,
     pkceMethod: 'S256',
-    flow: 'standard'
+    flow: 'standard',
 };
 
-// Exporter l'instance initialisée
+export const initializeKeycloak = () => {
+    if (!initPromise) {
+        const keycloak = initKeycloak();
+        initPromise = keycloak.init(keycloakInitOptions)
+            .then((auth) => {
+                console.log('Keycloak initialisé, authentifié:', auth);
+                return { keycloak, auth };
+            })
+            .catch((error) => {
+                console.error('Erreur init Keycloak:', error);
+                initPromise = null;
+                throw error;
+            });
+    }
+    return initPromise;
+};
+
 export const getKeycloak = () => {
     if (!keycloakInstance) {
         throw new Error('Keycloak non initialisé. Appelez initKeycloak() d\'abord.');
@@ -34,5 +48,4 @@ export const getKeycloak = () => {
     return keycloakInstance;
 };
 
-// Exporter la fonction d'initialisation
 export default initKeycloak;

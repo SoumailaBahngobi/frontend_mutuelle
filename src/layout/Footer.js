@@ -31,7 +31,6 @@ import {
     faCalendarAlt
 } from '@fortawesome/free-solid-svg-icons';
 
-//la fonction footer
 export default function Footer() {
     const location = useLocation();
     
@@ -229,7 +228,8 @@ export default function Footer() {
                 </div>
             </footer>
 
-            <style jsx>{`
+            {/* ⚠️ REMPLACER CE BLOC : supprimer 'jsx' */}
+            <style>{`
                 .footer-complete {
                     background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
                     color: #ecf0f1;
