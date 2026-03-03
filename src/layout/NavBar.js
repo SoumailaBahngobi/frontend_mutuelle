@@ -266,6 +266,9 @@ export default function Navbar() {
                       Mon profil
                     </Link>
                   </li>
+                  <Link className="dropdown-item" to="/change-password">
+        <i className="bi bi-shield-lock me-2"></i>Changer mot de passe
+    </Link>
                   <li><hr className="dropdown-divider" /></li>
                   <li>
                     <button className="dropdown-item text-danger" onClick={handleLogout}>

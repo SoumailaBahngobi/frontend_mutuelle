@@ -1,3 +1,4 @@
+// src/configuration/Login.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useKeycloak } from '../context/KeycloakContext';
@@ -62,11 +63,35 @@ function Login() {
                 toast.success('Connexion réussie !');
                 navigate('/dashboard');
             } else {
-                toast.error(result.message || 'Erreur de connexion');
+                // Afficher le message d'erreur spécifique
+                if (result.message === 'Email ou mot de passe incorrect') {
+                    toast.error('❌ Email ou mot de passe incorrect');
+                    // Optionnel : mettre en évidence les champs
+                    setErrors({
+                        email: ' ',
+                        password: ' '
+                    });
+                } else {
+                    toast.error(result.message || 'Erreur de connexion');
+                }
             }
         } catch (error) {
             console.error('Erreur de connexion:', error);
-            toast.error('Erreur de connexion. Veuillez réessayer.');
+            
+            // Analyser l'erreur pour un message plus précis
+            if (error.response?.status === 401) {
+                toast.error('❌ Email ou mot de passe incorrect');
+                setErrors({
+                    email: ' ',
+                    password: ' '
+                });
+            } else if (error.response?.status === 400) {
+                toast.error('❌ Données invalides');
+            } else if (error.code === 'ERR_NETWORK') {
+                toast.error('❌ Impossible de joindre le serveur. Vérifiez votre connexion.');
+            } else {
+                toast.error('❌ Erreur de connexion. Veuillez réessayer.');
+            }
         } finally {
             setLoading(false);
         }
@@ -88,6 +113,14 @@ function Login() {
                                 <i className="bi bi-person-circle text-primary" style={{ fontSize: '4rem' }}></i>
                             </div>
                             
+                            {/* Message d'erreur général optionnel */}
+                            {errors.email === ' ' && errors.password === ' ' && (
+                                <div className="alert alert-danger py-2 mb-3">
+                                    <i className="bi bi-exclamation-triangle-fill me-2"></i>
+                                    Email ou mot de passe incorrect
+                                </div>
+                            )}
+                            
                             <form onSubmit={handleSubmit} noValidate>
                                 <div className="form-group mb-3">
                                     <label htmlFor="email" className="form-label fw-semibold">
@@ -108,7 +141,7 @@ function Login() {
                                             disabled={loading}
                                             autoComplete="username"
                                         />
-                                        {errors.email && (
+                                        {errors.email && errors.email !== ' ' && (
                                             <div className="invalid-feedback">{errors.email}</div>
                                         )}
                                     </div>
@@ -133,7 +166,7 @@ function Login() {
                                             disabled={loading}
                                             autoComplete="current-password"
                                         />
-                                        {errors.password && (
+                                        {errors.password && errors.password !== ' ' && (
                                             <div className="invalid-feedback">{errors.password}</div>
                                         )}
                                     </div>

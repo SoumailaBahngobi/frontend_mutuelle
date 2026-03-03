@@ -36,6 +36,8 @@ import LoanHistory from './loan/LoanHistory';
 import LoanRequestDetails from './loan/LoanRequestDetails';
 import LoanDetails from './loan/LoanDetails';
 import Footer from './layout/Footer';
+import ForgotPassword from './configuration/ForgotPassword';
+import ChangePassword from './configuration/ChangePassword';
 
 function App() {
   const { loading } = useKeycloak();
@@ -201,11 +203,20 @@ function App() {
             </ProtectedRoute>
           } />
 
+
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/change-password" element={
+            <ProtectedRoute>
+              <ChangePassword />
+            </ProtectedRoute>
+          } />
+          <Route path="/reset-password" element={<ResetPassword />} />
+
           {/* Route 404 */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
-     <Footer /> 
+      <Footer />
       <ToastContainer position="top-right" autoClose={5000} />
     </div>
   );
