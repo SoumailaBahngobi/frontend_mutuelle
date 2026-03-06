@@ -30,11 +30,11 @@ export default function Navbar() {
   }
 
   // Déterminer le rôle pour les menus admin
-  const isAdmin = userProfile && 
-    (userProfile.role === 'ADMIN' || 
-     userProfile.role === 'PRESIDENT' || 
-     userProfile.role === 'SECRETARY' || 
-     userProfile.role === 'TREASURER');
+  const isAdmin = userProfile &&
+    (userProfile.role === 'ADMIN' ||
+      userProfile.role === 'PRESIDENT' ||
+      userProfile.role === 'SECRETARY' ||
+      userProfile.role === 'TREASURER');
 
   return (
     <nav className="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
@@ -60,7 +60,7 @@ export default function Navbar() {
           {/* Navigation links */}
           <ul className="navbar-nav me-auto">
             <li className="nav-item">
-              <Link 
+              <Link
                 className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}
                 to="/"
               >
@@ -72,7 +72,7 @@ export default function Navbar() {
             {authenticated && (
               <>
                 <li className="nav-item">
-                  <Link 
+                  <Link
                     className={`nav-link ${location.pathname === '/dashboard' ? 'active' : ''}`}
                     to="/dashboard"
                   >
@@ -123,7 +123,7 @@ export default function Navbar() {
                         Historique remboursements
                       </Link>
                     </li>
-                    
+
                     {/* Options admin pour les prêts */}
                     {isAdmin && (
                       <>
@@ -175,7 +175,7 @@ export default function Navbar() {
                         Historique
                       </Link>
                     </li>
-                    
+
                     {/* Options admin pour les cotisations */}
                     {isAdmin && (
                       <>
@@ -267,8 +267,8 @@ export default function Navbar() {
                     </Link>
                   </li>
                   <Link className="dropdown-item" to="/change-password">
-        <i className="bi bi-shield-lock me-2"></i>Changer mot de passe
-    </Link>
+                    <i className="bi bi-shield-lock me-2"></i>Changer mot de passe
+                  </Link>
                   <li><hr className="dropdown-divider" /></li>
                   <li>
                     <button className="dropdown-item text-danger" onClick={handleLogout}>

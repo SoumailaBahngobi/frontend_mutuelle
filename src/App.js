@@ -38,7 +38,8 @@ import LoanDetails from './loan/LoanDetails';
 import Footer from './layout/Footer';
 import ForgotPassword from './configuration/ForgotPassword';
 import ChangePassword from './configuration/ChangePassword';
-
+import PaymentCallback from './component/PaymentCallback';
+import PaymentSuccess from './component/Paiement/PaymentSuccess';
 function App() {
   const { loading } = useKeycloak();
 
@@ -90,6 +91,8 @@ function App() {
               <AddContributionPeriod />
             </ProtectedRoute>
           } />
+
+          <Route path="/payment/callback" element={<PaymentCallback />} />
           <Route path="/mutuelle/event" element={
             <ProtectedRoute>
               <AddEvent />
@@ -202,6 +205,9 @@ function App() {
               <LoanDetails />
             </ProtectedRoute>
           } />
+
+          <Route path="/payment/callback" element={<PaymentSuccess />} />
+          <Route path="/payment/success" element={<PaymentSuccess />} />
 
 
           <Route path="/forgot-password" element={<ForgotPassword />} />
