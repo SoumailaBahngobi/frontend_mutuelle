@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { toast } from 'react-toastify';
+import { AlignVerticalDistributeStart, Calendar, CalendarClock, CandyOffIcon, Check, CircleDollarSign, LucideDollarSign, Ratio, SunDimIcon, WalletCards } from 'lucide-react';
 
 const AddLoanRequest = () => {
     const [formData, setFormData] = useState({
@@ -351,7 +352,7 @@ const checkIfMemberExists = async () => {
                                 </div>
                             ) : (
                                 <div className="alert alert-warning">
-                                    <strong>⚠️ Attention:</strong> Impossible de récupérer vos informations.
+                                    <strong> Attention:</strong> Impossible de récupérer vos informations.
                                 </div>
                             )}
 
@@ -372,7 +373,7 @@ const checkIfMemberExists = async () => {
                                 <div className="row">
                                     <div className="col-md-6 mb-3">
                                         <label htmlFor="requestAmount" className="form-label fw-semibold">
-                                            💰 Montant demandé en FCFA *
+                                         <CircleDollarSign /> Montant demandé en FCFA *
                                         </label>
                                         <input
                                             id="requestAmount"
@@ -394,7 +395,7 @@ const checkIfMemberExists = async () => {
 
                                     <div className="col-md-6 mb-3">
                                         <label htmlFor="duration" className="form-label fw-semibold">
-                                            📅 Durée du prêt *
+                                         <Calendar /> Durée du prêt
                                         </label>
                                         <select
                                             id="duration"
@@ -420,7 +421,7 @@ const checkIfMemberExists = async () => {
 
                                 <div className="mb-3">
                                     <label htmlFor="reason" className="form-label fw-semibold">
-                                        🎯 Raison du prêt *
+                                        <SunDimIcon /> Raison du prêt *
                                     </label>
                                     <select
                                         id="reason"
@@ -447,7 +448,7 @@ const checkIfMemberExists = async () => {
                                 {loanDetails && (
                                     <div className="card bg-light mb-4">
                                         <div className="card-body">
-                                            <h6 className="card-title text-primary">📊 Détails du prêt calculés</h6>
+                                            <h6 className="card-title text-primary"><WalletCards /> Détails du prêt calculés</h6>
                                             <div className="row small">
                                                 <div className="col-md-6">
                                                     <p><strong>Montant:</strong> {formatCurrency(loanDetails.amount)}</p>
@@ -455,9 +456,9 @@ const checkIfMemberExists = async () => {
                                                     <p><strong>Taux d'intérêt:</strong> {loanDetails.interestRate}%</p>
                                                 </div>
                                                 <div className="col-md-6">
-                                                    <p><strong>Intérêt total:</strong> {formatCurrency(loanDetails.totalInterest)}</p>
-                                                    <p><strong>Montant total à rembourser:</strong> {formatCurrency(loanDetails.totalRepayment)}</p>
-                                                    <p><strong>Mensualité:</strong> {formatCurrency(loanDetails.monthlyPayment)}</p>
+                                                    <p><strong><Ratio /> Intérêt total:</strong> {formatCurrency(loanDetails.totalInterest)}</p>
+                                                    <p><strong><LucideDollarSign /> Montant total à rembourser:</strong> {formatCurrency(loanDetails.totalRepayment)}</p>
+                                                    <p><strong><CalendarClock /> Mensualité:</strong> {formatCurrency(loanDetails.monthlyPayment)}</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -475,7 +476,7 @@ const checkIfMemberExists = async () => {
                                             disabled={loading}
                                         />
                                         <label className="form-check-label" htmlFor="acceptTerms">
-                                            J'accepte les conditions générales du prêt *
+                                           J'accepte les conditions générales du prêt *
                                         </label>
                                         {errors.acceptTerms && (
                                             <div className="invalid-feedback d-block">
@@ -492,7 +493,7 @@ const checkIfMemberExists = async () => {
                                         onClick={handleCancel}
                                         disabled={loading}
                                     >
-                                        ❌ Annuler
+                                        <CandyOffIcon /> Annuler
                                     </button>
                                     <button
                                         type="submit"
@@ -502,10 +503,10 @@ const checkIfMemberExists = async () => {
                                         {loading ? (
                                             <>
                                                 <span className="spinner-border spinner-border-sm me-2" />
-                                                📤 Soumission...
+                                                 Soumission...
                                             </>
                                         ) : (
-                                            '✅ Soumettre la demande'
+                                            '  Soumettre la demande'
                                         )}
                                     </button>
                                 </div>
