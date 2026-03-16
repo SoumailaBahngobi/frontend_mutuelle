@@ -101,13 +101,16 @@ const AddContributionPeriod = () => {
                 return;
             }
 
+            const isActive = form.status === 'ACTIVE';
+
             // Préparation des données pour l'API
             const apiData = {
                 startDate: form.startDate,
                 endDate: form.endDate,
                 name: form.name || `Campagne ${new Date(form.startDate).toLocaleDateString()} - ${new Date(form.endDate).toLocaleDateString()}`,
                 individualAmount: parseFloat(form.amount),
-                status: form.status,
+               // status: form.status,
+               active: isActive,
                 description: form.description
             };
 

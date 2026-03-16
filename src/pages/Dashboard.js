@@ -51,6 +51,7 @@ export default function Dashboard() {
           const response = await axios.get('http://localhost:8081/mutuelle/auth/user-info', {
             headers: { Authorization: `Bearer ${getToken()}` }
           });
+
           
           if (response.data) {
             setUser(prev => ({ ...prev, ...response.data }));
@@ -482,7 +483,7 @@ export default function Dashboard() {
                     onClick={() => navigate('/mutuelle/contribution_period')}
                   >
                     <i className="fas fa-calendar-alt me-1"></i>
-                    Périodes
+                    Définir une campagne de cotisation
                   </button>
 
                   <button
