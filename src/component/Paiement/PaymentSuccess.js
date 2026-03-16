@@ -79,7 +79,7 @@ const PaymentSuccess = () => {
                     setTimeout(() => navigate('/dashboard'), 3000);
                 }
             } catch (error) {
-                console.error('Erreur vérification:', error);
+              //  console.error('Erreur vérification:', error);
                 toast.error('Erreur lors de la vérification du paiement');
                 setTimeout(() => navigate('/dashboard'), 3000);
             } finally {

@@ -19,7 +19,7 @@ const KkiapayWidget = ({ amount, phoneNumber, memberId, paymentType, buttonText 
             window.openKkiapayWidget({
                 amount: amount,
                 position: "center",
-                callback: `${window.location.origin}/payment/callback`, // Optionnel si tu utilises listener
+                callback: `${window.location.origin}/dashboard`, // Optionnel si tu utilises listener
                 data: JSON.stringify({ memberId, paymentType }), // Stocker tes infos personnalisées
                 phone: cleanPhone,
                 key: publicKey,

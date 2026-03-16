@@ -15,6 +15,7 @@ const AddIndividualContribution = () => {
     const [loading, setLoading] = useState(true);
     const [paymentStep, setPaymentStep] = useState('form');
     const [paymentInfo, setPaymentInfo] = useState(null);
+    const [isCreatingContribution, setIsCreatingContribution] = useState(false);
 
     const { values, errors, touched, isSubmitting, setIsSubmitting, handleChange, setValues, validateForm } = useForm(
         {
@@ -113,54 +114,135 @@ const AddIndividualContribution = () => {
         }
     };
 
+    /**
+     * ✅ FONCTION AMÉLIORÉE : Création immédiate de la cotisation après paiement
+     */
     const handlePaymentSuccess = async (paymentResponse) => {
-        console.log('Paiement réussi:', paymentResponse);
+        console.log('✅ Paiement réussi:', paymentResponse);
         
         setPaymentStep('processing');
         setPaymentInfo(paymentResponse);
+        setIsCreatingContribution(true);
         
         try {
+            // Étape 1: Vérifier le paiement
             const verification = paymentResponse.verified ? 
                 paymentResponse : 
                 await ApiService.verifyPayment(paymentResponse.transactionId);
             
+            console.log('📊 Vérification:', verification);
+            
             if (verification.success && verification.status === 'SUCCESS') {
+                // Étape 2: Récupérer l'ID du paiement
+                const paymentId = verification.payment?.id || paymentResponse.id;
+                
+                if (!paymentId) {
+                    throw new Error('ID de paiement non trouvé');
+                }
+                
+                console.log('💰 Payment ID:', paymentId);
+                
+                // Étape 3: Créer immédiatement la cotisation
+                await createContributionAfterPayment({
+                    id: paymentId,
+                    transactionId: paymentResponse.transactionId,
+                    amount: paymentResponse.amount
+                });
+                
                 setPaymentStep('done');
-                await createContributionAfterPayment(verification.payment);
             } else {
-                toast.error('Échec de la vérification du paiement');
-                setPaymentStep('form');
+                throw new Error('Échec de la vérification du paiement');
             }
         } catch (error) {
-            console.error('Erreur:', error);
-            toast.error('Erreur lors du traitement du paiement');
-            setPaymentStep('form');
+            console.error('❌ Erreur:', error);
+            toast.error('Erreur lors du traitement du paiement: ' + error.message);
+            setPaymentStep('payment');
+        } finally {
+            setIsCreatingContribution(false);
         }
     };
 
+    /**
+     * ✅ FONCTION AMÉLIORÉE : Création de la cotisation avec retry
+     */
     const createContributionAfterPayment = async (payment) => {
-        try {
-            const contributionData = {
-                amount: parseFloat(values.amount),
-                paymentDate: values.paymentDate,
-                paymentMode: 'KKIAPAY',
-                paymentProof: null,
-                contributionPeriodId: parseInt(values.contributionPeriodId),
-                paymentId: payment.id
-            };
-
-            await ApiService.addIndividualContribution(contributionData);
-            
-            toast.success('✅ Cotisation enregistrée avec succès !');
-            
-            setTimeout(() => {
+        let retryCount = 0;
+        const maxRetries = 3;
+        
+        // ✅ CORRECTION : Définir contributionData ici pour qu'il soit accessible partout
+        const contributionData = {
+            amount: parseFloat(values.amount),
+            paymentDate: values.paymentDate,
+            paymentMode: 'KKIAPAY',
+            paymentProof: null,
+            contributionPeriodId: parseInt(values.contributionPeriodId),
+            paymentId: payment.id
+        };
+        
+        while (retryCount < maxRetries) {
+            try {
+                console.log(`📝 Tentative ${retryCount + 1}/${maxRetries} de création de cotisation...`);
+                console.log('📦 Données cotisation:', contributionData);
+                
+                // Appel API pour créer la cotisation
+                const response = await ApiService.addIndividualContribution(contributionData);
+                
+                console.log('✅ Cotisation créée avec succès:', response);
+                
+                // Afficher le toast de succès
+                toast.success('✅ Cotisation enregistrée avec succès !');
+                
+                // Attendre un peu pour que l'utilisateur voie le message
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                
+                // Rediriger vers l'historique
                 navigate('/mutuelle/contribution/individual/my-contributions');
-            }, 2000);
-            
-        } catch (error) {
-            console.error('❌ Erreur création cotisation:', error);
-            toast.error('Erreur lors de l\'enregistrement de la cotisation');
-            setPaymentStep('payment');
+                
+                return; // Sortir de la fonction en cas de succès
+                
+            } catch (error) {
+                retryCount++;
+                console.error(`❌ Tentative ${retryCount} échouée:`, error);
+                
+                if (retryCount >= maxRetries) {
+                    // Si toutes les tentatives échouent
+                    toast.error('Erreur lors de l\'enregistrement de la cotisation après ' + maxRetries + ' tentatives');
+                    
+                    // Option: Sauvegarder les données pour reprise manuelle
+                    savePendingContribution(payment.id, contributionData); // ✅ Utiliser contributionData
+                    
+                    // Rediriger vers une page de reprise
+                    navigate('/pending-contributions', { 
+                        state: { 
+                            paymentId: payment.id,
+                            contributionData: contributionData, // ✅ Utiliser contributionData
+                            error: error.message 
+                        } 
+                    });
+                } else {
+                    // Attendre avant de réessayer
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+            }
+        }
+    };
+
+    /**
+     * ✅ Sauvegarde des cotisations en attente
+     */
+    const savePendingContribution = (paymentId, data) => {
+        try {
+            const pendingContributions = JSON.parse(localStorage.getItem('pendingContributions') || '[]');
+            pendingContributions.push({
+                paymentId: paymentId,
+                data: data,
+                timestamp: new Date().toISOString(),
+                userId: user?.id
+            });
+            localStorage.setItem('pendingContributions', JSON.stringify(pendingContributions));
+            console.log('💾 Cotisation sauvegardée pour reprise manuelle');
+        } catch (e) {
+            console.error('Erreur sauvegarde cotisation:', e);
         }
     };
 
@@ -200,7 +282,12 @@ const AddIndividualContribution = () => {
                             <h4 className="mb-0">
                                 {paymentStep === 'form' && 'Cotisation Individuelle'}
                                 {paymentStep === 'payment' && 'Paiement de la cotisation'}
-                                {paymentStep === 'processing' && 'Traitement en cours...'}
+                                {paymentStep === 'processing' && (
+                                    <span>
+                                        Traitement en cours...
+                                        {isCreatingContribution && ' (Création de la cotisation)'}
+                                    </span>
+                                )}
                                 {paymentStep === 'done' && 'Paiement réussi !'}
                             </h4>
                         </div>
@@ -372,8 +459,23 @@ const AddIndividualContribution = () => {
                                     <div className="spinner-border text-primary mb-3" style={{ width: '4rem', height: '4rem' }}>
                                         <span className="visually-hidden">Chargement...</span>
                                     </div>
-                                    <h5>Traitement de votre paiement en cours...</h5>
-                                    <p className="text-muted">Veuillez patienter un instant</p>
+                                    <h5>
+                                        {isCreatingContribution 
+                                            ? 'Enregistrement de votre cotisation...' 
+                                            : 'Traitement de votre paiement en cours...'}
+                                    </h5>
+                                    <p className="text-muted">
+                                        {isCreatingContribution 
+                                            ? 'Veuillez patienter, votre cotisation est en cours de création.'
+                                            : 'Veuillez patienter un instant'}
+                                    </p>
+                                    {isCreatingContribution && (
+                                        <div className="mt-3">
+                                            <div className="progress" style={{ height: '5px' }}>
+                                                <div className="progress-bar progress-bar-striped progress-bar-animated" style={{ width: '100%' }}></div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
@@ -388,8 +490,11 @@ const AddIndividualContribution = () => {
                                         <p className="mb-1">Montant: {paymentInfo.amount?.toLocaleString()} FCFA</p>
                                         <p className="mb-0">Statut: Confirmé</p>
                                     </div>
-                                    <p className="text-muted">
-                                        Enregistrement de votre cotisation en cours...
+                                    <p className="text-success fw-bold">
+                                        ✓ Cotisation enregistrée avec succès !
+                                    </p>
+                                    <p className="text-muted small">
+                                        Redirection vers l'historique...
                                     </p>
                                 </div>
                             )}

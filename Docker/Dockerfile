@@ -1,17 +1,20 @@
-# frontend/Dockerfile
-# Étape 1 : Construction de l'app React
-FROM node:18-alpine AS build
+# Use the official Node.js image as the base image
+FROM node:18
+
+# Set the working directory in the container
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
+
+# Copy the application files into the working directory
+COPY . /app
+
+# Install the application dependencies
+RUN npm install
+
+# Build the React application
 RUN npm run build
 
-# Étape 2 : Service avec Nginx
-FROM nginx:stable-alpine
-# (Optionnel) Copie d'une configuration Nginx personnalisée
-# COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /app/dist /usr/share/nginx/html
-# Si votre build React utilise un dossier de sortie différent (ex: /app/build), ajustez la ligne ci-dessus.
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+# Expose port 3000
+EXPOSE 3000
+
+# Define the entry point for the container
+CMD ["npm", "start"]
