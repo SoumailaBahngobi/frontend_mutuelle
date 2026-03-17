@@ -25,8 +25,8 @@ COPY --from=build /app/build /usr/share/nginx/html
 # Copier une configuration Nginx personnalisée (optionnel)
 COPY nginx.conf /etc/nginx/nginx.conf
 
-# Exposer le port 80
-EXPOSE 80
+# Exposer le port 82
+EXPOSE 82
 
 # Démarrer Nginx
 CMD ["nginx", "-g", "daemon off;"]
