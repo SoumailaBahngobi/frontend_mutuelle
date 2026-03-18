@@ -3,6 +3,7 @@ import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useKeycloak } from '../context/KeycloakContext';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import { LogInIcon,DiamondPlus, Grid2x2Check,HandCoins,LogOut,House, HistoryIcon,DatabaseZap } from 'lucide-react';
 
 export default function Navbar() {
   const { authenticated, userProfile, logout, loading } = useKeycloak();
@@ -42,7 +43,7 @@ export default function Navbar() {
         {/* Brand */}
         <Link className="navbar-brand fw-bold" to="/">
           <i className="fas fa-hand-holding-heart me-2"></i>
-          Mutuelle
+         <HandCoins /> Mutuelle
         </Link>
 
         {/* Mobile toggle */}
@@ -65,7 +66,7 @@ export default function Navbar() {
                 to="/"
               >
                 <i className="fas fa-home me-1"></i>
-                Accueil
+               <House /> Accueil
               </Link>
             </li>
 
@@ -77,7 +78,7 @@ export default function Navbar() {
                     to="/dashboard"
                   >
                     <i className="fas fa-tachometer-alt me-1"></i>
-                    Tableau de bord
+                   <Grid2x2Check /> Tableau de bord
                   </Link>
                 </li>
 
@@ -90,13 +91,13 @@ export default function Navbar() {
                     data-bs-toggle="dropdown"
                   >
                     <i className="fas fa-hand-holding-usd me-1"></i>
-                    Prêts
+                  <HandCoins />  Prêts
                   </a>
                   <ul className="dropdown-menu">
                     <li>
                       <Link className="dropdown-item" to="/loans/request">
                         <i className="fas fa-plus-circle me-2"></i>
-                        Nouvelle demande
+                       <DiamondPlus /> Nouvelle demande
                       </Link>
                     </li>
                     <li>
@@ -120,7 +121,7 @@ export default function Navbar() {
                     <li>
                       <Link className="dropdown-item" to="/loans/repayment-history">
                         <i className="fas fa-history me-2"></i>
-                        Historique remboursements
+                        <HistoryIcon /> Historique remboursements
                       </Link>
                     </li>
 
@@ -154,7 +155,7 @@ export default function Navbar() {
                     data-bs-toggle="dropdown"
                   >
                     <i className="fas fa-money-bill-wave me-1"></i>
-                    Cotisations
+                    <DatabaseZap /> Cotisations
                   </a>
                   <ul className="dropdown-menu">
                     <li>
@@ -257,7 +258,7 @@ export default function Navbar() {
                   <li>
                     <Link className="dropdown-item" to="/dashboard">
                       <i className="fas fa-tachometer-alt me-2"></i>
-                      Tableau de bord
+                    <Grid2x2Check />  Tableau de bord
                     </Link>
                   </li>
                   <li>
@@ -273,7 +274,7 @@ export default function Navbar() {
                   <li>
                     <button className="dropdown-item text-danger" onClick={handleLogout}>
                       <i className="fas fa-sign-out-alt me-2"></i>
-                      Déconnexion
+                     <LogOut /> Déconnexion
                     </button>
                   </li>
                 </ul>
@@ -282,7 +283,7 @@ export default function Navbar() {
               <li className="nav-item">
                 <Link className="btn btn-outline-light btn-sm" to="/login">
                   <i className="fas fa-sign-in-alt me-1"></i>
-                  Connexion
+                  <LogInIcon /> Connexion
                 </Link>
               </li>
             )}

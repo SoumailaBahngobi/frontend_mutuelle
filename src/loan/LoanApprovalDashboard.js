@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { Eye } from 'lucide-react';
 
 export default function LoanApprovalDashboard() {
   const [loanRequests, setLoanRequests] = useState([]);
@@ -267,8 +268,8 @@ const sortRequests = (requests, sortBy) => {
                       <th>Président</th>
                       <th>Secrétaire</th>
                       <th>Trésorier</th>
-                      <th>Progression</th>
-                      <th>Actions</th>
+                     {/* <th>Progression</th>*/}
+                      <th>Détails</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -301,7 +302,7 @@ const sortRequests = (requests, sortBy) => {
                           <td>{getApprovalBadge(request.presidentApproved, request.presidentApprovalDate, request.presidentComment)}</td>
                           <td>{getApprovalBadge(request.secretaryApproved, request.secretaryApprovalDate, request.secretaryComment)}</td>
                           <td>{getApprovalBadge(request.treasurerApproved, request.treasurerApprovalDate, request.treasurerComment)}</td>
-                          <td>
+                          {/*<td>
                             <div className="d-flex align-items-center">
                               <div className="progress flex-grow-1 me-2" style={{ height: '8px' }}>
                                 <div
@@ -315,7 +316,7 @@ const sortRequests = (requests, sortBy) => {
                                 {request.approvalProgress?.approvedCount || 0}/3
                               </small>
                             </div>
-                          </td>
+                          </td>*/}
                           <td>
                             <div className="btn-group btn-group-sm">
                               <button
@@ -323,7 +324,8 @@ const sortRequests = (requests, sortBy) => {
                                 onClick={() => setSelectedRequest(request)}
                                 title="Voir les détails"
                               >
-                                <i className="fas fa-eye"></i>
+                                <Eye />
+                                {/*<i className="fas fa-eye"></i>*/}
                               </button>
 
                               {/* Actions d'approbation selon le rôle */}
