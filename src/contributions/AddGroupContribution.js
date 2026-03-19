@@ -9,7 +9,7 @@ function AddGroupContribution() {
     const { user, loading: authLoading } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
-    
+
     const [form, setForm] = useState({
         individualAmount: '',
         paymentDate: new Date().toISOString().split('T')[0],
@@ -19,14 +19,14 @@ function AddGroupContribution() {
         paymentProof: null,
         totalAmount: ''
     });
-    
+
     const [periods, setPeriods] = useState([]);
     const [members, setMembers] = useState([]);
     const [selectedMembers, setSelectedMembers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
     const [fileName, setFileName] = useState('');
-    
+
     // États pour le paiement
     const [paymentStep, setPaymentStep] = useState('form'); // form, payment, processing, done
     const [paymentInfo, setPaymentInfo] = useState(null);
@@ -68,12 +68,12 @@ function AddGroupContribution() {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        
+
         if (name === 'contributionPeriodId') {
             const selectedPeriod = periods.find(p => p.id === parseInt(value));
             if (selectedPeriod) {
-                setForm({ 
-                    ...form, 
+                setForm({
+                    ...form,
                     [name]: value,
                     individualAmount: selectedPeriod.individualAmount || selectedPeriod.amount || ''
                 });
@@ -98,8 +98,8 @@ function AddGroupContribution() {
     };
 
     const handleMemberSelection = (memberId) => {
-        setSelectedMembers(prev => 
-            prev.includes(memberId) 
+        setSelectedMembers(prev =>
+            prev.includes(memberId)
                 ? prev.filter(id => id !== memberId)
                 : [...prev, memberId]
         );
@@ -114,20 +114,21 @@ function AddGroupContribution() {
     };
 
     const handlePaymentSuccess = async (paymentResponse) => {
-        console.log('Paiement réussi:', paymentResponse);
-        
+        //console.log('Paiement réussi:', paymentResponse);
+        toast.success('Paiement réussi, vérification en cours...');
+
         setPaymentStep('processing');
         setPaymentInfo(paymentResponse);
-        
+
         try {
             // Vérifier le paiement
-            const verification = paymentResponse.verified ? 
-                paymentResponse : 
+            const verification = paymentResponse.verified ?
+                paymentResponse :
                 await ApiService.verifyPayment(paymentResponse.transactionId);
-            
+
             if (verification.success && verification.status === 'SUCCESS') {
                 setPaymentStep('done');
-                
+
                 // Créer les cotisations après paiement
                 await createGroupContributionsAfterPayment(verification.payment);
             } else {
@@ -135,7 +136,7 @@ function AddGroupContribution() {
                 setPaymentStep('form');
             }
         } catch (error) {
-            console.error('Erreur:', error);
+           // console.error('Erreur:', error);
             toast.error('Erreur lors du traitement du paiement');
             setPaymentStep('form');
         }
@@ -160,11 +161,11 @@ function AddGroupContribution() {
             });
 
             toast.success(`${selectedMembers.length} cotisation(s) ajoutée(s) avec succès !`);
-            
+
             setTimeout(() => {
                 navigate('/mutuelle/contribution/individual/my-contributions');
             }, 2000);
-            
+
         } catch (error) {
             console.error('Erreur:', error);
             toast.error(error.response?.data?.message || 'Erreur lors de l\'ajout');
@@ -176,7 +177,7 @@ function AddGroupContribution() {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        
+
         if (!user) {
             toast.error('Vous devez être connecté');
             return;
@@ -233,7 +234,7 @@ function AddGroupContribution() {
                     </h3>
                 </div>
                 <div className="card-body">
-                    
+
                     {/* Informations utilisateur */}
                     <div className="alert alert-info d-flex align-items-center mb-4">
                         <i className="bi bi-person-circle fs-4 me-3"></i>
@@ -250,7 +251,7 @@ function AddGroupContribution() {
                             <div className="mb-4">
                                 <div className="d-flex justify-content-between align-items-center mb-3">
                                     <label className="fw-bold">Membres sélectionnés ({selectedMembers.length})</label>
-                                    <button 
+                                    <button
                                         type="button"
                                         className="btn btn-sm btn-outline-primary"
                                         onClick={selectAllMembers}
@@ -331,7 +332,7 @@ function AddGroupContribution() {
                                         name="phoneNumber"
                                         value={form.phoneNumber}
                                         onChange={handleChange}
-                                        placeholder="Ex: 97000000"
+                                        placeholder="Ex: 01 97 00 00 00"
                                         required
                                     />
                                 </div>
@@ -395,7 +396,7 @@ function AddGroupContribution() {
                     {paymentStep === 'payment' && (
                         <div className="text-center py-4">
                             <h5 className="mb-4">Récapitulatif du paiement</h5>
-                            
+
                             <div className="alert alert-secondary mb-4">
                                 <p className="mb-1">Montant total: <strong>{totalAmount.toLocaleString()} FCFA</strong></p>
                                 <p className="mb-1">Période: <strong>{selectedPeriod?.description}</strong></p>
@@ -443,7 +444,7 @@ function AddGroupContribution() {
                             <div className="text-success mb-4">
                                 <i className="bi bi-check-circle-fill" style={{ fontSize: '5rem' }}></i>
                             </div>
-                            <h5 className="mb-3">✅ Paiement réussi !</h5>
+                            <h5 className="mb-3"> Paiement réussi !</h5>
                             <div className="alert alert-success">
                                 <p className="mb-1">Transaction: {paymentInfo.transactionId}</p>
                                 <p className="mb-1">Montant: {paymentInfo.amount?.toLocaleString()} FCFA</p>

@@ -10,7 +10,7 @@ const AddIndividualContribution = () => {
     const { user, loading: authLoading } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
-    
+
     const [periods, setPeriods] = useState([]);
     const [loading, setLoading] = useState(true);
     const [paymentStep, setPaymentStep] = useState('form');
@@ -69,7 +69,7 @@ const AddIndividualContribution = () => {
             const data = await ApiService.getContributionPeriods();
             setPeriods(data);
         } catch (error) {
-            console.error('❌ Erreur chargement périodes:', error);
+           // console.error('❌ Erreur chargement périodes:', error);
             toast.error('Impossible de charger les périodes');
         } finally {
             setLoading(false);
@@ -89,14 +89,15 @@ const AddIndividualContribution = () => {
                 });
             }
         } catch (error) {
-            console.error('Erreur récupération paiement:', error);
+           // console.error('Erreur récupération paiement:', error);
+            toast.error('Impossible de récupérer les informations de paiement');
         }
     };
 
     const handlePeriodChange = (e) => {
         const periodId = e.target.value;
         const selectedPeriod = periods.find(p => p.id === parseInt(periodId));
-        
+
         handleChange({
             target: {
                 name: 'contributionPeriodId',
@@ -118,43 +119,46 @@ const AddIndividualContribution = () => {
      * ✅ FONCTION AMÉLIORÉE : Création immédiate de la cotisation après paiement
      */
     const handlePaymentSuccess = async (paymentResponse) => {
-        console.log('✅ Paiement réussi:', paymentResponse);
-        
+       // console.log('✅ Paiement réussi:', paymentResponse);
+        toast.success('Paiement réussi, vérification en cours...');
+
         setPaymentStep('processing');
         setPaymentInfo(paymentResponse);
         setIsCreatingContribution(true);
-        
+
         try {
             // Étape 1: Vérifier le paiement
-            const verification = paymentResponse.verified ? 
-                paymentResponse : 
+            const verification = paymentResponse.verified ?
+                paymentResponse :
                 await ApiService.verifyPayment(paymentResponse.transactionId);
-            
-            console.log('📊 Vérification:', verification);
-            
+
+           // console.log('📊 Vérification:', verification);
+           toast.info('Paiement vérifié, enregistrement de votre cotisation...');
+
             if (verification.success && verification.status === 'SUCCESS') {
                 // Étape 2: Récupérer l'ID du paiement
                 const paymentId = verification.payment?.id || paymentResponse.id;
-                
+
                 if (!paymentId) {
                     throw new Error('ID de paiement non trouvé');
                 }
-                
-                console.log('💰 Payment ID:', paymentId);
-                
+
+                //console.log('💰 Payment ID:', paymentId);
+                toast.info('Paiement vérifié, enregistrement de votre cotisation...');
+
                 // Étape 3: Créer immédiatement la cotisation
                 await createContributionAfterPayment({
                     id: paymentId,
                     transactionId: paymentResponse.transactionId,
                     amount: paymentResponse.amount
                 });
-                
+
                 setPaymentStep('done');
             } else {
                 throw new Error('Échec de la vérification du paiement');
             }
         } catch (error) {
-            console.error('❌ Erreur:', error);
+           // console.error('❌ Erreur:', error);
             toast.error('Erreur lors du traitement du paiement: ' + error.message);
             setPaymentStep('payment');
         } finally {
@@ -168,7 +172,7 @@ const AddIndividualContribution = () => {
     const createContributionAfterPayment = async (payment) => {
         let retryCount = 0;
         const maxRetries = 3;
-        
+
         // ✅ CORRECTION : Définir contributionData ici pour qu'il soit accessible partout
         const contributionData = {
             amount: parseFloat(values.amount),
@@ -178,46 +182,51 @@ const AddIndividualContribution = () => {
             contributionPeriodId: parseInt(values.contributionPeriodId),
             paymentId: payment.id
         };
-        
+
         while (retryCount < maxRetries) {
             try {
-                console.log(`📝 Tentative ${retryCount + 1}/${maxRetries} de création de cotisation...`);
-                console.log('📦 Données cotisation:', contributionData);
-                
+              //  console.log(`📝 Tentative ${retryCount + 1}/${maxRetries} de création de cotisation...`);
+              toast.info(`Enregistrement de votre cotisation (tentative ${retryCount + 1}/${maxRetries})...`);
+
+              //  console.log('📦 Données cotisation:', contributionData);
+              toast.info('Données de votre cotisation prêtes pour l\'enregistrement.');
+
                 // Appel API pour créer la cotisation
                 const response = await ApiService.addIndividualContribution(contributionData);
-                
-                console.log('✅ Cotisation créée avec succès:', response);
-                
+
+               // console.log('✅ Cotisation créée avec succès:', response);
+               toast.success('Cotisation créée avec succès !');
+
                 // Afficher le toast de succès
                 toast.success('✅ Cotisation enregistrée avec succès !');
-                
+
                 // Attendre un peu pour que l'utilisateur voie le message
                 await new Promise(resolve => setTimeout(resolve, 1500));
-                
+
                 // Rediriger vers l'historique
                 navigate('/mutuelle/contribution/individual/my-contributions');
-                
+
                 return; // Sortir de la fonction en cas de succès
-                
+
             } catch (error) {
                 retryCount++;
-                console.error(`❌ Tentative ${retryCount} échouée:`, error);
-                
+                //console.error(`❌ Tentative ${retryCount} échouée:`, error);
+                toast.error(`Erreur lors de l'enregistrement de la cotisation (tentative ${retryCount}/${maxRetries})`);
+
                 if (retryCount >= maxRetries) {
                     // Si toutes les tentatives échouent
                     toast.error('Erreur lors de l\'enregistrement de la cotisation après ' + maxRetries + ' tentatives');
-                    
+
                     // Option: Sauvegarder les données pour reprise manuelle
                     savePendingContribution(payment.id, contributionData); // ✅ Utiliser contributionData
-                    
+
                     // Rediriger vers une page de reprise
-                    navigate('/pending-contributions', { 
-                        state: { 
+                    navigate('/pending-contributions', {
+                        state: {
                             paymentId: payment.id,
                             contributionData: contributionData, // ✅ Utiliser contributionData
-                            error: error.message 
-                        } 
+                            error: error.message
+                        }
                     });
                 } else {
                     // Attendre avant de réessayer
@@ -240,7 +249,8 @@ const AddIndividualContribution = () => {
                 userId: user?.id
             });
             localStorage.setItem('pendingContributions', JSON.stringify(pendingContributions));
-            console.log('💾 Cotisation sauvegardée pour reprise manuelle');
+          //  console.log('💾 Cotisation sauvegardée pour reprise manuelle');
+          toast.info('Votre cotisation a été sauvegardée pour reprise manuelle.');
         } catch (e) {
             console.error('Erreur sauvegarde cotisation:', e);
         }
@@ -248,7 +258,7 @@ const AddIndividualContribution = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         if (!validateForm()) {
             toast.error('Veuillez corriger les erreurs');
             return;
@@ -291,9 +301,9 @@ const AddIndividualContribution = () => {
                                 {paymentStep === 'done' && 'Paiement réussi !'}
                             </h4>
                         </div>
-                        
+
                         <div className="card-body">
-                            
+
                             <div className="alert alert-info d-flex align-items-center">
                                 <i className="bi bi-person-circle fs-4 me-3"></i>
                                 <div>
@@ -305,7 +315,7 @@ const AddIndividualContribution = () => {
 
                             {paymentStep === 'form' && (
                                 <form onSubmit={handleSubmit}>
-                                    
+
                                     <div className="mb-3">
                                         <label className="form-label fw-semibold">
                                             Période de cotisation *
@@ -386,7 +396,7 @@ const AddIndividualContribution = () => {
                                                 name="phoneNumber"
                                                 value={values.phoneNumber}
                                                 onChange={handleChange}
-                                                placeholder="Ex: 97000000"
+                                                placeholder="Ex: 01 97 00 00 00"
                                                 disabled={isSubmitting}
                                             />
                                         </div>
@@ -422,7 +432,7 @@ const AddIndividualContribution = () => {
                             {paymentStep === 'payment' && (
                                 <div className="text-center py-4">
                                     <h5 className="mb-4">Récapitulatif du paiement</h5>
-                                    
+
                                     <div className="alert alert-secondary mb-4">
                                         <p className="mb-1">Montant: <strong>{parseFloat(values.amount).toLocaleString()} FCFA</strong></p>
                                         <p className="mb-1">Période: <strong>{selectedPeriod?.description}</strong></p>
@@ -460,12 +470,12 @@ const AddIndividualContribution = () => {
                                         <span className="visually-hidden">Chargement...</span>
                                     </div>
                                     <h5>
-                                        {isCreatingContribution 
-                                            ? 'Enregistrement de votre cotisation...' 
+                                        {isCreatingContribution
+                                            ? 'Enregistrement de votre cotisation...'
                                             : 'Traitement de votre paiement en cours...'}
                                     </h5>
                                     <p className="text-muted">
-                                        {isCreatingContribution 
+                                        {isCreatingContribution
                                             ? 'Veuillez patienter, votre cotisation est en cours de création.'
                                             : 'Veuillez patienter un instant'}
                                     </p>
@@ -484,14 +494,14 @@ const AddIndividualContribution = () => {
                                     <div className="text-success mb-4">
                                         <i className="bi bi-check-circle-fill" style={{ fontSize: '5rem' }}></i>
                                     </div>
-                                    <h5 className="mb-3">✅ Paiement réussi !</h5>
+                                    <h5 className="mb-3"> Paiement réussi !</h5>
                                     <div className="alert alert-success">
                                         <p className="mb-1">Transaction: {paymentInfo.transactionId}</p>
                                         <p className="mb-1">Montant: {paymentInfo.amount?.toLocaleString()} FCFA</p>
                                         <p className="mb-0">Statut: Confirmé</p>
                                     </div>
                                     <p className="text-success fw-bold">
-                                        ✓ Cotisation enregistrée avec succès !
+                                         Cotisation enregistrée avec succès !
                                     </p>
                                     <p className="text-muted small">
                                         Redirection vers l'historique...

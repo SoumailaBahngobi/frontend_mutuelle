@@ -121,7 +121,8 @@ function ContributionHistory() {
       });
       setContributionPeriods(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
-      console.error('Erreur récupération périodes:', error);
+    //  console.error('Erreur récupération périodes:', error);
+      toast.error('Impossible de charger les périodes de cotisation');
     }
   };
 
@@ -369,8 +370,8 @@ function ContributionHistory() {
       const signatureY = finalY + 30;
       doc.setFontSize(8);
       doc.setTextColor(150, 150, 150);
-      doc.text('Document généré automatiquement - Mutuelle WBF', pageWidth / 2, signatureY, { align: 'center' });
-      doc.text('© 2024 Tous droits réservés', pageWidth / 2, signatureY + 5, { align: 'center' });
+      doc.text('Document généré automatiquement - Mutuelle BIS', pageWidth / 2, signatureY, { align: 'center' });
+      doc.text('© 2026 Tous droits réservés', pageWidth / 2, signatureY + 5, { align: 'center' });
 
       const fileName = `cotisations_${currentUser.name}_${new Date().toISOString().split('T')[0]}.pdf`;
       doc.save(fileName);
@@ -378,7 +379,7 @@ function ContributionHistory() {
       toast.success('PDF des cotisations généré avec succès !');
       
     } catch (error) {
-      console.error('❌ Erreur génération PDF:', error);
+    //  console.error('❌ Erreur génération PDF:', error);
       toast.error('Erreur lors de la génération du PDF: ' + error.message);
     }
   };
