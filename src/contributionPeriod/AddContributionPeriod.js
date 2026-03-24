@@ -128,7 +128,7 @@ const AddContributionPeriod = () => {
                 }
             );
             
-            console.log('✅ Réponse reçue:', response.data);
+            console.log(' Réponse reçue:', response.data);
             
             setSuccess('Campagne de cotisation ajoutée avec succès !');
             
@@ -148,7 +148,7 @@ const AddContributionPeriod = () => {
             }, 2000);
             
         } catch (error) {
-            console.error('❌ Erreur détaillée:', error);
+            console.error(' Erreur détaillée:', error);
             
             if (error.response?.status === 401) {
                 setError('Session expirée. Veuillez vous reconnecter.');
