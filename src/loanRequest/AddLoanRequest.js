@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { toast } from 'react-toastify';
+import { AlignVerticalDistributeStart, Calendar, CalendarClock, CandyOffIcon, Check, CircleDollarSign, LucideDollarSign, Ratio, SunDimIcon, WalletCards } from 'lucide-react';
 
 const AddLoanRequest = () => {
     const [formData, setFormData] = useState({
@@ -10,7 +11,7 @@ const AddLoanRequest = () => {
         reason: '',
         acceptTerms: false
     });
-    
+
     const [errors, setErrors] = useState({});
     const [success, setSuccess] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -47,9 +48,9 @@ const AddLoanRequest = () => {
             if (!token) {
                 return null;
             }
-            
+
             const payload = JSON.parse(atob(token.split('.')[1]));
-            
+
             return {
                 id: payload.id || payload.userId || payload.sub,
                 firstName: payload.firstName || payload.given_name || 'Utilisateur',
@@ -87,14 +88,14 @@ const AddLoanRequest = () => {
                 console.log('👤 User data:', userData);
                 setCurrentUser(userData);
             } else {
-                toast.warn('⚠️ Impossible de récupérer le profil complet. Certaines fonctionnalités peuvent être limitées.', { autoClose: 7000 });    
+                toast.warn('⚠️ Impossible de récupérer le profil complet. Certaines fonctionnalités peuvent être limitées.', { autoClose: 7000 });
                 const userFromToken = getCurrentUserFromToken();
                 if (userFromToken) {
                     setCurrentUser(userFromToken);
                 }
             }
         } catch (error) {
-            toast.error('❌ Erreur lors de la récupération des informations utilisateur. Certaines fonctionnalités peuvent être limitées.', { autoClose: 7000 }); 
+            toast.error('❌ Erreur lors de la récupération des informations utilisateur. Certaines fonctionnalités peuvent être limitées.', { autoClose: 7000 });
             const userFromToken = getCurrentUserFromToken();
             if (userFromToken) {
                 setCurrentUser(userFromToken);
@@ -147,23 +148,32 @@ const AddLoanRequest = () => {
 
     const handleSubmit = async (event) => {
         event.preventDefault();
-        
+
         if (!validateForm()) return;
 
-        if (!currentUser) {
-            toast.error('Erreur: Utilisateur non connecté. Veuillez vous reconnecter.', { autoClose: 5000 });
+        // Vérification que l'utilisateur est connecté
+        const token = localStorage.getItem('token');
+        if (!token) {
+            toast.error('Veuillez vous connecter');
+            navigate('/login');
             return;
         }
 
         setLoading(true);
         try {
-            const token = localStorage.getItem('token');
-            
+            // ✅ CORRECTION : N'envoyer que les champs nécessaires
+            // Le controller récupère le membre via l'email du token
             const loanRequestData = {
                 requestAmount: parseFloat(formData.requestAmount),
                 duration: parseInt(formData.duration),
-                reason: formData.reason
+                reason: formData.reason,
+                acceptTerms: formData.acceptTerms,
+                // ⚠️ NE PAS envoyer member ou memberId
+                // Le status sera mis à "PENDING" par défaut dans l'entité
+                // requestDate sera générée automatiquement
             };
+
+            console.log('📤 Données envoyées:', loanRequestData);
 
             const response = await fetch('http://localhost:8081/mutuelle/loan_request', {
                 method: 'POST',
@@ -174,41 +184,32 @@ const AddLoanRequest = () => {
                 body: JSON.stringify(loanRequestData)
             });
 
+            // Lire la réponse
             const responseText = await response.text();
+            console.log('📥 Réponse brute:', responseText);
 
             if (response.ok) {
-                toast.success('✅ Demande de prêt soumise avec succès !', { autoClose: 3000 });
-                
+                toast.success('✅ Demande de prêt soumise avec succès !');
                 setSuccess(true);
-                setFormData({
-                    requestAmount: '',
-                    duration: '',
-                    reason: '',
-                    acceptTerms: false
-                });
-                
-                // Redirection après succès
-                setTimeout(() => {
-                    navigate('/loans/requests');
-                }, 2000);
+                setTimeout(() => navigate('/loans/requests'), 2000);
             } else {
                 let errorMessage = 'Erreur lors de la création de la demande';
-                if (responseText) {
-                    try {
-                        const errorData = JSON.parse(responseText);
-                        errorMessage = errorData.message || errorMessage;
-                    } catch {
-                        errorMessage = responseText || errorMessage;
-                    }
+                try {
+                    const errorData = JSON.parse(responseText);
+                    errorMessage = errorData.message || errorData.error || responseText;
+                } catch {
+                    errorMessage = responseText || errorMessage;
                 }
                 throw new Error(errorMessage);
             }
         } catch (error) {
-            toast.error(`❌ Erreur: ${error.message}`);
+            console.error('❌ Erreur:', error);
+            toast.error(`❌ ${error.message}`);
         } finally {
             setLoading(false);
         }
     };
+
 
     const handleCancel = () => {
         if (window.confirm('Êtes-vous sûr de vouloir annuler ? Toutes les données saisies seront perdues.')) {
@@ -233,7 +234,7 @@ const AddLoanRequest = () => {
         const amount = parseFloat(formData.requestAmount);
         const duration = parseInt(formData.duration);
         const interestRate = 0; // Taux d'intérêt mensuel de 0%
-        
+
         const totalInterest = (amount * interestRate * duration) / 100 / 12;
         const totalRepayment = amount + totalInterest;
         const monthlyPayment = totalRepayment / duration;
@@ -257,6 +258,82 @@ const AddLoanRequest = () => {
         }).format(amount);
     };
 
+
+    const checkKeycloakEmail = () => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            console.log(' Email Keycloak:', payload.email);
+            console.log(' Username:', payload.preferred_username);
+            console.log(' Subject:', payload.sub);
+            console.log(' Token complet:', payload);
+
+            alert(`Email Keycloak: ${payload.email}\nUsername: ${payload.preferred_username}\nVoir console pour plus de détails`);
+        } else {
+            alert('Pas de token trouvé');
+        }
+    };
+
+    // Ajoutez ce bouton temporaire dans votre render
+    <button
+        className="btn btn-warning mb-3"
+        onClick={checkKeycloakEmail}
+    >
+        Vérifier Email Keycloak
+    </button>
+
+
+
+const createMemberFromKeycloak = async () => {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('http://localhost:8081/mutuelle/member/create-from-token', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        console.log('Réponse création membre:', data);
+        
+        if (response.ok) {
+            toast.success('✅ Membre créé avec succès !');
+            // Recharger les infos
+            fetchCurrentUser();
+        } else {
+            toast.error(`❌ Erreur: ${data.error || data.message}`);
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        toast.error('Erreur lors de la création du membre');
+    }
+};
+
+const checkIfMemberExists = async () => {
+    try {
+        const token = localStorage.getItem('token');
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const email = payload.email || payload.preferred_username;
+        
+        const response = await fetch(`http://localhost:8081/mutuelle/member/check-email/${email}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        const data = await response.json();
+        console.log('Vérification email:', data);
+        
+        if (data.exists) {
+            toast.info(`Un membre existe déjà avec l'email: ${email}`);
+        } else {
+            toast.warn(`Aucun membre trouvé avec l'email: ${email}`);
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+    }
+};
+
     return (
         <div className="container mt-4">
             <div className="row justify-content-center">
@@ -270,12 +347,12 @@ const AddLoanRequest = () => {
                             {/* Affichage du membre connecté */}
                             {currentUser ? (
                                 <div className="alert alert-info">
-                                    <strong>👤 Membre connecté:</strong> {currentUser.firstName} {currentUser.lastName} 
+                                    <strong>👤 Membre connecté:</strong> {currentUser.firstName} {currentUser.lastName}
                                     {currentUser.email && ` (${currentUser.email})`}
                                 </div>
                             ) : (
                                 <div className="alert alert-warning">
-                                    <strong>⚠️ Attention:</strong> Impossible de récupérer vos informations.
+                                    <strong> Attention:</strong> Impossible de récupérer vos informations.
                                 </div>
                             )}
 
@@ -296,7 +373,7 @@ const AddLoanRequest = () => {
                                 <div className="row">
                                     <div className="col-md-6 mb-3">
                                         <label htmlFor="requestAmount" className="form-label fw-semibold">
-                                            💰 Montant demandé en FCFA *
+                                         <CircleDollarSign /> Montant demandé en FCFA *
                                         </label>
                                         <input
                                             id="requestAmount"
@@ -318,7 +395,7 @@ const AddLoanRequest = () => {
 
                                     <div className="col-md-6 mb-3">
                                         <label htmlFor="duration" className="form-label fw-semibold">
-                                            📅 Durée du prêt *
+                                         <Calendar /> Durée du prêt
                                         </label>
                                         <select
                                             id="duration"
@@ -344,7 +421,7 @@ const AddLoanRequest = () => {
 
                                 <div className="mb-3">
                                     <label htmlFor="reason" className="form-label fw-semibold">
-                                        🎯 Raison du prêt *
+                                        <SunDimIcon /> Raison du prêt *
                                     </label>
                                     <select
                                         id="reason"
@@ -371,7 +448,7 @@ const AddLoanRequest = () => {
                                 {loanDetails && (
                                     <div className="card bg-light mb-4">
                                         <div className="card-body">
-                                            <h6 className="card-title text-primary">📊 Détails du prêt calculés</h6>
+                                            <h6 className="card-title text-primary"><WalletCards /> Détails du prêt calculés</h6>
                                             <div className="row small">
                                                 <div className="col-md-6">
                                                     <p><strong>Montant:</strong> {formatCurrency(loanDetails.amount)}</p>
@@ -379,9 +456,9 @@ const AddLoanRequest = () => {
                                                     <p><strong>Taux d'intérêt:</strong> {loanDetails.interestRate}%</p>
                                                 </div>
                                                 <div className="col-md-6">
-                                                    <p><strong>Intérêt total:</strong> {formatCurrency(loanDetails.totalInterest)}</p>
-                                                    <p><strong>Montant total à rembourser:</strong> {formatCurrency(loanDetails.totalRepayment)}</p>
-                                                    <p><strong>Mensualité:</strong> {formatCurrency(loanDetails.monthlyPayment)}</p>
+                                                    <p><strong><Ratio /> Intérêt total:</strong> {formatCurrency(loanDetails.totalInterest)}</p>
+                                                    <p><strong><LucideDollarSign /> Montant total à rembourser:</strong> {formatCurrency(loanDetails.totalRepayment)}</p>
+                                                    <p><strong><CalendarClock /> Mensualité:</strong> {formatCurrency(loanDetails.monthlyPayment)}</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -399,7 +476,7 @@ const AddLoanRequest = () => {
                                             disabled={loading}
                                         />
                                         <label className="form-check-label" htmlFor="acceptTerms">
-                                            J'accepte les conditions générales du prêt *
+                                           J'accepte les conditions générales du prêt *
                                         </label>
                                         {errors.acceptTerms && (
                                             <div className="invalid-feedback d-block">
@@ -410,26 +487,26 @@ const AddLoanRequest = () => {
                                 </div>
 
                                 <div className="d-grid gap-2 d-md-flex justify-content-md-end">
-                                    <button 
+                                    <button
                                         type="button"
                                         className="btn btn-outline-secondary btn-lg me-md-2"
                                         onClick={handleCancel}
                                         disabled={loading}
                                     >
-                                        ❌ Annuler
+                                        <CandyOffIcon /> Annuler
                                     </button>
-                                    <button 
-                                        type="submit" 
+                                    <button
+                                        type="submit"
                                         className="btn btn-primary btn-lg"
                                         disabled={loading || !currentUser || !formData.acceptTerms}
                                     >
                                         {loading ? (
                                             <>
                                                 <span className="spinner-border spinner-border-sm me-2" />
-                                                📤 Soumission...
+                                                 Soumission...
                                             </>
                                         ) : (
-                                            '✅ Soumettre la demande'
+                                            '  Soumettre la demande'
                                         )}
                                     </button>
                                 </div>

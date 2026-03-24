@@ -1,445 +1,404 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import 'bootstrap/dist/css/bootstrap.min.css';
-import axios from 'axios';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import useAuth from '../hook/useAuth';
+import ApiService from '../service/api';
+import KkiapayWidget from '../component/Paiement/KkiapayWidget';
+import { useForm } from '../hook/useForm';
+import { toast } from 'react-toastify';
 
-function AddIndividualContribution() {
-    const [form, setForm] = React.useState({
-        amount: '', 
-        paymentDate: new Date().toISOString().split('T')[0],
-        contributionPeriodId: '',
-        paymentMode: 'ESPECES',
-        paymentProof: null
-    });
-    
-    const [contributionPeriods, setContributionPeriods] = React.useState([]);
-    const [currentUser, setCurrentUser] = React.useState(null);
-    const [loading, setLoading] = React.useState(true);
-    const [uploading, setUploading] = React.useState(false);
-    const [fileName, setFileName] = React.useState('');
-    
+const AddIndividualContribution = () => {
+    const { user, loading: authLoading } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
+    
+    const [periods, setPeriods] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [paymentStep, setPaymentStep] = useState('form');
+    const [paymentInfo, setPaymentInfo] = useState(null);
 
-    React.useEffect(() => {
-        getCurrentUser();
-        fetchContributionPeriods();
-    }, []);
-
-    const getCurrentUser = () => {
-        let user = null;
-        
-        try {
-            const userData = localStorage.getItem('currentUser');
-            if (userData) {
-                user = JSON.parse(userData);
+    const { values, errors, touched, isSubmitting, setIsSubmitting, handleChange, setValues, validateForm } = useForm(
+        {
+            amount: '',
+            paymentDate: new Date().toISOString().split('T')[0],
+            contributionPeriodId: '',
+            paymentMode: 'KKIAPAY',
+            phoneNumber: user?.phone || '',
+            paymentProof: null
+        },
+        {
+            amount: {
+                required: true,
+                min: 1,
+                message: 'Montant requis',
+                minMessage: 'Le montant doit être supérieur à 0'
+            },
+            contributionPeriodId: {
+                required: true,
+                message: 'Sélectionnez une période'
+            },
+            paymentDate: {
+                required: true,
+                message: 'Date de paiement requise'
+            },
+            phoneNumber: {
+                required: true,
+                pattern: /^[0-9]{8,12}$/,
+                message: 'Numéro de téléphone requis (8-12 chiffres)'
             }
-        } catch (error) {
-            console.log('Erreur localStorage:', error);
         }
+    );
 
-        if (user) {
-            setCurrentUser(user);
-        } else {
+    useEffect(() => {
+        if (location.state?.paymentVerified && location.state?.paymentId) {
+            setPaymentStep('payment');
+            fetchPaymentInfo(location.state.paymentId);
+        }
+    }, [location]);
+
+    useEffect(() => {
+        if (!authLoading && !user) {
             navigate('/login');
+            return;
         }
-    };
+        loadPeriods();
+    }, [user, authLoading, navigate]);
 
-    const fetchContributionPeriods = async () => {
+    const loadPeriods = async () => {
         try {
-            setLoading(true);
-            const response = await axios.get('http://localhost:8081/mutuelle/contribution_period');
-            setContributionPeriods(response.data);
+            const data = await ApiService.getContributionPeriods();
+            setPeriods(data);
         } catch (error) {
-            console.error('Erreur lors de la récupération des campagnes de cotisation', error);
-            alert('Erreur lors du chargement des campagnes de cotisation');
+            console.error('❌ Erreur chargement périodes:', error);
+            toast.error('Impossible de charger les périodes');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        
-        if (name === 'contributionPeriodId') {
-            // Trouver la période sélectionnée
-            const selectedPeriod = contributionPeriods.find(period => period.id === parseInt(value));
-            
-            if (selectedPeriod) {
-                // Mettre à jour le montant automatiquement
-                setForm({ 
-                    ...form, 
-                    [name]: value,
-                    amount: selectedPeriod.individualAmount || selectedPeriod.amount || ''
-                });
-            } else {
-                setForm({ ...form, [name]: value });
-            }
-        } else {
-            setForm({ ...form, [name]: value });
-        }
-    };
-
-    const handleFileChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            // Vérifier la taille du fichier (max 5MB)
-            if (file.size > 5 * 1024 * 1024) {
-                alert('Le fichier est trop volumineux. Taille maximale: 5MB');
-                e.target.value = ''; // Reset l'input file
-                return;
-            }
-            
-            // Vérifier le type de fichier
-            const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
-            if (!allowedTypes.includes(file.type)) {
-                alert('Type de fichier non supporté. Formats acceptés: JPEG, PNG, PDF');
-                e.target.value = ''; // Reset l'input file
-                return;
-            }
-            
-            setForm({ ...form, paymentProof: file });
-            setFileName(file.name);
-        }
-    };
-
-    const uploadPaymentProof = async (file) => {
+    const fetchPaymentInfo = async (paymentId) => {
         try {
-            const token = localStorage.getItem('token');
-            const formData = new FormData();
-            formData.append('file', file);
-            
-            console.log(' Début upload du fichier:', file.name);
-            
-            const response = await axios.post(
-                'http://localhost:8081/mutuelle/contribution/upload/payment-proof', 
-                formData,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'multipart/form-data'
-                    },
-                    timeout: 30000 // 30 secondes timeout
+            const payments = await ApiService.getMemberPayments(user?.id);
+            const payment = payments.find(p => p.id === paymentId);
+            if (payment) {
+                setPaymentInfo(payment);
+                setValues({
+                    ...values,
+                    amount: payment.amount,
+                    phoneNumber: payment.phoneNumber
+                });
+            }
+        } catch (error) {
+            console.error('Erreur récupération paiement:', error);
+        }
+    };
+
+    const handlePeriodChange = (e) => {
+        const periodId = e.target.value;
+        const selectedPeriod = periods.find(p => p.id === parseInt(periodId));
+        
+        handleChange({
+            target: {
+                name: 'contributionPeriodId',
+                value: periodId
+            }
+        });
+
+        if (selectedPeriod) {
+            handleChange({
+                target: {
+                    name: 'amount',
+                    value: selectedPeriod.individualAmount || selectedPeriod.amount || ''
                 }
-            );
+            });
+        }
+    };
+
+    const handlePaymentSuccess = async (paymentResponse) => {
+        console.log('Paiement réussi:', paymentResponse);
+        
+        setPaymentStep('processing');
+        setPaymentInfo(paymentResponse);
+        
+        try {
+            const verification = paymentResponse.verified ? 
+                paymentResponse : 
+                await ApiService.verifyPayment(paymentResponse.transactionId);
             
-            console.log('✅ Upload réussi:', response.data);
-            return response.data; // Retourne le nom du fichier
+            if (verification.success && verification.status === 'SUCCESS') {
+                setPaymentStep('done');
+                await createContributionAfterPayment(verification.payment);
+            } else {
+                toast.error('Échec de la vérification du paiement');
+                setPaymentStep('form');
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
+            toast.error('Erreur lors du traitement du paiement');
+            setPaymentStep('form');
+        }
+    };
+
+    const createContributionAfterPayment = async (payment) => {
+        try {
+            const contributionData = {
+                amount: parseFloat(values.amount),
+                paymentDate: values.paymentDate,
+                paymentMode: 'KKIAPAY',
+                paymentProof: null,
+                contributionPeriodId: parseInt(values.contributionPeriodId),
+                paymentId: payment.id
+            };
+
+            await ApiService.addIndividualContribution(contributionData);
+            
+            toast.success('✅ Cotisation enregistrée avec succès !');
+            
+            setTimeout(() => {
+                navigate('/mutuelle/contribution/individual/my-contributions');
+            }, 2000);
             
         } catch (error) {
-            console.error('Erreur upload:', error);
-            
-            if (error.response) {
-                // Le serveur a répondu avec un code d'erreur
-                throw new Error(error.response.data || 'Erreur lors de l\'upload');
-            } else if (error.request) {
-                // La requête a été faite mais aucune réponse n'a été reçue
-                throw new Error('Serveur non accessible. Vérifiez votre connexion.');
-            } else {
-                // Quelque chose s'est mal passé lors de la configuration de la requête
-                throw new Error('Erreur de configuration: ' + error.message);
-            }
+            console.error('❌ Erreur création cotisation:', error);
+            toast.error('Erreur lors de l\'enregistrement de la cotisation');
+            setPaymentStep('payment');
         }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         
-        if (!currentUser) {
-            alert('Vous devez être connecté pour ajouter une cotisation');
-            navigate('/login');
+        if (!validateForm()) {
+            toast.error('Veuillez corriger les erreurs');
             return;
         }
 
-        if (!form.contributionPeriodId) {
-            alert('Veuillez sélectionner une campagne  de cotisation');
-            return;
-        }
-
-        if (!form.amount || parseFloat(form.amount) <= 0) {
-            alert('Veuillez choisir la campagne de cotisation et le montant sera automatique');
-            return;
-        }
-
-        try {
-            setUploading(true);
-            
-            let paymentProofFileName = null;
-            
-            // Upload du fichier de preuve de paiement si présent
-            if (form.paymentProof) {
-                try {
-                    paymentProofFileName = await uploadPaymentProof(form.paymentProof);
-                } catch (uploadError) {
-                    alert('Erreur lors de l\'upload du fichier: ' + uploadError.message);
-                    setUploading(false);
-                    return;
-                }
-            }
-
-            // Format des données compatible avec Spring/Jackson
-            const contributionData = {
-                amount: form.amount,
-                paymentDate: form.paymentDate + "T00:00:00",
-                paymentMode: form.paymentMode,
-                paymentProof: paymentProofFileName, // Nom du fichier uploadé
-                member: { 
-                    id: currentUser.id || currentUser.memberId
-                },
-                contributionPeriod: { 
-                    id: parseInt(form.contributionPeriodId) 
-                },
-                contributionType: "INDIVIDUAL"
-            };
-            
-            console.log('📤 DONNEES COTISATION:', contributionData);
-            
-            const token = localStorage.getItem('token');
-            
-            const response = await axios.post(
-                'http://localhost:8081/mutuelle/contribution/individual', 
-                contributionData,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                }
-            );
-            
-            console.log('✅ COTISATION CREEE:', response.data);
-            
-            alert('Cotisation ajoutée avec succès !');  
-            
-            // Réinitialiser
-            setForm({
-                amount: '', 
-                paymentDate: new Date().toISOString().split('T')[0],
-                contributionPeriodId: '',
-                paymentMode: 'ESPECES',
-                paymentProof: null
-            });
-            setFileName('');
-            
-            navigate('/dashboard');
-            
-        } catch (error) {
-            console.error('❌ ERREUR COMPLETE:', error);
-            
-            if (error.response?.status === 400) {
-                alert('Erreur de validation: ' + 
-                    (error.response.data.message || JSON.stringify(error.response.data)));
-            } else if (error.response?.status === 500) {
-                alert('Erreur serveur. Veuillez contacter l\'administrateur.');
-            } else {
-                alert('Erreur: ' + (error.message || 'Veuillez réessayer'));
-            }
-        } finally {
-            setUploading(false);
-        }
+        setPaymentStep('payment');
     };
 
-    const removeFile = () => {
-        setForm({ ...form, paymentProof: null });
-        setFileName('');
-        // Reset l'input file
-        const fileInput = document.getElementById('paymentProof');
-        if (fileInput) fileInput.value = '';
+    const handleCancelPayment = () => {
+        setPaymentStep('form');
     };
 
-    // Fonction pour obtenir le montant de la période sélectionnée
-    const getSelectedPeriodAmount = () => {
-        if (!form.contributionPeriodId) return null;
-        const selectedPeriod = contributionPeriods.find(period => period.id === parseInt(form.contributionPeriodId));
-        return selectedPeriod ? (selectedPeriod.individualAmount || selectedPeriod.amount) : null;
-    };
-
-    if (!currentUser) {
+    if (authLoading || loading) {
         return (
-            <div className="container">
-                <div className="alert alert-warning text-center">
-                    <h4>Accès non autorisé</h4>
-                    <p>Vous devez être connecté pour accéder à cette page.</p>
-                    <button 
-                        className="btn btn-primary" 
-                        onClick={() => navigate('/login')}
-                    >
-                        Se connecter
-                    </button>
+            <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
+                <div className="spinner-border text-primary" role="status">
+                    <span className="visually-hidden">Chargement...</span>
                 </div>
             </div>
         );
     }
 
+    const selectedPeriod = periods.find(p => p.id === parseInt(values.contributionPeriodId));
+
     return (
-        <div>
-            <div className='container'>
-                <div className="card">
-                    <div className="card-header">
-                        <h3>Ajouter une Cotisation Individuelle</h3>
-                    </div>
-                    <div className="card-body">
-                        <div className="alert alert-info">
-                            <strong>Utilisateur :</strong> {currentUser.name} {currentUser.firstName}
-                            <br />
-                            <small>ID: {currentUser.id || currentUser.memberId}</small>
+        <div className="container mt-4">
+            <div className="row justify-content-center">
+                <div className="col-md-8 col-lg-6">
+                    <div className="card shadow">
+                        <div className="card-header bg-primary text-white">
+                            <h4 className="mb-0">
+                                {paymentStep === 'form' && 'Cotisation Individuelle'}
+                                {paymentStep === 'payment' && 'Paiement de la cotisation'}
+                                {paymentStep === 'processing' && 'Traitement en cours...'}
+                                {paymentStep === 'done' && 'Paiement réussi !'}
+                            </h4>
                         </div>
                         
-                        <form onSubmit={handleSubmit}>
-                            <div className="row">
-                                <div className="col-md-6">
-                                    <div className="form-group mb-3">
-                                        <label htmlFor="amount" className="form-label">
-                                            Montant (FCFA) *
-                                            {getSelectedPeriodAmount() && (
-                                                <span className="text-success ms-2">
-                                                    (Montant automatique: {getSelectedPeriodAmount()} FCFA)
-                                                </span>
-                                            )}
-                                        </label>
-                                        <input 
-                                            type="number" 
-                                            className="form-control" 
-                                            id="amount" 
-                                            name="amount" 
-                                            value={form.amount} 
-                                            onChange={handleChange} 
-                                            placeholder="Le montant est automaitique selon la campagne sélectionnée " 
-                                            required
-                                            min="1"
-                                            step="1"
-                                            readOnly={!!getSelectedPeriodAmount()} // Rendre le champ en lecture seule si le montant est automatique
-                                        />
-                                        {getSelectedPeriodAmount() && (
-                                            <small className="form-text text-muted">
-                                                Le montant est automatiquement défini selon la campagne sélectionnée
-                                            </small>
-                                        )}
-                                    </div>
-                                </div>
-                                
-                                <div className="col-md-6">
-                                    <div className="form-group mb-3">
-                                        <label htmlFor="paymentDate" className="form-label">Date de paiement *</label>
-                                        <input 
-                                            type="date" 
-                                            className="form-control" 
-                                            id="paymentDate" 
-                                            name="paymentDate" 
-                                            value={form.paymentDate} 
-                                            onChange={handleChange} 
-                                            required
-                                        />  
-                                    </div>
+                        <div className="card-body">
+                            
+                            <div className="alert alert-info d-flex align-items-center">
+                                <i className="bi bi-person-circle fs-4 me-3"></i>
+                                <div>
+                                    <strong>{user?.firstName} {user?.name}</strong>
+                                    <br />
+                                    <small>{user?.email}</small>
                                 </div>
                             </div>
-                            
-                            <div className="row">
-                                <div className="col-md-6">
-                                    <div className="form-group mb-3">
-                                        <label htmlFor="paymentMode" className="form-label">Mode de paiement *</label>
-                                        <select 
-                                            id="paymentMode" 
-                                            name="paymentMode" 
-                                            className="form-control" 
-                                            value={form.paymentMode} 
-                                            onChange={handleChange}
-                                            required
+
+                            {paymentStep === 'form' && (
+                                <form onSubmit={handleSubmit}>
+                                    
+                                    <div className="mb-3">
+                                        <label className="form-label fw-semibold">
+                                            Période de cotisation *
+                                        </label>
+                                        <select
+                                            className={`form-control ${errors.contributionPeriodId && touched.contributionPeriodId ? 'is-invalid' : ''}`}
+                                            name="contributionPeriodId"
+                                            value={values.contributionPeriodId}
+                                            onChange={handlePeriodChange}
+                                            disabled={isSubmitting}
                                         >
-                                            <option value="ESPECES">Espèces</option>
-                                            <option value="CHEQUE">Chèque</option>
-                                            <option value="VIREMENT">Virement</option>
-                                            <option value="MOBILE_MONEY">Mobile Money</option>
-                                            <option value="CARTE">Carte bancaire</option>
+                                            <option value="">Sélectionnez...</option>
+                                            {periods.map(p => (
+                                                <option key={p.id} value={p.id}>
+                                                    {p.description || p.name} - {p.individualAmount || p.amount} FCFA
+                                                </option>
+                                            ))}
                                         </select>
+                                        {errors.contributionPeriodId && touched.contributionPeriodId && (
+                                            <div className="invalid-feedback">{errors.contributionPeriodId}</div>
+                                        )}
                                     </div>
-                                </div>
-                                
-                                <div className="col-md-6">
-                                    <div className="form-group mb-3">
-                                        <label htmlFor="paymentProof" className="form-label">Preuve de paiement</label>
+
+                                    <div className="mb-3">
+                                        <label className="form-label fw-semibold">
+                                            Montant (FCFA) *
+                                        </label>
                                         <div className="input-group">
-                                            <input 
-                                                type="file" 
-                                                className="form-control" 
-                                                id="paymentProof" 
-                                                name="paymentProof" 
-                                                onChange={handleFileChange}
-                                                accept=".jpg,.jpeg,.png,.pdf,.JPG,.JPEG,.PNG,.PDF"
+                                            <span className="input-group-text">FCFA</span>
+                                            <input
+                                                type="number"
+                                                className={`form-control ${errors.amount && touched.amount ? 'is-invalid' : ''}`}
+                                                name="amount"
+                                                value={values.amount}
+                                                onChange={handleChange}
+                                                readOnly={!!selectedPeriod}
+                                                disabled={isSubmitting}
                                             />
                                         </div>
-                                        <small className="form-text text-muted">
-                                            Formats acceptés: JPG, PNG, PDF (max 5MB)
-                                        </small>
-                                        
-                                        {/* Affichage du fichier sélectionné */}
-                                        {fileName && (
-                                            <div className="mt-2 p-2 border rounded bg-light">
-                                                <div className="d-flex justify-content-between align-items-center">
-                                                    <span>
-                                                        <i className="fas fa-file me-2"></i>
-                                                        {fileName}
-                                                    </span>
-                                                    <button 
-                                                        type="button" 
-                                                        className="btn btn-sm btn-outline-danger"
-                                                        onClick={removeFile}
-                                                    >
-                                                        <i className="fas fa-times"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
+                                        {selectedPeriod && (
+                                            <small className="text-success">
+                                                Montant automatique basé sur la période
+                                            </small>
+                                        )}
+                                        {errors.amount && touched.amount && (
+                                            <div className="invalid-feedback d-block">{errors.amount}</div>
                                         )}
                                     </div>
-                                </div>
-                            </div>
-                            
-                            <div className="form-group mb-4">
-                                <label htmlFor="contributionPeriodId" className="form-label">Campagne de Cotisation *</label>
-                                {loading ? (
-                                    <div className="form-control">Chargement...</div>
-                                ) : (
-                                    <select 
-                                        id="contributionPeriodId" 
-                                        name="contributionPeriodId" 
-                                        className="form-control" 
-                                        value={form.contributionPeriodId} 
-                                        onChange={handleChange}
-                                        required
+
+                                    <div className="mb-3">
+                                        <label className="form-label fw-semibold">
+                                            Date de paiement *
+                                        </label>
+                                        <input
+                                            type="date"
+                                            className={`form-control ${errors.paymentDate && touched.paymentDate ? 'is-invalid' : ''}`}
+                                            name="paymentDate"
+                                            value={values.paymentDate}
+                                            onChange={handleChange}
+                                            disabled={isSubmitting}
+                                        />
+                                        {errors.paymentDate && touched.paymentDate && (
+                                            <div className="invalid-feedback">{errors.paymentDate}</div>
+                                        )}
+                                    </div>
+
+                                    <div className="mb-3">
+                                        <label className="form-label fw-semibold">
+                                            Numéro de téléphone (Mobile Money) *
+                                        </label>
+                                        <div className="input-group">
+                                            <span className="input-group-text">
+                                                <i className="bi bi-phone"></i>
+                                            </span>
+                                            <input
+                                                type="tel"
+                                                className={`form-control ${errors.phoneNumber && touched.phoneNumber ? 'is-invalid' : ''}`}
+                                                name="phoneNumber"
+                                                value={values.phoneNumber}
+                                                onChange={handleChange}
+                                                placeholder="Ex: 97000000"
+                                                disabled={isSubmitting}
+                                            />
+                                        </div>
+                                        <small className="text-muted">
+                                            Numéro Mobile Money pour le paiement
+                                        </small>
+                                        {errors.phoneNumber && touched.phoneNumber && (
+                                            <div className="invalid-feedback d-block">{errors.phoneNumber}</div>
+                                        )}
+                                    </div>
+
+                                    <div className="d-flex justify-content-end gap-2">
+                                        <button
+                                            type="button"
+                                            className="btn btn-outline-secondary"
+                                            onClick={() => navigate('/dashboard')}
+                                            disabled={isSubmitting}
+                                        >
+                                            Annuler
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            className="btn btn-primary"
+                                            disabled={isSubmitting}
+                                        >
+                                            <i className="bi bi-credit-card me-2"></i>
+                                            Procéder au paiement
+                                        </button>
+                                    </div>
+                                </form>
+                            )}
+
+                            {paymentStep === 'payment' && (
+                                <div className="text-center py-4">
+                                    <h5 className="mb-4">Récapitulatif du paiement</h5>
+                                    
+                                    <div className="alert alert-secondary mb-4">
+                                        <p className="mb-1">Montant: <strong>{parseFloat(values.amount).toLocaleString()} FCFA</strong></p>
+                                        <p className="mb-1">Période: <strong>{selectedPeriod?.description}</strong></p>
+                                        <p className="mb-0">Téléphone: <strong>{values.phoneNumber}</strong></p>
+                                    </div>
+
+                                    <KkiapayWidget
+                                        amount={parseFloat(values.amount)}
+                                        phoneNumber={values.phoneNumber}
+                                        memberId={user?.id}
+                                        paymentType="INDIVIDUAL_CONTRIBUTION"
+                                        onSuccess={handlePaymentSuccess}
+                                        onError={(error) => {
+                                            toast.error('Erreur de paiement');
+                                            console.error(error);
+                                        }}
+                                        onClose={handleCancelPayment}
+                                        buttonText="Confirmer le paiement"
+                                        className="mb-3"
+                                    />
+
+                                    <button
+                                        type="button"
+                                        className="btn btn-link text-muted"
+                                        onClick={handleCancelPayment}
                                     >
-                                        <option value="">Choisir une campagne de cotisation</option>
-                                        {contributionPeriods.map((period) => (
-                                            <option key={period.id} value={period.id}>
-                                                {period.description} 
-                                                ({new Date(period.startDate).toLocaleDateString()} - {new Date(period.endDate).toLocaleDateString()})
-                                                - Montant: {period.individualAmount || period.amount} FCFA
-                                            </option>
-                                        ))}
-                                    </select>
-                                )}
-                            </div>
-                            
-                            <div className="d-grid gap-2 d-md-flex justify-content-md-end">
-                                <button 
-                                    type="button" 
-                                    className="btn btn-secondary me-md-2" 
-                                    onClick={() => navigate('/dashboard')}
-                                >
-                                    Annuler
-                                </button>
-                                <button 
-                                    type="submit" 
-                                    className="btn btn-primary" 
-                                    disabled={loading || uploading}
-                                >
-                                    {uploading ? 'Upload en cours...' : (loading ? 'En cours...' : 'Valider la cotisation')}
-                                </button>
-                            </div>
-                        </form>
+                                        Retour au formulaire
+                                    </button>
+                                </div>
+                            )}
+
+                            {paymentStep === 'processing' && (
+                                <div className="text-center py-5">
+                                    <div className="spinner-border text-primary mb-3" style={{ width: '4rem', height: '4rem' }}>
+                                        <span className="visually-hidden">Chargement...</span>
+                                    </div>
+                                    <h5>Traitement de votre paiement en cours...</h5>
+                                    <p className="text-muted">Veuillez patienter un instant</p>
+                                </div>
+                            )}
+
+                            {paymentStep === 'done' && paymentInfo && (
+                                <div className="text-center py-4">
+                                    <div className="text-success mb-4">
+                                        <i className="bi bi-check-circle-fill" style={{ fontSize: '5rem' }}></i>
+                                    </div>
+                                    <h5 className="mb-3">✅ Paiement réussi !</h5>
+                                    <div className="alert alert-success">
+                                        <p className="mb-1">Transaction: {paymentInfo.transactionId}</p>
+                                        <p className="mb-1">Montant: {paymentInfo.amount?.toLocaleString()} FCFA</p>
+                                        <p className="mb-0">Statut: Confirmé</p>
+                                    </div>
+                                    <p className="text-muted">
+                                        Enregistrement de votre cotisation en cours...
+                                    </p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     );
-}
+};
 
 export default AddIndividualContribution;

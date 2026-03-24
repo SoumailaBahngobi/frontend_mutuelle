@@ -3,38 +3,43 @@ import './App.css';
 import { Routes, Route } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import Navbar from './layout/NavBar.js';
-import AddMember from './members/AddMember.js';
-import Login from './configuration/Login.js';
-import Dashboard from './pages/Dashboard.js';
-import AddIndividualContribution from './contributions/AddIndividualContribution.js';
-import AddGroupContribution from './contributions/AddGroupContribution.js';
-import ContributionHistory from './contributions/ContributionHistory.js';
-import AddLoanRequest from './loanRequest/AddLoanRequest.js';
-import AddLoan from './loan/AddLoan.js';
-import AddRepayment from './repayment/AddRepayment.js';
-import LoanApproval from './loan/LoanApproval.js';
-import MyLoanRequests from './loanRequest/MyLoanRequest.js';
-import AddContributionPeriod from './contributionPeriod/AddContributionPeriod.js';
-import LoanApprovalDashboard from './loan/LoanApprovalDashboard.js';
-import MyLoans from './loan/MyLoans.js';
-import Home from './pages/Home.js';
-import TreasurerLoanDashboard from './treasurer/TreasurerLoanDashboard.js';
-import RoleProtectedRoute from './treasurer/RoleProtectedRoute.js';
-import AddEvent from './evenement/AddEvent.js';
-import RepaymentList from './repayment/RepaymentList.js';
-import LoanList from './loan/LoanList.js';
-import EventList from './evenement/EventList.js';
-import ViewMember from './members/ViewMember.js';
-import EditMember from './members/EditMember.js';
-import ResetPassword from './configuration/ResetPassword.js';
-import EmailHandler from './configuration/EmailHandler.js';
-import Footer from './pages/layout/Footer.js';
-import Keycloak from './keycloak/keycloak.js';
-
-import { useEffect, useState } from "react";
-///mutuelle/member/profile/update
-
+import { useKeycloak } from './context/KeycloakContext';
+import Navbar from './layout/NavBar';
+import ProtectedRoute from './component/ProtectedRoute';
+import Home from './pages/Home';
+import Login from './configuration/Login';
+import AddMember from './members/AddMember';
+import Dashboard from './pages/Dashboard';
+import AddIndividualContribution from './contributions/AddIndividualContribution';
+import AddGroupContribution from './contributions/AddGroupContribution';
+import ContributionHistory from './contributions/ContributionHistory';
+import AddLoanRequest from './loanRequest/AddLoanRequest';
+import AddLoan from './loan/AddLoan';
+import AddRepayment from './repayment/AddRepayment';
+import LoanApproval from './loan/LoanApproval';
+import MyLoanRequests from './loanRequest/MyLoanRequest';
+import AddContributionPeriod from './contributionPeriod/AddContributionPeriod';
+import LoanApprovalDashboard from './loan/LoanApprovalDashboard';
+import MyLoans from './loan/MyLoans';
+import TreasurerLoanDashboard from './treasurer/TreasurerLoanDashboard';
+import RoleProtectedRoute from './treasurer/RoleProtectedRoute';
+import AddEvent from './evenement/AddEvent';
+import RepaymentList from './repayment/RepaymentList';
+import LoanList from './loan/LoanList';
+import EventList from './evenement/EventList';
+import ViewMember from './members/ViewMember';
+import EditMember from './members/EditMember';
+import ResetPassword from './configuration/ResetPassword';
+import EmailHandler from './configuration/EmailHandler';
+import LoanApprovalList from './loan/LoanApprovalList';
+import LoanHistory from './loan/LoanHistory';
+import LoanRequestDetails from './loan/LoanRequestDetails';
+import LoanDetails from './loan/LoanDetails';
+import Footer from './layout/Footer';
+import ForgotPassword from './configuration/ForgotPassword';
+import ChangePassword from './configuration/ChangePassword';
+import PaymentCallback from './component/PaymentCallback';
+import PaymentSuccess from './component/Paiement/PaymentSuccess';
 function App() {
   const { loading } = useKeycloak();
 
@@ -86,6 +91,8 @@ function App() {
               <AddContributionPeriod />
             </ProtectedRoute>
           } />
+
+          <Route path="/payment/callback" element={<PaymentCallback />} />
           <Route path="/mutuelle/event" element={
             <ProtectedRoute>
               <AddEvent />
@@ -198,6 +205,9 @@ function App() {
               <LoanDetails />
             </ProtectedRoute>
           } />
+
+          <Route path="/payment/callback" element={<PaymentSuccess />} />
+          <Route path="/payment/success" element={<PaymentSuccess />} />
 
 
           <Route path="/forgot-password" element={<ForgotPassword />} />

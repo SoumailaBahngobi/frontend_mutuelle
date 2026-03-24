@@ -1,6 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import authService from '../service/authService';
-
+import React, { createContext, useContext } from 'react';
+import useAuth from '../hook/useAuth';
 const KeycloakContext = createContext();
 
 export const useKeycloak = () => {
@@ -12,73 +11,11 @@ export const useKeycloak = () => {
 };
 
 export const KeycloakProvider = ({ children }) => {
-    const [authenticated, setAuthenticated] = useState(false);
-    const [userInfo, setUserInfo] = useState(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const checkAuth = () => {
-            try {
-                const isAuth = authService.isAuthenticated();
-                setAuthenticated(isAuth);
-                
-                if (isAuth) {
-                    const user = authService.getCurrentUser();
-                    setUserInfo(user);
-                }
-            } catch (error) {
-                console.error('Erreur de vérification d\'authentification:', error);
-                setAuthenticated(false);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        checkAuth();
-    }, []);
-
-    const login = async (email, password) => {
-        const result = await authService.login(email, password);
-        
-        if (result.success) {
-            setAuthenticated(true);
-            setUserInfo(result.data.userInfo);
-            return { success: true };
-        }
-        
-        return result;
-    };
-
-    const logout = () => {
-        authService.logout();
-        setAuthenticated(false);
-        setUserInfo(null);
-    };
-
-    const hasRole = (role) => {
-        if (!userInfo) return false;
-        return userInfo.role === role;
-    };
-
-    const getToken = () => {
-        return authService.getToken();
-    };
-
-    const value = {
-        authenticated,
-        userInfo,
-        loading,
-        login,
-        logout,
-        getToken,
-        hasRole
-    };
+    const auth = useAuth();
 
     return (
-        <KeycloakContext.Provider value={value}>
+        <KeycloakContext.Provider value={auth}>
             {children}
         </KeycloakContext.Provider>
     );
 };
-
-

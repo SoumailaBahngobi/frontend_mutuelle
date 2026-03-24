@@ -8,10 +8,14 @@ const setupAxiosInterceptors = () => {
             const token = authService.getToken();
             if (token) {
                 config.headers.Authorization = `Bearer ${token}`;
+                console.log('Token ajouté au header:', token.substring(0, 20) + '...');
+            } else {
+                console.warn(' Aucun token trouvé dans localStorage');
             }
             return config;
         },
         (error) => {
+            console.error('Erreur intercepteur requête:', error);
             return Promise.reject(error);
         }
     );
@@ -21,9 +25,11 @@ const setupAxiosInterceptors = () => {
         (response) => response,
         async (error) => {
             const originalRequest = error.config;
+            console.error('Erreur axios:', error.response?.status, error.config?.url);
 
             // Si erreur 401 et pas déjà tenté de rafraîchir
             if (error.response?.status === 401 && !originalRequest._retry) {
+                console.warn('Token expiré (401), tentative de rafraîchissement...');
                 originalRequest._retry = true;
 
                 try {
@@ -31,6 +37,7 @@ const setupAxiosInterceptors = () => {
                     const refreshResult = await authService.refreshToken();
                     
                     if (refreshResult.success) {
+                        console.log('Token rafraîchi avec succès');
                         // Mettre à jour le token dans la requête originale
                         originalRequest.headers.Authorization = `Bearer ${refreshResult.token}`;
                         // Réessayer la requête
@@ -41,6 +48,7 @@ const setupAxiosInterceptors = () => {
                 }
 
                 // Si le rafraîchissement échoue, déconnecter l'utilisateur
+                console.error('Déconnexion de l\'utilisateur - redirection vers /login');
                 authService.logout();
                 window.location.href = '/login';
             }
