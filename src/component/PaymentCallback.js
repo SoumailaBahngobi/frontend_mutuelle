@@ -26,7 +26,7 @@ const PaymentCallback = () => {
                     const verification = await ApiService.verifyPayment(transactionId);
                     
                     if (verification.success && verification.status === 'SUCCESS') {
-                        setStatus('✅ Paiement réussi !');
+                        setStatus(' Paiement réussi !');
                         toast.success('Paiement réussi !');
                         
                         // Rediriger vers la création de cotisation
@@ -53,13 +53,13 @@ const PaymentCallback = () => {
                             }
                         }, 2000);
                     } else {
-                        setStatus('⚠️ Paiement en attente');
+                        setStatus(' Paiement en attente');
                         toast.warning('Paiement en attente de confirmation');
                         setTimeout(() => navigate('/dashboard'), 3000);
                     }
                 } catch (error) {
                     console.error('Erreur vérification:', error);
-                    setStatus('❌ Erreur de vérification');
+                    setStatus(' Erreur de vérification');
                     toast.error('Erreur lors de la vérification');
                     setTimeout(() => navigate('/dashboard'), 3000);
                 }

@@ -65,7 +65,7 @@ function Login() {
             } else {
                 // Afficher le message d'erreur spécifique
                 if (result.message === 'Email ou mot de passe incorrect') {
-                    toast.error('❌ Email ou mot de passe incorrect');
+                    toast.error(' Email ou mot de passe incorrect');
                     // Optionnel : mettre en évidence les champs
                     setErrors({
                         email: ' ',
@@ -80,17 +80,17 @@ function Login() {
             
             // Analyser l'erreur pour un message plus précis
             if (error.response?.status === 401) {
-                toast.error('❌ Email ou mot de passe incorrect');
+                toast.error(' Email ou mot de passe incorrect');
                 setErrors({
                     email: ' ',
                     password: ' '
                 });
             } else if (error.response?.status === 400) {
-                toast.error('❌ Données invalides');
+                toast.error(' Données invalides');
             } else if (error.code === 'ERR_NETWORK') {
-                toast.error('❌ Impossible de joindre le serveur. Vérifiez votre connexion.');
+                toast.error(' Impossible de joindre le serveur. Vérifiez votre connexion.');
             } else {
-                toast.error('❌ Erreur de connexion. Veuillez réessayer.');
+                toast.error(' Erreur de connexion. Veuillez réessayer.');
             }
         } finally {
             setLoading(false);

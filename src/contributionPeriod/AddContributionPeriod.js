@@ -101,13 +101,16 @@ const AddContributionPeriod = () => {
                 return;
             }
 
+            const isActive = form.status === 'ACTIVE';
+
             // Préparation des données pour l'API
             const apiData = {
                 startDate: form.startDate,
                 endDate: form.endDate,
                 name: form.name || `Campagne ${new Date(form.startDate).toLocaleDateString()} - ${new Date(form.endDate).toLocaleDateString()}`,
                 individualAmount: parseFloat(form.amount),
-                status: form.status,
+               // status: form.status,
+               active: isActive,
                 description: form.description
             };
 
@@ -125,7 +128,7 @@ const AddContributionPeriod = () => {
                 }
             );
             
-            console.log('✅ Réponse reçue:', response.data);
+            console.log(' Réponse reçue:', response.data);
             
             setSuccess('Campagne de cotisation ajoutée avec succès !');
             
@@ -145,7 +148,7 @@ const AddContributionPeriod = () => {
             }, 2000);
             
         } catch (error) {
-            console.error('❌ Erreur détaillée:', error);
+            console.error(' Erreur détaillée:', error);
             
             if (error.response?.status === 401) {
                 setError('Session expirée. Veuillez vous reconnecter.');

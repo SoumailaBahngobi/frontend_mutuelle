@@ -33,15 +33,15 @@ const LoanApproval = () => {
         try {
             setLoading(true);
             const token = localStorage.getItem('token');
-            
+
             const res = await axios.get('http://localhost:8081/mutuelle/loan_request/all-with-approval', {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            
+
             // ✅ CORRECTION : S'assurer que loanRequests est toujours un tableau
             const data = res.data;
             console.log('📊 Données reçues:', data);
-            
+
             if (Array.isArray(data)) {
                 setLoanRequests(data);
             } else if (data && typeof data === 'object') {
@@ -52,7 +52,7 @@ const LoanApproval = () => {
                 console.warn('Réponse inattendue du serveur:', data);
                 setLoanRequests([]);
             }
-            
+
         } catch (err) {
             console.error('Erreur chargement demandes:', err);
             setError('Impossible de charger les demandes de prêt');
@@ -65,7 +65,7 @@ const LoanApproval = () => {
     // ✅ CORRECTION : Toujours s'assurer que loanRequests est un tableau avant filter
     const getFilteredRequests = () => {
         const requests = Array.isArray(loanRequests) ? loanRequests : [];
-        
+
         if (filter === 'all') return requests;
         if (filter === 'pending_grant') {
             return requests.filter(request => request.status === 'APPROVED' && !request.loanGranted);
@@ -127,8 +127,8 @@ const LoanApproval = () => {
     };
 
     const getApprovalBadge = (approved) => {
-        return approved ? 
-            <span className="badge bg-success">✓</span> : 
+        return approved ?
+            <span className="badge bg-success">✓</span> :
             <span className="badge bg-secondary">✗</span>;
     };
 
@@ -146,13 +146,13 @@ const LoanApproval = () => {
 
     const getApprovalProgress = (loanRequest) => {
         if (!loanRequest.approvalProgress) return null;
-        
+
         const progress = loanRequest.approvalProgress;
         return (
             <div className="d-flex align-items-center">
                 <div className="progress flex-grow-1 me-2" style={{ height: '8px' }}>
-                    <div 
-                        className="progress-bar" 
+                    <div
+                        className="progress-bar"
                         style={{ width: `${progress.approvalPercentage}%` }}
                         title={`${progress.approvalPercentage}% approuvé`}
                     ></div>
@@ -166,25 +166,25 @@ const LoanApproval = () => {
 
     const canApprove = (loanRequest) => {
         if (!userRole) return false;
-        
+
         const userRoles = {
             'PRESIDENT': !loanRequest.presidentApproved,
             'SECRETARY': !loanRequest.secretaryApproved,
             'TREASURER': !loanRequest.treasurerApproved
         };
 
-        return userRoles[userRole] && 
-               (loanRequest.status === 'PENDING' || loanRequest.status === 'IN_REVIEW');
+        return userRoles[userRole] &&
+            (loanRequest.status === 'PENDING' || loanRequest.status === 'IN_REVIEW');
     };
 
     const handleApprove = async (loanRequestId) => {
         try {
             const token = localStorage.getItem('token');
             const endpoint = `http://localhost:8081/mutuelle/loan_request/${loanRequestId}/approve/${userRole.toLowerCase()}`;
-            
+
             const comment = prompt('Ajouter un commentaire (optionnel):');
-            
-            const response = await axios.post(endpoint, 
+
+            const response = await axios.post(endpoint,
                 { comment: comment || '' },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -194,7 +194,7 @@ const LoanApproval = () => {
             } else {
                 toast.success('✅ Demande approuvée ! En attente des autres validations.');
             }
-            
+
             fetchLoanRequests();
         } catch (err) {
             console.error('Erreur approbation:', err);
@@ -206,20 +206,20 @@ const LoanApproval = () => {
         try {
             const token = localStorage.getItem('token');
             const reason = prompt('Raison du rejet:');
-            
+
             if (!reason) {
                 toast.warning('Veuillez saisir une raison de rejet');
                 return;
             }
-            
-            await axios.post(`http://localhost:8081/mutuelle/loan_request/${loanRequestId}/reject`, 
-                { 
+
+            await axios.post(`http://localhost:8081/mutuelle/loan_request/${loanRequestId}/reject`,
+                {
                     rejectionReason: reason,
                     rejectedByRole: userRole
                 },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
-            
+
             toast.success('Demande rejetée avec succès!');
             fetchLoanRequests();
         } catch (err) {
@@ -347,7 +347,7 @@ const LoanApproval = () => {
                         </div>
                     </div>
                 </div>
-                
+
                 <div className="col-md-4">
                     <div className="card shadow-sm bg-light">
                         <div className="card-body text-center">
@@ -355,7 +355,7 @@ const LoanApproval = () => {
                             <span className="badge bg-primary fs-6">{userRole || 'Membre'}</span>
                             {userRole === 'TREASURER' && (
                                 <div className="mt-2">
-                                    <button 
+                                    <button
                                         className="btn btn-warning btn-sm"
                                         onClick={() => navigate('/treasurer/loans')}
                                     >
@@ -385,7 +385,7 @@ const LoanApproval = () => {
                                     <i className="fas fa-folder-open fa-3x text-muted mb-3"></i>
                                     <h5 className="text-muted">Aucune demande trouvée</h5>
                                     <p className="text-muted">
-                                        {filter === 'all' 
+                                        {filter === 'all'
                                             ? "Aucune demande de prêt n'a été soumise pour le moment."
                                             : `Aucune demande avec le filtre "${filter}" n'a été trouvée.`
                                         }
@@ -403,7 +403,7 @@ const LoanApproval = () => {
                                                 <th>Date demande</th>
                                                 <th>Statut</th>
                                                 <th>Accord Prêt</th>
-                                                <th>Progression</th>
+                                                {/* <th>Progression</th>*/}
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
@@ -429,8 +429,8 @@ const LoanApproval = () => {
                                                         {formatCurrency(request.requestAmount)}
                                                     </td>
                                                     <td>
-                                                        <div className="text-truncate" style={{ maxWidth: '200px' }} 
-                                                             title={request.reason}>
+                                                        <div className="text-truncate" style={{ maxWidth: '200px' }}
+                                                            title={request.reason}>
                                                             {request.reason}
                                                         </div>
                                                     </td>
@@ -443,34 +443,36 @@ const LoanApproval = () => {
                                                     <td>
                                                         {getLoanGrantBadge(request)}
                                                     </td>
-                                                    <td style={{ minWidth: '120px' }}>
+                                                    {/*<td style={{ minWidth: '120px' }}>
                                                         {getApprovalProgress(request)}
-                                                    </td>
+                                                    </td>*/}
                                                     <td>
                                                         <div className="btn-group btn-group-sm">
-                                                            <button
+                                                            {/* <button
                                                                 className="btn btn-outline-info"
                                                                 onClick={() => navigate(`/loans/request-details/${request.id}`)}
                                                                 title="Voir détails"
                                                             >
                                                                 <i className="fas fa-eye"></i>
                                                             </button>
-                                                            
+                                                            */}
                                                             {canApprove(request) && (
                                                                 <>
+
                                                                     <button
                                                                         className="btn btn-outline-success"
                                                                         onClick={() => handleApprove(request.id)}
                                                                         title="Approuver"
                                                                     >
-                                                                        <i className="fas fa-check"></i>
+                                                                        <i className="fas fa-check"></i>Approuver
                                                                     </button>
+
                                                                     <button
                                                                         className="btn btn-outline-danger"
                                                                         onClick={() => handleReject(request.id)}
                                                                         title="Rejeter"
                                                                     >
-                                                                        <i className="fas fa-times"></i>
+                                                                        <i className="fas fa-times"></i>Rejeter
                                                                     </button>
                                                                 </>
                                                             )}

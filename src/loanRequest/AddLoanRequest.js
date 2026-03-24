@@ -168,6 +168,9 @@ const AddLoanRequest = () => {
                 duration: parseInt(formData.duration),
                 reason: formData.reason,
                 acceptTerms: formData.acceptTerms,
+
+                memberId: currentUser?.id
+
                 // ⚠️ NE PAS envoyer member ou memberId
                 // Le status sera mis à "PENDING" par défaut dans l'entité
                 // requestDate sera générée automatiquement
@@ -189,7 +192,7 @@ const AddLoanRequest = () => {
             console.log('📥 Réponse brute:', responseText);
 
             if (response.ok) {
-                toast.success('✅ Demande de prêt soumise avec succès !');
+                toast.success('Demande de prêt soumise avec succès !');
                 setSuccess(true);
                 setTimeout(() => navigate('/loans/requests'), 2000);
             } else {
@@ -284,55 +287,55 @@ const AddLoanRequest = () => {
 
 
 
-const createMemberFromKeycloak = async () => {
-    try {
-        const token = localStorage.getItem('token');
-        const response = await fetch('http://localhost:8081/mutuelle/member/create-from-token', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        const data = await response.json();
-        console.log('Réponse création membre:', data);
-        
-        if (response.ok) {
-            toast.success('✅ Membre créé avec succès !');
-            // Recharger les infos
-            fetchCurrentUser();
-        } else {
-            toast.error(`❌ Erreur: ${data.error || data.message}`);
-        }
-    } catch (error) {
-        console.error('Erreur:', error);
-        toast.error('Erreur lors de la création du membre');
-    }
-};
+    const createMemberFromKeycloak = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch('http://localhost:8081/mutuelle/member/create-from-token', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
 
-const checkIfMemberExists = async () => {
-    try {
-        const token = localStorage.getItem('token');
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        const email = payload.email || payload.preferred_username;
-        
-        const response = await fetch(`http://localhost:8081/mutuelle/member/check-email/${email}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        const data = await response.json();
-        console.log('Vérification email:', data);
-        
-        if (data.exists) {
-            toast.info(`Un membre existe déjà avec l'email: ${email}`);
-        } else {
-            toast.warn(`Aucun membre trouvé avec l'email: ${email}`);
+            const data = await response.json();
+            console.log('Réponse création membre:', data);
+
+            if (response.ok) {
+                toast.success('✅ Membre créé avec succès !');
+                // Recharger les infos
+                fetchCurrentUser();
+            } else {
+                toast.error(`❌ Erreur: ${data.error || data.message}`);
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
+            toast.error('Erreur lors de la création du membre');
         }
-    } catch (error) {
-        console.error('Erreur:', error);
-    }
-};
+    };
+
+    const checkIfMemberExists = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const email = payload.email || payload.preferred_username;
+
+            const response = await fetch(`http://localhost:8081/mutuelle/member/check-email/${email}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            const data = await response.json();
+            console.log('Vérification email:', data);
+
+            if (data.exists) {
+                toast.info(`Un membre existe déjà avec l'email: ${email}`);
+            } else {
+                toast.warn(`Aucun membre trouvé avec l'email: ${email}`);
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
+        }
+    };
 
     return (
         <div className="container mt-4">
@@ -373,7 +376,7 @@ const checkIfMemberExists = async () => {
                                 <div className="row">
                                     <div className="col-md-6 mb-3">
                                         <label htmlFor="requestAmount" className="form-label fw-semibold">
-                                         <CircleDollarSign /> Montant demandé en FCFA *
+                                            <CircleDollarSign /> Montant demandé en FCFA *
                                         </label>
                                         <input
                                             id="requestAmount"
@@ -395,7 +398,7 @@ const checkIfMemberExists = async () => {
 
                                     <div className="col-md-6 mb-3">
                                         <label htmlFor="duration" className="form-label fw-semibold">
-                                         <Calendar /> Durée du prêt
+                                            <Calendar /> Durée du prêt
                                         </label>
                                         <select
                                             id="duration"
@@ -476,7 +479,7 @@ const checkIfMemberExists = async () => {
                                             disabled={loading}
                                         />
                                         <label className="form-check-label" htmlFor="acceptTerms">
-                                           J'accepte les conditions générales du prêt *
+                                            J'accepte les conditions générales du prêt *
                                         </label>
                                         {errors.acceptTerms && (
                                             <div className="invalid-feedback d-block">
@@ -503,7 +506,7 @@ const checkIfMemberExists = async () => {
                                         {loading ? (
                                             <>
                                                 <span className="spinner-border spinner-border-sm me-2" />
-                                                 Soumission...
+                                                Soumission...
                                             </>
                                         ) : (
                                             '  Soumettre la demande'

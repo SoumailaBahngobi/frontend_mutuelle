@@ -12,7 +12,7 @@ class ApiService {
             const response = await this.http.get('/mutuelle/contribution_period');
             return response.data;
         } catch (error) {
-            console.error('❌ Erreur getContributionPeriods:', error);
+            console.error(' Erreur getContributionPeriods:', error);
             throw error;
         }
     }
@@ -22,7 +22,7 @@ class ApiService {
             const response = await this.http.get(`/mutuelle/contribution_period/${id}`);
             return response.data;
         } catch (error) {
-            console.error(`❌ Erreur getContributionPeriod ${id}:`, error);
+            console.error(`Erreur getContributionPeriod ${id}:`, error);
             throw error;
         }
     }
@@ -32,7 +32,7 @@ class ApiService {
             const response = await this.http.post('/mutuelle/contribution_period', data);
             return response.data;
         } catch (error) {
-            console.error('❌ Erreur createContributionPeriod:', error);
+            console.error(' Erreur createContributionPeriod:', error);
             throw error;
         }
     }
@@ -52,18 +52,18 @@ class ApiService {
                 // Ne pas inclure member ici, il sera ajouté par le backend via JWT
             };
 
-            console.log("📤 Payload envoyé à /individual:", JSON.stringify(payload, null, 2));
+            console.log(" Payload envoyé à /individual:", JSON.stringify(payload, null, 2));
 
             const response = await this.http.post('/mutuelle/contribution/individual', payload);
-            console.log("✅ Réponse /individual:", response.data);
+            console.log(" Réponse /individual:", response.data);
             return response.data;
             
         } catch (error) {
-            console.error('❌ Erreur addIndividualContribution:', error);
+            console.error('Erreur addIndividualContribution:', error);
             if (error.response) {
-                console.error('📦 Données de la réponse:', error.response.data);
-                console.error('📊 Status:', error.response.status);
-                console.error('🔧 Headers:', error.response.headers);
+                console.error(' Données de la réponse:', error.response.data);
+                console.error(' Status:', error.response.status);
+                console.error(' Headers:', error.response.headers);
             }
             throw error;
         }
@@ -80,17 +80,17 @@ class ApiService {
                 memberIds: data.memberIds.map(id => parseInt(id))
             };
 
-            console.log("📤 Payload envoyé à /group:", JSON.stringify(payload, null, 2));
+            console.log(" Payload envoyé à /group:", JSON.stringify(payload, null, 2));
 
             const response = await this.http.post('/mutuelle/contribution/group', payload);
-            console.log("✅ Réponse /group:", response.data);
+            console.log(" Réponse /group:", response.data);
             return response.data;
             
         } catch (error) {
-            console.error('❌ Erreur addGroupContribution:', error);
+            console.error('Erreur addGroupContribution:', error);
             if (error.response) {
-                console.error('📦 Données de la réponse:', error.response.data);
-                console.error('📊 Status:', error.response.status);
+                console.error(' Données de la réponse:', error.response.data);
+                console.error(' Status:', error.response.status);
             }
             throw error;
         }
@@ -105,12 +105,12 @@ class ApiService {
                 endpoint = '/mutuelle/contribution/group/my-contributions';
             }
             
-            console.log(`📤 Récupération des contributions: ${endpoint}`);
+            console.log(` Récupération des contributions: ${endpoint}`);
             const response = await this.http.get(endpoint);
             return response.data;
             
         } catch (error) {
-            console.error('❌ Erreur getMyContributions:', error);
+            console.error(' Erreur getMyContributions:', error);
             throw error;
         }
     }
@@ -128,15 +128,15 @@ class ApiService {
                 throw new Error(`Type de fichier non supporté. Types acceptés: ${appConfig.upload.allowedTypes.join(', ')}`);
             }
 
-            console.log(`📤 Upload du fichier: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
+            console.log(` Upload du fichier: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
 
             const response = await this.http.upload('/mutuelle/contribution/upload/payment-proof', file, onProgress);
             
-            console.log("✅ Fichier uploadé avec succès:", response.data);
+            console.log(" Fichier uploadé avec succès:", response.data);
             return response.data; // Retourne le nom du fichier
             
         } catch (error) {
-            console.error('❌ Erreur uploadPaymentProof:', error);
+            console.error(' Erreur uploadPaymentProof:', error);
             throw error;
         }
     }
@@ -147,7 +147,7 @@ class ApiService {
             const response = await this.http.get('/mutuelle/member');
             return response.data;
         } catch (error) {
-            console.error('❌ Erreur getMembers:', error);
+            console.error(' Erreur getMembers:', error);
             throw error;
         }
     }
@@ -157,7 +157,7 @@ class ApiService {
             const response = await this.http.get('/mutuelle/auth/user-info');
             return response.data;
         } catch (error) {
-            console.error('❌ Erreur getCurrentUser:', error);
+            console.error(' Erreur getCurrentUser:', error);
             throw error;
         }
     }
@@ -168,7 +168,7 @@ class ApiService {
             const response = await this.http.get('/actuator/health');
             return response.data;
         } catch (error) {
-            console.error('❌ Erreur healthCheck:', error);
+            console.error(' Erreur healthCheck:', error);
             return { status: 'DOWN' };
         }
     }

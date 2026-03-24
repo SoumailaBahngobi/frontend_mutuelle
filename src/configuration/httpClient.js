@@ -26,7 +26,7 @@ class HttpClient {
                 
                 // Logging dynamique
                 if (process.env.NODE_ENV === 'development') {
-                    console.log(`🚀 ${config.method.toUpperCase()} ${config.url}`, config.data || '');
+                    console.log(` ${config.method.toUpperCase()} ${config.url}`, config.data || '');
                 }
                 
                 return config;
@@ -38,7 +38,7 @@ class HttpClient {
         this.client.interceptors.response.use(
             response => {
                 if (process.env.NODE_ENV === 'development') {
-                    console.log(`✅ ${response.status} ${response.config.url}`, response.data);
+                    console.log(` ${response.status} ${response.config.url}`, response.data);
                 }
                 return response;
             },
@@ -56,7 +56,7 @@ class HttpClient {
                             return this.client(originalRequest);
                         }
                     } catch (refreshError) {
-                        console.error('❌ Refresh token failed:', refreshError);
+                        console.error(' Refresh token failed:', refreshError);
                     }
 
                     // Redirection vers login
@@ -65,12 +65,12 @@ class HttpClient {
 
                 // Gestion 403 - Accès interdit
                 if (error.response?.status === 403) {
-                    console.error('⛔ Accès interdit');
+                    console.error(' Accès interdit');
                 }
 
                 // Gestion 413 - Fichier trop volumineux
                 if (error.response?.status === 413) {
-                    console.error('📁 Fichier trop volumineux');
+                    console.error(' Fichier trop volumineux');
                 }
 
                 return Promise.reject(error);
