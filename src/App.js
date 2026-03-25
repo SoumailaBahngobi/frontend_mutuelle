@@ -22,7 +22,6 @@ import AddContributionPeriod from './contributionPeriod/AddContributionPeriod';
 import LoanApprovalDashboard from './loan/LoanApprovalDashboard';
 import MyLoans from './loan/MyLoans';
 import TreasurerLoanDashboard from './treasurer/TreasurerLoanDashboard';
-//import RoleProtectedRoute from './treasurer/RoleProtectedRoute';
 import AddEvent from './evenement/AddEvent';
 import RepaymentList from './repayment/RepaymentList';
 import LoanList from './loan/LoanList';
@@ -32,7 +31,6 @@ import EditMember from './members/EditMember';
 import ResetPassword from './configuration/ResetPassword';
 import EmailHandler from './configuration/EmailHandler';
 import LoanApprovalList from './loan/LoanApprovalList';
-//import LoanHistory from './loan/LoanHistory';
 import LoanRequestDetails from './loan/LoanRequestDetails';
 import LoanDetails from './loan/LoanDetails';
 import Footer from './layout/Footer';
@@ -40,6 +38,9 @@ import ForgotPassword from './configuration/ForgotPassword';
 import ChangePassword from './configuration/ChangePassword';
 import PaymentCallback from './component/PaymentCallback';
 import PaymentSuccess from './component/Paiement/PaymentSuccess';
+import AdminRegister from './component/Admin/AdminRegister';
+import AdminRoleManagement from './component/Admin/AdminRoleManagement';
+
 function App() {
   const { loading } = useKeycloak();
 
@@ -64,6 +65,10 @@ function App() {
           <Route path="/register" element={<AddMember />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/email-handler" element={<EmailHandler />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/payment/callback" element={<PaymentCallback />} />
+          <Route path="/payment/success" element={<PaymentSuccess />} />
+          <Route path="/admin/register" element={<AdminRegister />} />  {/* ← AJOUTÉ ICI */}
 
           {/* Routes protégées */}
           <Route path="/dashboard" element={
@@ -71,33 +76,37 @@ function App() {
               <Dashboard />
             </ProtectedRoute>
           } />
+          
           <Route path="/mutuelle/contribution/individual" element={
             <ProtectedRoute>
               <AddIndividualContribution />
             </ProtectedRoute>
           } />
+          
           <Route path="/mutuelle/contribution/group" element={
             <ProtectedRoute>
               <AddGroupContribution />
             </ProtectedRoute>
           } />
+          
           <Route path="/mutuelle/contribution/individual/my-contributions" element={
             <ProtectedRoute>
               <ContributionHistory />
             </ProtectedRoute>
           } />
+          
           <Route path="/mutuelle/contribution_period" element={
             <ProtectedRoute>
               <AddContributionPeriod />
             </ProtectedRoute>
           } />
 
-          <Route path="/payment/callback" element={<PaymentCallback />} />
           <Route path="/mutuelle/event" element={
             <ProtectedRoute>
               <AddEvent />
             </ProtectedRoute>
           } />
+          
           <Route path="/mutuelle/event/list" element={
             <ProtectedRoute>
               <EventList />
@@ -110,41 +119,49 @@ function App() {
               <AddLoanRequest />
             </ProtectedRoute>
           } />
+          
           <Route path="/loans/requests" element={
             <ProtectedRoute>
               <MyLoanRequests />
             </ProtectedRoute>
           } />
+          
           <Route path="/loans/my-loans" element={
             <ProtectedRoute>
               <MyLoans />
             </ProtectedRoute>
           } />
+          
           <Route path="/loans/repayment" element={
             <ProtectedRoute>
               <AddRepayment />
             </ProtectedRoute>
           } />
+          
           <Route path="/loans/repayment-history" element={
             <ProtectedRoute>
               <RepaymentList />
             </ProtectedRoute>
           } />
+          
           <Route path="/loans/create" element={
             <ProtectedRoute>
               <AddLoan />
             </ProtectedRoute>
           } />
+          
           <Route path="/loans/approval" element={
             <ProtectedRoute>
               <LoanApproval />
             </ProtectedRoute>
           } />
+          
           <Route path="/loans/approval-dashboard" element={
             <ProtectedRoute>
               <LoanApprovalDashboard />
             </ProtectedRoute>
           } />
+          
           <Route path="/loans/list" element={
             <ProtectedRoute>
               <LoanList />
@@ -157,16 +174,19 @@ function App() {
               <AddMember />
             </ProtectedRoute>
           } />
+          
           <Route path="/members/add" element={
             <ProtectedRoute>
               <AddMember />
             </ProtectedRoute>
           } />
+          
           <Route path="/members/list" element={
             <ProtectedRoute>
               <ViewMember />
             </ProtectedRoute>
           } />
+          
           <Route path="/members/edit/:id" element={
             <ProtectedRoute>
               <EditMember />
@@ -200,23 +220,25 @@ function App() {
               <LoanRequestDetails />
             </ProtectedRoute>
           } />
+          
           <Route path="/loans/details/:id" element={
             <ProtectedRoute>
               <LoanDetails />
             </ProtectedRoute>
           } />
 
-          <Route path="/payment/callback" element={<PaymentSuccess />} />
-          <Route path="/payment/success" element={<PaymentSuccess />} />
-
-
-          <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/change-password" element={
             <ProtectedRoute>
               <ChangePassword />
             </ProtectedRoute>
           } />
-          <Route path="/reset-password" element={<ResetPassword />} />
+
+          <Route path="/admin/register" element={<AdminRegister />} />
+<Route path="/admin/roles" element={
+    <ProtectedRoute>
+        <AdminRoleManagement />
+    </ProtectedRoute>
+} />
 
           {/* Route 404 */}
           <Route path="*" element={<NotFound />} />
