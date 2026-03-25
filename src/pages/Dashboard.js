@@ -48,11 +48,11 @@ export default function Dashboard() {
   const [contributionData, setContributionData] = useState([]);
   const [recentActivities, setRecentActivities] = useState([]);
   const [topMembers, setTopMembers] = useState([]);
-  
+
   const navigate = useNavigate();
 
-  const isAdmin = user && (user.role === 'ADMIN' || user.role === 'PRESIDENT' || 
-                          user.role === 'SECRETARY' || user.role === 'TREASURER');
+  const isAdmin = user && (user.role === 'ADMIN' || user.role === 'PRESIDENT' ||
+    user.role === 'SECRETARY' || user.role === 'TREASURER');
   const unreadCount = notifications.filter(notif => !notif.read).length;
 
   useEffect(() => {
@@ -124,11 +124,15 @@ export default function Dashboard() {
 
       // Si admin, charger les membres
       if (isAdmin) {
-        const membersRes = await axios.get('http://localhost:8081/mutuelle/members', {
+        /* const membersRes = await axios.get('http://localhost:8081/mutuelle/members', {
+           headers: { Authorization: `Bearer ${token}` }
+         });*/
+
+        const membersRes = await axios.get('http://localhost:8081/mutuelle/member', {
           headers: { Authorization: `Bearer ${token}` }
         });
-        const members = Array.isArray(membersRes.data) ? membersRes.data : 
-                       membersRes.data.content || membersRes.data.members || [];
+        const members = Array.isArray(membersRes.data) ? membersRes.data :
+          membersRes.data.content || membersRes.data.members || [];
         setAllMembers(members);
       }
 
@@ -137,10 +141,10 @@ export default function Dashboard() {
 
       // Calculer les statistiques à partir des données réelles
       calculateStatsFromData(loanRequests, userLoans, loansData);
-      
+
       // Générer les données des graphiques à partir des données réelles
       generateChartDataFromLoans(loansData, loanRequests);
-      
+
       // Générer les activités récentes
       generateRecentActivities(loanRequests, userLoans, loansData);
 
@@ -186,16 +190,16 @@ export default function Dashboard() {
   const calculateStatsFromData = (loanRequests, userLoans, allLoans) => {
     const activeLoans = userLoans.filter(loan => !loan.isRepaid);
     const pendingRequests = loanRequests.filter(req => req.status === 'PENDING');
-    
+
     // Calculer le montant total des prêts
     const totalAmountLoaned = allLoans.reduce((sum, loan) => sum + (loan.amount || 0), 0);
     const totalRepaid = allLoans
       .filter(loan => loan.isRepaid)
       .reduce((sum, loan) => sum + (loan.repaidAmount || loan.amount || 0), 0);
-    
+
     // Taux de remboursement
     const repaymentRate = totalAmountLoaned > 0 ? (totalRepaid / totalAmountLoaned) * 100 : 0;
-    
+
     // Intérêts totaux
     const totalInterest = allLoans.reduce((sum, loan) => sum + (loan.interest || 0), 0);
 
@@ -215,17 +219,17 @@ export default function Dashboard() {
   const generateChartDataFromLoans = (loansData, requestsData) => {
     // Grouper les prêts par mois
     const monthlyMap = new Map();
-    
+
     loansData.forEach(loan => {
       if (loan.createdDate) {
         const date = new Date(loan.createdDate);
         const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
         const monthName = date.toLocaleString('fr-FR', { month: 'short' });
-        
+
         if (!monthlyMap.has(monthKey)) {
           monthlyMap.set(monthKey, { month: monthName, loans: 0, contributions: 0, reimbursements: 0 });
         }
-        
+
         const data = monthlyMap.get(monthKey);
         data.loans += loan.amount || 0;
         if (loan.isRepaid) {
@@ -435,8 +439,8 @@ export default function Dashboard() {
   return (
     <div className="d-flex bg-light" style={{ minHeight: '100vh' }}>
       {/* Sidebar */}
-      <div className={`bg-dark text-white position-relative ${sidebarCollapsed ? 'collapsed' : ''}`} 
-           style={{ width: sidebarCollapsed ? '80px' : '280px', transition: 'all 0.3s', minHeight: '100vh' }}>
+      <div className={`bg-dark text-white position-relative ${sidebarCollapsed ? 'collapsed' : ''}`}
+        style={{ width: sidebarCollapsed ? '80px' : '280px', transition: 'all 0.3s', minHeight: '100vh' }}>
         <div className="p-3 border-bottom border-secondary">
           <div className="d-flex align-items-center justify-content-between">
             {!sidebarCollapsed && (
@@ -450,7 +454,7 @@ export default function Dashboard() {
             </button>
           </div>
         </div>
-        
+
         <div className="p-3">
           {!sidebarCollapsed && (
             <div className="mb-4 p-3 bg-primary bg-opacity-10 rounded-3">
@@ -466,7 +470,7 @@ export default function Dashboard() {
               </div>
             </div>
           )}
-          
+
           <nav>
             <p className={`text-secondary small mb-2 ${sidebarCollapsed ? 'text-center' : ''}`}>
               {!sidebarCollapsed && 'Menu principal'}
@@ -568,8 +572,8 @@ export default function Dashboard() {
               )}
             </div>
             <div className="d-flex align-items-center gap-2">
-              <div className="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
-                   style={{ width: '40px', height: '40px' }}>
+              <div className="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center"
+                style={{ width: '40px', height: '40px' }}>
                 {user.firstName?.charAt(0)}{user.name?.charAt(0)}
               </div>
             </div>

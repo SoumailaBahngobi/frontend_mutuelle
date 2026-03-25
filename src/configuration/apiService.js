@@ -498,6 +498,58 @@ class ApiService {
             return appConfig;
         }
     }
+
+    /**
+ * Récupérer tous les membres (pour admin)
+ */
+async getAllMembersForAdmin() {
+    try {
+        const response = await this.http.get('/mutuelle/admin/members');
+        return response.data;
+    } catch (error) {
+        console.error('❌ Erreur getAllMembersForAdmin:', error);
+        throw error;
+    }
+}
+
+/**
+ * Récupérer un membre par ID (pour admin)
+ */
+async getMemberByIdForAdmin(memberId) {
+    try {
+        const response = await this.http.get(`/mutuelle/admin/members/${memberId}`);
+        return response.data;
+    } catch (error) {
+        console.error('❌ Erreur getMemberByIdForAdmin:', error);
+        throw error;
+    }
+}
+
+/**
+ * Mettre à jour un membre (pour admin)
+ */
+async updateMemberByAdmin(memberId, data) {
+    try {
+        const response = await this.http.put(`/mutuelle/admin/members/${memberId}`, data);
+        return response.data;
+    } catch (error) {
+        console.error('❌ Erreur updateMemberByAdmin:', error);
+        throw error;
+    }
+}
+
+/**
+ * Supprimer un membre (pour admin)
+ */
+async deleteMemberByAdmin(memberId) {
+    try {
+        const response = await this.http.delete(`/mutuelle/admin/members/${memberId}`);
+        return response.data;
+    } catch (error) {
+        console.error('❌ Erreur deleteMemberByAdmin:', error);
+        throw error;
+    }
+}
 }
 
 // Création et export de l'instance unique
