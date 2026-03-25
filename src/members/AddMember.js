@@ -4,8 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { useKeycloak } from '../context/KeycloakContext';
 
 function AddMember() {
+    const { authenticated, getToken } = useKeycloak();
     const [form, setForm] = useState({
         name: '',
         firstName: '',
@@ -13,12 +15,19 @@ function AddMember() {
         password: '',
         npi: '',
         phone: '',
-        role: 'MEMBER'
+        role: 'MEMBER' // Toujours MEMBER à l'inscription
     });
 
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState({});
     const navigate = useNavigate();
+
+    // Vérifier si l'utilisateur est admin pour afficher les options d'admin
+    const isAdmin = authenticated && getToken() &&
+        (localStorage.getItem('userRole') === 'ADMIN' ||
+            localStorage.getItem('userRole') === 'PRESIDENT' ||
+            localStorage.getItem('userRole') === 'SECRETARY' ||
+            localStorage.getItem('userRole') === 'TREASURER');
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -63,11 +72,22 @@ function AddMember() {
 
         setLoading(true);
 
+        // Préparer les données - le rôle est toujours MEMBER
+        const userData = {
+            name: form.name,
+            firstName: form.firstName,
+            email: form.email,
+            password: form.password,
+            npi: form.npi,
+            phone: form.phone,
+            role: 'MEMBER' // Forcé à MEMBER
+        };
+
         try {
-            // Log pour voir ce qui est envoyé
-            console.log('Données envoyées:', JSON.stringify(form, null, 2));
-            
-            const response = await axios.post('http://localhost:8081/mutuelle/auth/register', form, {
+            //console.log('Données envoyées:', JSON.stringify(userData, null, 2));
+            toast.info('Envoi de l\'inscription en cours...', { autoClose: 2000 });
+
+            const response = await axios.post('http://localhost:8081/mutuelle/auth/register', userData, {
                 headers: {
                     'Content-Type': 'application/json'
                 }
@@ -76,33 +96,30 @@ function AddMember() {
             console.log('Réponse:', response.data);
 
             if (response.status === 200 || response.status === 201) {
-                toast.success('Inscription réussie ! Vous pouvez maintenant vous connecter.');
+                toast.success('Inscription réussie ! Vous êtes maintenant membre.');
                 setTimeout(() => {
                     navigate('/login');
                 }, 2000);
             }
         } catch (error) {
             console.error('Erreur d\'inscription:', error);
-            
+
             if (error.response) {
-                // Le serveur a répondu avec une erreur
                 console.error('Détails de l\'erreur:', {
                     status: error.response.status,
                     data: error.response.data,
                     headers: error.response.headers
                 });
-                
-                const errorMessage = error.response.data?.message || 
-                                    error.response.data?.error || 
-                                    'Erreur lors de l\'inscription';
-                
+
+                const errorMessage = error.response.data?.message ||
+                    error.response.data?.error ||
+                    'Erreur lors de l\'inscription';
+
                 toast.error(`Erreur ${error.response.status}: ${errorMessage}`);
             } else if (error.request) {
-                // La requête a été faite mais pas de réponse
                 console.error('Pas de réponse du serveur:', error.request);
                 toast.error('Le serveur ne répond pas. Vérifiez que le backend est démarré.');
             } else {
-                // Erreur de configuration
                 toast.error('Erreur: ' + error.message);
             }
         } finally {
@@ -118,10 +135,22 @@ function AddMember() {
                         <div className="card-header bg-primary text-white">
                             <h4 className="card-title mb-0">
                                 <i className="bi bi-person-plus me-2"></i>
-                                Inscription
+                                Inscription - Devenir Membre
                             </h4>
                         </div>
                         <div className="card-body p-4">
+                            {/* Message d'information pour l'utilisateur */}
+                            <div className="alert alert-info mb-4">
+                                <i className="bi bi-info-circle-fill me-2"></i>
+                                L'inscription vous donne automatiquement le statut de <strong>Membre</strong>.
+                                {isAdmin && (
+                                    <span className="d-block mt-2">
+                                        <i className="bi bi-shield-lock-fill me-1"></i>
+                                        <strong>Admin :</strong> Vous pouvez attribuer des rôles spéciaux via la gestion des membres.
+                                    </span>
+                                )}
+                            </div>
+
                             <form onSubmit={handleSubmit} noValidate>
                                 <div className="row">
                                     <div className="col-md-6 mb-3">
@@ -212,7 +241,7 @@ function AddMember() {
                                             name="npi"
                                             value={form.npi}
                                             onChange={handleChange}
-                                            placeholder="Numéro personnel"
+                                            placeholder="Numéro  d'Identification personnel"
                                             disabled={loading}
                                         />
                                         {errors.npi && (
@@ -230,7 +259,7 @@ function AddMember() {
                                             name="phone"
                                             value={form.phone}
                                             onChange={handleChange}
-                                            placeholder="Ex: +229 01 00 00 00"
+                                            placeholder="Ex: +229 01 00 00 00 00"
                                             disabled={loading}
                                         />
                                         {errors.phone && (
@@ -239,26 +268,10 @@ function AddMember() {
                                     </div>
                                 </div>
 
-                                <div className="mb-4">
-                                    <label htmlFor="role" className="form-label fw-semibold">
-                                        Rôle
-                                    </label>
-                                    <select
-                                        id="role"
-                                        name="role"
-                                        className="form-control"
-                                        value={form.role}
-                                        onChange={handleChange}
-                                        disabled={loading}
-                                    >
-                                        <option value="MEMBER">Membre</option>
-                                        <option value="SECRETARY">Secrétaire</option>
-                                        <option value="PRESIDENT">Président</option>
-                                        <option value="TREASURER">Trésorier</option>
-                                    </select>
-                                </div>
+                                {/* Le champ rôle est caché car toujours MEMBER */}
+                                <input type="hidden" name="role" value="MEMBER" />
 
-                                <div className="d-flex justify-content-end gap-2">
+                                <div className="d-flex justify-content-end gap-2 mt-4">
                                     <button
                                         type="button"
                                         className="btn btn-outline-secondary"
@@ -280,7 +293,7 @@ function AddMember() {
                                         ) : (
                                             <>
                                                 <i className="bi bi-check-lg me-2"></i>
-                                                S'inscrire
+                                                S'inscrire comme Membre
                                             </>
                                         )}
                                     </button>
