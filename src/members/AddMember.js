@@ -139,18 +139,7 @@ function AddMember() {
                             </h4>
                         </div>
                         <div className="card-body p-4">
-                            {/* Message d'information pour l'utilisateur */}
-                            <div className="alert alert-info mb-4">
-                                <i className="bi bi-info-circle-fill me-2"></i>
-                                L'inscription vous donne automatiquement le statut de <strong>Membre</strong>.
-                                {isAdmin && (
-                                    <span className="d-block mt-2">
-                                        <i className="bi bi-shield-lock-fill me-1"></i>
-                                        <strong>Admin :</strong> Vous pouvez attribuer des rôles spéciaux via la gestion des membres.
-                                    </span>
-                                )}
-                            </div>
-
+                           
                             <form onSubmit={handleSubmit} noValidate>
                                 <div className="row">
                                     <div className="col-md-6 mb-3">
