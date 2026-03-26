@@ -171,7 +171,8 @@ export default function Dashboard() {
 
   const fetchContributionData = async (token) => {
     try {
-      const response = await axios.get('http://localhost:8081/mutuelle/contributions/summary', {
+     // const response = await axios.get('http://localhost:8081/mutuelle/contributions/summary', {
+     const response = await axios.get('http://localhost:8081/mutuelle/contribution/summary', {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (response.data) {

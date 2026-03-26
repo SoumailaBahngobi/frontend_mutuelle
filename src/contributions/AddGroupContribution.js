@@ -27,8 +27,7 @@ function AddGroupContribution() {
     const [uploading, setUploading] = useState(false);
     const [fileName, setFileName] = useState('');
 
-    // États pour le paiement
-    const [paymentStep, setPaymentStep] = useState('form'); // form, payment, processing, done
+    const [paymentStep, setPaymentStep] = useState('form');
     const [paymentInfo, setPaymentInfo] = useState(null);
 
     useEffect(() => {
@@ -113,30 +112,36 @@ function AddGroupContribution() {
         }
     };
 
+    /**
+     * Gestion du succès du paiement - VERSION CORRIGÉE
+     */
     const handlePaymentSuccess = async (paymentResponse) => {
-        //console.log('Paiement réussi:', paymentResponse);
-        toast.success('Paiement réussi, vérification en cours...');
+        console.log('✅ Paiement réussi:', paymentResponse);
+        toast.success('Paiement réussi, enregistrement de votre cotisation...');
 
         setPaymentStep('processing');
         setPaymentInfo(paymentResponse);
 
         try {
-            // Vérifier le paiement
-            const verification = paymentResponse.verified ?
-                paymentResponse :
-                await ApiService.verifyPayment(paymentResponse.transactionId);
-
-            if (verification.success && verification.status === 'SUCCESS') {
-                setPaymentStep('done');
-
-                // Créer les cotisations après paiement
-                await createGroupContributionsAfterPayment(verification.payment);
-            } else {
-                toast.error('Échec de la vérification du paiement');
-                setPaymentStep('form');
+            const paymentId = paymentResponse.payment?.id || paymentResponse.id || paymentResponse.paymentId;
+            
+            if (!paymentId) {
+                throw new Error('ID de paiement non trouvé');
             }
+
+            console.log('💰 Payment ID utilisé:', paymentId);
+            
+            // Créer les cotisations directement
+            await createGroupContributionsAfterPayment({
+                id: paymentId,
+                transactionId: paymentResponse.transactionId,
+                amount: paymentResponse.amount
+            });
+
+            setPaymentStep('done');
+
         } catch (error) {
-           // console.error('Erreur:', error);
+            console.error('Erreur:', error);
             toast.error('Erreur lors du traitement du paiement');
             setPaymentStep('form');
         }
@@ -198,7 +203,6 @@ function AddGroupContribution() {
             return;
         }
 
-        // Passer à l'étape de paiement
         setPaymentStep('payment');
     };
 
@@ -235,7 +239,6 @@ function AddGroupContribution() {
                 </div>
                 <div className="card-body">
 
-                    {/* Informations utilisateur */}
                     <div className="alert alert-info d-flex align-items-center mb-4">
                         <i className="bi bi-person-circle fs-4 me-3"></i>
                         <div>
@@ -247,15 +250,10 @@ function AddGroupContribution() {
 
                     {paymentStep === 'form' && (
                         <form onSubmit={handleSubmit}>
-                            {/* Sélection des membres */}
                             <div className="mb-4">
                                 <div className="d-flex justify-content-between align-items-center mb-3">
                                     <label className="fw-bold">Membres sélectionnés ({selectedMembers.length})</label>
-                                    <button
-                                        type="button"
-                                        className="btn btn-sm btn-outline-primary"
-                                        onClick={selectAllMembers}
-                                    >
+                                    <button type="button" className="btn btn-sm btn-outline-primary" onClick={selectAllMembers}>
                                         {selectedMembers.length === members.length ? 'Tout désélectionner' : 'Tout sélectionner'}
                                     </button>
                                 </div>
@@ -277,7 +275,6 @@ function AddGroupContribution() {
                                 </div>
                             </div>
 
-                            {/* Montant et période */}
                             <div className="row">
                                 <div className="col-md-6 mb-3">
                                     <label className="form-label">Montant par membre (FCFA) *</label>
@@ -311,7 +308,6 @@ function AddGroupContribution() {
                                 </div>
                             </div>
 
-                            {/* Date et téléphone */}
                             <div className="row">
                                 <div className="col-md-6 mb-3">
                                     <label className="form-label">Date de paiement *</label>
@@ -338,7 +334,6 @@ function AddGroupContribution() {
                                 </div>
                             </div>
 
-                            {/* Montant total */}
                             {totalAmount > 0 && (
                                 <div className="alert alert-info mb-3">
                                     <strong>Montant total à payer: {totalAmount.toLocaleString()} FCFA</strong>
@@ -347,7 +342,6 @@ function AddGroupContribution() {
                                 </div>
                             )}
 
-                            {/* Preuve de paiement (optionnel) */}
                             <div className="mb-4">
                                 <label className="form-label">Preuve de paiement (optionnel)</label>
                                 <input
@@ -374,20 +368,11 @@ function AddGroupContribution() {
                             </div>
 
                             <div className="d-flex justify-content-end gap-2">
-                                <button
-                                    type="button"
-                                    className="btn btn-secondary"
-                                    onClick={() => navigate('/dashboard')}
-                                >
+                                <button type="button" className="btn btn-secondary" onClick={() => navigate('/dashboard')}>
                                     Annuler
                                 </button>
-                                <button
-                                    type="submit"
-                                    className="btn btn-primary"
-                                    disabled={selectedMembers.length === 0}
-                                >
-                                    <i className="bi bi-credit-card me-2"></i>
-                                    Procéder au paiement
+                                <button type="submit" className="btn btn-primary" disabled={selectedMembers.length === 0}>
+                                    <i className="bi bi-credit-card me-2"></i> Procéder au paiement
                                 </button>
                             </div>
                         </form>
@@ -396,7 +381,6 @@ function AddGroupContribution() {
                     {paymentStep === 'payment' && (
                         <div className="text-center py-4">
                             <h5 className="mb-4">Récapitulatif du paiement</h5>
-
                             <div className="alert alert-secondary mb-4">
                                 <p className="mb-1">Montant total: <strong>{totalAmount.toLocaleString()} FCFA</strong></p>
                                 <p className="mb-1">Période: <strong>{selectedPeriod?.description}</strong></p>
@@ -416,14 +400,9 @@ function AddGroupContribution() {
                                 }}
                                 onClose={handleCancelPayment}
                                 buttonText="Confirmer le paiement groupé"
-                                className="mb-3"
                             />
 
-                            <button
-                                type="button"
-                                className="btn btn-link text-muted"
-                                onClick={handleCancelPayment}
-                            >
+                            <button type="button" className="btn btn-link text-muted mt-3" onClick={handleCancelPayment}>
                                 Retour au formulaire
                             </button>
                         </div>
@@ -444,15 +423,13 @@ function AddGroupContribution() {
                             <div className="text-success mb-4">
                                 <i className="bi bi-check-circle-fill" style={{ fontSize: '5rem' }}></i>
                             </div>
-                            <h5 className="mb-3"> Paiement réussi !</h5>
+                            <h5 className="mb-3">✅ Paiement réussi !</h5>
                             <div className="alert alert-success">
                                 <p className="mb-1">Transaction: {paymentInfo.transactionId}</p>
                                 <p className="mb-1">Montant: {paymentInfo.amount?.toLocaleString()} FCFA</p>
                                 <p className="mb-0">Statut: Confirmé</p>
                             </div>
-                            <p className="text-muted">
-                                Enregistrement des cotisations en cours...
-                            </p>
+                            <p className="text-muted">Enregistrement des cotisations en cours...</p>
                         </div>
                     )}
                 </div>
