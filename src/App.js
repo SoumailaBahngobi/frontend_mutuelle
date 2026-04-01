@@ -1,6 +1,5 @@
 // src/App.js
 import './App.css';
-import { Routes, Route } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useKeycloak } from './context/KeycloakContext';
@@ -39,7 +38,11 @@ import ChangePassword from './configuration/ChangePassword';
 import PaymentCallback from './component/PaymentCallback';
 import PaymentSuccess from './component/Paiement/PaymentSuccess';
 import AdminRegister from './component/Admin/AdminRegister';
+import { Route } from 'react-router-dom';
 import AdminRoleManagement from './component/Admin/AdminRoleManagement';
+import 'bootstrap/dist/css/bootstrap.min.css';
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
+import { Routes } from 'react-router-dom';
 
 function App() {
   const { loading } = useKeycloak();

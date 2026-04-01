@@ -32,7 +32,7 @@ const PaymentSuccess = () => {
                     setPaymentDetails(response.payment);
                     
                     if (response.status === 'SUCCESS') {
-                        toast.success('✅ Paiement Mobile Money réussi !');
+                        toast.success(' Paiement Mobile Money réussi !');
                         
                         // Récupérer la transaction en attente
                         const pendingPayment = localStorage.getItem('pending_payment');

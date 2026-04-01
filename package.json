@@ -15,7 +15,7 @@
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^13.5.0",
     "axios": "^1.13.5",
-    "bootstrap": "^5.3.0",
+    "bootstrap": "^5.3.8",
     "bootstrap-icons": "^1.13.1",
     "jspdf": "^2.5.1",
     "jspdf-autotable": "^3.5.28",
@@ -25,7 +25,7 @@
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-hot-toast": "^2.6.0",
-    "react-router-dom": "^7.13.1",
+    "react-router-dom": "^7.13.2",
     "react-scripts": "^5.0.1",
     "react-toastify": "^11.0.5",
     "recharts": "^3.8.0",
@@ -57,5 +57,10 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.27",
+    "postcss": "^8.5.8",
+    "tailwindcss": "^4.2.2"
   }
 }

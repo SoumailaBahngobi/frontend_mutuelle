@@ -9,22 +9,22 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  
+
   const token = searchParams.get('token');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!password || !confirmPassword) {
       toast.error('Veuillez remplir tous les champs');
       return;
     }
-    
+
     if (password !== confirmPassword) {
       toast.error('Les mots de passe ne correspondent pas');
       return;
     }
-    
+
     if (password.length < 6) {
       toast.error('Le mot de passe doit contenir au moins 6 caractères');
       return;
@@ -80,7 +80,7 @@ export default function ResetPassword() {
                   Nouveau mot de passe
                 </h4>
               </div>
-              
+
               <div className="card-body p-4 p-md-5">
                 <form onSubmit={handleSubmit}>
                   <div className="alert alert-info mb-4">
@@ -93,11 +93,11 @@ export default function ResetPassword() {
                       <i className="bi bi-lock me-2"></i>
                       Nouveau mot de passe
                     </label>
-                    <input 
-                      type="password" 
+                    <input
+                      type="password"
                       className="form-control"
-                      id="password" 
-                      value={password} 
+                      id="password"
+                      value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Minimum 6 caractères"
                       required
@@ -110,11 +110,11 @@ export default function ResetPassword() {
                       <i className="bi bi-lock-fill me-2"></i>
                       Confirmer le mot de passe
                     </label>
-                    <input 
-                      type="password" 
+                    <input
+                      type="password"
                       className="form-control"
-                      id="confirmPassword" 
-                      value={confirmPassword} 
+                      id="confirmPassword"
+                      value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Retapez votre mot de passe"
                       required
@@ -123,8 +123,8 @@ export default function ResetPassword() {
                   </div>
 
                   <div className="d-grid mb-3">
-                    <button 
-                      type="submit" 
+                    <button
+                      type="submit"
                       className="btn btn-success fw-semibold py-2"
                       disabled={loading}
                     >
@@ -143,7 +143,7 @@ export default function ResetPassword() {
                   </div>
 
                   <div className="text-center">
-                    <button 
+                    <button
                       type="button"
                       className="btn btn-link text-decoration-none"
                       onClick={() => navigate('/login')}

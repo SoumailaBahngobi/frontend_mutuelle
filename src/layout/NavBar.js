@@ -1,5 +1,4 @@
 // src/layout/Navbar.js
-import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useKeycloak } from '../context/KeycloakContext';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -125,7 +124,7 @@ export default function Navbar() {
                       </Link>
                     </li>
 
-                    {/* Options admin pour les prêts */}
+                    {/* Options admin ou manager pour les prêts */}
                     {isAdmin && (
                       <>
                         <li><hr className="dropdown-divider" /></li>
@@ -192,7 +191,7 @@ export default function Navbar() {
                   </ul>
                 </li>
 
-                {/* Menu Administration */}
+                {/* Menu Administration  ou manager*/}
                 {isAdmin && (
                   <li className="nav-item dropdown">
                     <a
@@ -202,7 +201,7 @@ export default function Navbar() {
                       data-bs-toggle="dropdown"
                     >
                       <i className="fas fa-user-shield me-1"></i>
-                      Administration
+                      Manager
                     </a>
                     <ul className="dropdown-menu">
                       <li>

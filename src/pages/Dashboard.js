@@ -1,21 +1,19 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useKeycloak } from '../context/KeycloakContext';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import {
-  LayoutDashboard, Users, HandCoins, CalendarRange, ChartNoAxesCombined,
-  BellRing, LogOut, Menu, X, ChevronRight, ChevronLeft, Home,
-  FileText, CreditCard, TrendingUp, Wallet, PiggyBank, BarChart3,
+  LayoutDashboard, Users, HandCoins, CalendarRange,
+  BellRing, LogOut, ChevronRight, ChevronLeft,
+  FileText, CreditCard, TrendingUp, Wallet, BarChart3,
   Activity, Clock, CheckCircle, XCircle, AlertCircle, UserCheck,
-  Settings, HelpCircle, FolderKanban, Briefcase, BookOpen, Award,
-  Loader, RefreshCw, DollarSign, PercentCircle
+  RefreshCw, PercentCircle, Globe, User
 } from 'lucide-react';
 import {
-  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-  Legend, ResponsiveContainer, ComposedChart
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  Legend, ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts';
 
 export default function Dashboard() {
@@ -25,12 +23,14 @@ export default function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeMenu, setActiveMenu] = useState('dashboard');
-  const [myLoanRequests, setMyLoanRequests] = useState([]);
-  const [myLoans, setMyLoans] = useState([]);
-  const [allLoans, setAllLoans] = useState([]);
   const [allMembers, setAllMembers] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [selectedMemberId, setSelectedMemberId] = useState(null);
+  const [selectedMemberName, setSelectedMemberName] = useState('');
+  const [showMemberSelector, setShowMemberSelector] = useState(false);
+  
+  // États pour les données du dashboard
   const [stats, setStats] = useState({
     totalRequests: 0,
     activeLoans: 0,
@@ -40,19 +40,24 @@ export default function Dashboard() {
     totalRepaid: 0,
     membersCount: 0,
     totalInterest: 0,
-    repaymentRate: 0
+    repaymentRate: 0,
+    balance: 0
   });
-
+  
   const [monthlyData, setMonthlyData] = useState([]);
   const [loanStatusData, setLoanStatusData] = useState([]);
-  const [contributionData, setContributionData] = useState([]);
   const [recentActivities, setRecentActivities] = useState([]);
   const [topMembers, setTopMembers] = useState([]);
+  const [yearlyData, setYearlyData] = useState([]);
+  const [myLoanRequests, setMyLoanRequests] = useState([]);
+  const [allLoans, setAllLoans] = useState([]);
+  const [contributions, setContributions] = useState([]);
 
   const navigate = useNavigate();
 
-  const isAdmin = user && (user.role === 'ADMIN' || user.role === 'PRESIDENT' ||
-    user.role === 'SECRETARY' || user.role === 'TREASURER');
+  // Déterminer si l'utilisateur a un rôle admin ou manager
+  const adminRoles = ['ADMIN', 'PRESIDENT', 'SECRETARY', 'TREASURER'];
+  const isAdminRole = user && adminRoles.includes(user?.role);
   const unreadCount = notifications.filter(notif => !notif.read).length;
 
   useEffect(() => {
@@ -62,31 +67,61 @@ export default function Dashboard() {
   }, [authenticated, keycloakLoading, navigate]);
 
   useEffect(() => {
-    const fetchUserProfile = async () => {
+    const fetchUserAndData = async () => {
       if (authenticated && getToken()) {
         try {
-          if (userProfile) {
-            setUser({
-              ...userProfile,
-              firstName: userProfile.firstName,
-              name: userProfile.lastName,
-              email: userProfile.email
-            });
+          const token = getToken();
+          if (!token) {
+            console.error('Token non disponible');
+            setLoading(false);
+            return;
           }
 
-          const response = await axios.get('http://localhost:8081/mutuelle/auth/user-info', {
-            headers: { Authorization: `Bearer ${getToken()}` }
+          // 1. Récupérer les informations utilisateur
+          const userInfoResponse = await axios.get('http://localhost:8081/mutuelle/auth/user-info', {
+            headers: { Authorization: `Bearer ${token}` }
           });
 
-          if (response.data) {
-            setUser(prev => ({ ...prev, ...response.data }));
-            if (response.data.id) {
-              await loadAllData(getToken(), response.data.id);
+          let userData = {
+            id: userInfoResponse.data?.id,
+            firstName: userInfoResponse.data?.firstName || userProfile?.firstName || '',
+            name: userInfoResponse.data?.name || userProfile?.lastName || '',
+            email: userInfoResponse.data?.email || userProfile?.email || '',
+            role: userInfoResponse.data?.role || 'MEMBER'
+          };
+
+          // Si pas d'ID, essayer de récupérer via auto-link
+          if (!userData.id) {
+            try {
+              const autoLinkResponse = await axios.post(
+                'http://localhost:8081/mutuelle/member/auto-link',
+                {},
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
+              if (autoLinkResponse.data?.member?.id) {
+                userData.id = autoLinkResponse.data.member.id;
+                userData.firstName = autoLinkResponse.data.member.firstName || userData.firstName;
+                userData.name = autoLinkResponse.data.member.name || userData.name;
+                userData.role = autoLinkResponse.data.member.role || 'MEMBER';
+              }
+            } catch (error) {
+              console.log('Auto-link non disponible');
             }
           }
+
+          setUser(userData);
+
+          // 2. Charger les données du dashboard
+          if (userData.id) {
+            await loadDashboardData(token, userData.id);
+          } else {
+            console.error('ID utilisateur non trouvé');
+            setLoading(false);
+          }
+
         } catch (error) {
+          console.error('Erreur chargement profil:', error);
           toast.error('Erreur lors du chargement du profil');
-        } finally {
           setLoading(false);
         }
       } else {
@@ -94,252 +129,332 @@ export default function Dashboard() {
       }
     };
 
-    fetchUserProfile();
-  }, [authenticated, getToken, userProfile]);
+    fetchUserAndData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authenticated, getToken]);
 
-  const loadAllData = async (token, userId) => {
+  const loadDashboardData = async (token, userId) => {
     try {
-      // Charger les demandes de prêt de l'utilisateur
-      const requestsRes = await axios.get('http://localhost:8081/mutuelle/loan_request/my-requests', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const loanRequests = Array.isArray(requestsRes.data) ? requestsRes.data : [];
-      setMyLoanRequests(loanRequests);
-
-      // Charger tous les prêts
-      const loansRes = await axios.get('http://localhost:8081/mutuelle/loans', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      let loansData = [];
-      if (Array.isArray(loansRes.data)) {
-        loansData = loansRes.data;
-      } else if (loansRes.data && typeof loansRes.data === 'object') {
-        loansData = loansRes.data.content || loansRes.data.loans || loansRes.data.data || [];
-      }
-      setAllLoans(loansData);
-
-      // Filtrer les prêts de l'utilisateur
-      const userLoans = loansData.filter(loan => loan && loan.member && loan.member.id === userId);
-      setMyLoans(userLoans);
-
-      // Si admin, charger les membres
-      if (isAdmin) {
-        /* const membersRes = await axios.get('http://localhost:8081/mutuelle/members', {
-           headers: { Authorization: `Bearer ${token}` }
-         });*/
-
-        const membersRes = await axios.get('http://localhost:8081/mutuelle/member', {
+      setLoading(true);
+      
+      // Récupérer toutes les données en parallèle
+      const [
+        loanRequestsRes,
+        loansRes,
+        contributionsRes,
+        notificationsRes,
+        membersRes
+      ] = await Promise.allSettled([
+        axios.get('http://localhost:8081/mutuelle/loan_request/my-requests', {
           headers: { Authorization: `Bearer ${token}` }
-        });
-        const members = Array.isArray(membersRes.data) ? membersRes.data :
-          membersRes.data.content || membersRes.data.members || [];
-        setAllMembers(members);
-      }
-
-      // Charger les notifications
-      await fetchNotifications(token);
-
-      // Calculer les statistiques à partir des données réelles
-      calculateStatsFromData(loanRequests, userLoans, loansData);
-
-      // Générer les données des graphiques à partir des données réelles
-      generateChartDataFromLoans(loansData, loanRequests);
-
-      // Générer les activités récentes
-      generateRecentActivities(loanRequests, userLoans, loansData);
-
-      // Charger les données de cotisation
-      await fetchContributionData(token);
-
-    } catch (error) {
-      console.error('Erreur chargement données:', error);
-      toast.error('Erreur lors du chargement des données');
-    }
-  };
-
-  const fetchNotifications = async (token) => {
-    try {
-      const response = await axios.get('http://localhost:8081/mutuelle/notification', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setNotifications(response.data);
-    } catch (error) {
-      // Notifications optionnelles, pas d'erreur critique
-      console.log('Notifications non disponibles');
-    }
-  };
-
-  const fetchContributionData = async (token) => {
-    try {
-     // const response = await axios.get('http://localhost:8081/mutuelle/contributions/summary', {
-     const response = await axios.get('http://localhost:8081/mutuelle/contribution/summary', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (response.data) {
-        setContributionData(response.data);
-      }
-    } catch (error) {
-      // Données de démonstration si API non disponible
-      setContributionData([
-        { category: 'Mensuelles', amount: 1250000, members: 45 },
-        { category: 'Spéciales', amount: 680000, members: 28 },
-        { category: 'Événements', amount: 450000, members: 32 },
+        }),
+        axios.get('http://localhost:8081/mutuelle/loans', {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        axios.get('http://localhost:8081/mutuelle/contribution/my-contributions', {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        axios.get('http://localhost:8081/mutuelle/notification', {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        isAdminRole ? axios.get('http://localhost:8081/mutuelle/member', {
+          headers: { Authorization: `Bearer ${token}` }
+        }) : Promise.resolve({ data: [] })
       ]);
+
+      // Traitement des données
+      const loanRequests = loanRequestsRes.status === 'fulfilled' && Array.isArray(loanRequestsRes.value.data) 
+        ? loanRequestsRes.value.data : [];
+      
+      let loansData = [];
+      if (loansRes.status === 'fulfilled') {
+        loansData = Array.isArray(loansRes.value.data) ? loansRes.value.data :
+          (loansRes.value.data?.content || loansRes.value.data?.loans || []);
+      }
+      
+      let contributionsData = [];
+      if (contributionsRes.status === 'fulfilled') {
+        contributionsData = Array.isArray(contributionsRes.value.data) ? contributionsRes.value.data : [];
+      }
+      
+      const notificationsData = notificationsRes.status === 'fulfilled' && Array.isArray(notificationsRes.value.data)
+        ? notificationsRes.value.data : [];
+      
+      const membersData = membersRes.status === 'fulfilled' && Array.isArray(membersRes.value.data)
+        ? membersRes.value.data : [];
+
+      // Mise à jour des states
+      setMyLoanRequests(loanRequests);
+      setAllLoans(loansData);
+      setContributions(contributionsData);
+      setNotifications(notificationsData);
+      setAllMembers(membersData);
+
+      // Calculer les statistiques
+      calculateStatsFromData(loanRequests, loansData, contributionsData, membersData);
+      
+      // Générer les données des graphiques
+      generateChartData(loansData, loanRequests, contributionsData, membersData);
+      
+      // Générer les activités récentes
+      generateRecentActivities(loanRequests, loansData, contributionsData, user);
+
+    } catch (error) {
+      console.error('Erreur chargement données dashboard:', error);
+      toast.error('Erreur lors du chargement des données');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const calculateStatsFromData = (loanRequests, userLoans, allLoans) => {
-    const activeLoans = userLoans.filter(loan => !loan.isRepaid);
+  const calculateStatsFromData = (loanRequests, allLoans, contributionsData, membersData) => {
     const pendingRequests = loanRequests.filter(req => req.status === 'PENDING');
+    const activeLoans = allLoans.filter(loan => !loan.isRepaid && loan.status !== 'REJECTED');
 
-    // Calculer le montant total des prêts
-    const totalAmountLoaned = allLoans.reduce((sum, loan) => sum + (loan.amount || 0), 0);
+    const totalAmountLoaned = allLoans.reduce((sum, loan) => sum + (parseFloat(loan.amount) || 0), 0);
     const totalRepaid = allLoans
       .filter(loan => loan.isRepaid)
-      .reduce((sum, loan) => sum + (loan.repaidAmount || loan.amount || 0), 0);
+      .reduce((sum, loan) => sum + (parseFloat(loan.repaidAmount) || parseFloat(loan.amount) || 0), 0);
 
-    // Taux de remboursement
+    const totalContributions = contributionsData.reduce((sum, c) => sum + (parseFloat(c.amount) || 0), 0);
     const repaymentRate = totalAmountLoaned > 0 ? (totalRepaid / totalAmountLoaned) * 100 : 0;
-
-    // Intérêts totaux
-    const totalInterest = allLoans.reduce((sum, loan) => sum + (loan.interest || 0), 0);
+    const balance = totalContributions - totalAmountLoaned + totalRepaid;
 
     setStats({
       totalRequests: loanRequests.length,
       activeLoans: activeLoans.length,
       pendingApprovals: pendingRequests.length,
-      totalContributions: 0, // À calculer depuis API contributions
+      totalContributions: totalContributions,
       totalAmountLoaned: totalAmountLoaned,
       totalRepaid: totalRepaid,
-      membersCount: allMembers.length,
-      totalInterest: totalInterest,
-      repaymentRate: Math.round(repaymentRate)
+      membersCount: membersData.length,
+      totalInterest: 0,
+      repaymentRate: Math.round(repaymentRate),
+      balance: balance
     });
   };
 
-  const generateChartDataFromLoans = (loansData, requestsData) => {
-    // Grouper les prêts par mois
+  const generateChartData = (loansData, requestsData, contributionsData, membersData) => {
+    // Créer les 12 derniers mois
     const monthlyMap = new Map();
+    const now = new Date();
 
-    loansData.forEach(loan => {
-      if (loan.createdDate) {
-        const date = new Date(loan.createdDate);
-        const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
-        const monthName = date.toLocaleString('fr-FR', { month: 'short' });
+    for (let i = 11; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
+      const monthName = date.toLocaleString('fr-FR', { month: 'short' });
+      monthlyMap.set(monthKey, {
+        month: monthName,
+        year: date.getFullYear(),
+        monthNum: date.getMonth() + 1,
+        contributions: 0,
+        loans: 0,
+        reimbursements: 0,
+        balance: 0
+      });
+    }
 
-        if (!monthlyMap.has(monthKey)) {
-          monthlyMap.set(monthKey, { month: monthName, loans: 0, contributions: 0, reimbursements: 0 });
-        }
-
-        const data = monthlyMap.get(monthKey);
-        data.loans += loan.amount || 0;
-        if (loan.isRepaid) {
-          data.reimbursements += loan.repaidAmount || loan.amount || 0;
+    // Ajouter les cotisations
+    contributionsData.forEach(contribution => {
+      if (contribution.paymentDate) {
+        const date = new Date(contribution.paymentDate);
+        if (!isNaN(date.getTime())) {
+          const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
+          if (monthlyMap.has(monthKey)) {
+            const data = monthlyMap.get(monthKey);
+            data.contributions += parseFloat(contribution.amount) || 0;
+            monthlyMap.set(monthKey, data);
+          }
         }
       }
     });
 
-    const monthlyArray = Array.from(monthlyMap.values()).slice(-6);
+    // Ajouter les prêts
+    loansData.forEach(loan => {
+      if (loan.beginDate) {
+        const date = new Date(loan.beginDate);
+        if (!isNaN(date.getTime())) {
+          const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
+          if (monthlyMap.has(monthKey)) {
+            const data = monthlyMap.get(monthKey);
+            data.loans += parseFloat(loan.amount) || 0;
+            monthlyMap.set(monthKey, data);
+          }
+        }
+      }
+    });
+
+    // Ajouter les remboursements
+    loansData.forEach(loan => {
+      if (loan.lastRepaymentDate && loan.isRepaid) {
+        const date = new Date(loan.lastRepaymentDate);
+        if (!isNaN(date.getTime())) {
+          const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
+          if (monthlyMap.has(monthKey)) {
+            const data = monthlyMap.get(monthKey);
+            data.reimbursements += parseFloat(loan.repaidAmount) || parseFloat(loan.amount) || 0;
+            monthlyMap.set(monthKey, data);
+          }
+        }
+      }
+    });
+
+    // Calculer le solde cumulé
+    let runningBalance = 0;
+    const monthlyArray = Array.from(monthlyMap.values()).sort((a, b) => {
+      if (a.year !== b.year) return a.year - b.year;
+      return a.monthNum - b.monthNum;
+    });
+
+    monthlyArray.forEach(data => {
+      runningBalance += data.contributions - data.loans + data.reimbursements;
+      data.balance = runningBalance;
+    });
+
     setMonthlyData(monthlyArray.length ? monthlyArray : getDefaultMonthlyData());
 
-    // Statistiques des statuts de prêts
-    const statusCount = {
-      PENDING: 0,
-      APPROVED: 0,
-      REJECTED: 0,
-      ACTIVE: 0,
-      REPAID: 0
-    };
-
-    requestsData.forEach(req => {
-      if (req.status === 'PENDING') statusCount.PENDING++;
-      if (req.status === 'APPROVED') statusCount.APPROVED++;
-      if (req.status === 'REJECTED') statusCount.REJECTED++;
+    // Données annuelles
+    const yearlyMap = new Map();
+    monthlyArray.forEach(data => {
+      if (!yearlyMap.has(data.year)) {
+        yearlyMap.set(data.year, {
+          year: data.year,
+          contributions: 0,
+          loans: 0,
+          reimbursements: 0
+        });
+      }
+      const yearly = yearlyMap.get(data.year);
+      yearly.contributions += data.contributions;
+      yearly.loans += data.loans;
+      yearly.reimbursements += data.reimbursements;
     });
 
+    setYearlyData(Array.from(yearlyMap.values()).sort((a, b) => a.year - b.year));
+
+    // Statistiques des statuts de prêts
+    const statusMap = new Map();
+    
+    // Ajouter les demandes de prêt
+    requestsData.forEach(req => {
+      const statusKey = req.status;
+      let label = '';
+      let color = '';
+      
+      switch(statusKey) {
+        case 'PENDING':
+          label = 'En attente';
+          color = '#f59e0b';
+          break;
+        case 'APPROVED':
+          label = 'Approuvés';
+          color = '#10b981';
+          break;
+        case 'REJECTED':
+          label = 'Rejetés';
+          color = '#ef4444';
+          break;
+        default:
+          return;
+      }
+      
+      if (statusMap.has(statusKey)) {
+        statusMap.get(statusKey).count++;
+      } else {
+        statusMap.set(statusKey, { name: label, value: 1, color: color, status: statusKey });
+      }
+    });
+    
+    // Ajouter les prêts actifs et remboursés
     loansData.forEach(loan => {
       if (!loan.isRepaid && loan.status !== 'REJECTED') {
-        statusCount.ACTIVE++;
+        if (statusMap.has('ACTIVE')) {
+          statusMap.get('ACTIVE').count++;
+        } else {
+          statusMap.set('ACTIVE', { name: 'En cours', value: 1, color: '#3b82f6', status: 'ACTIVE' });
+        }
       }
       if (loan.isRepaid) {
-        statusCount.REPAID++;
+        if (statusMap.has('REPAID')) {
+          statusMap.get('REPAID').count++;
+        } else {
+          statusMap.set('REPAID', { name: 'Remboursés', value: 1, color: '#8b5cf6', status: 'REPAID' });
+        }
       }
     });
-
-    const statusColors = {
-      PENDING: '#f59e0b',
-      APPROVED: '#10b981',
-      REJECTED: '#ef4444',
-      ACTIVE: '#3b82f6',
-      REPAID: '#8b5cf6'
-    };
-
-    const statusLabels = {
-      PENDING: 'En attente',
-      APPROVED: 'Approuvés',
-      REJECTED: 'Rejetés',
-      ACTIVE: 'En cours',
-      REPAID: 'Remboursés'
-    };
-
-    const statusData = Object.entries(statusCount)
-      .filter(([_, count]) => count > 0)
-      .map(([status, count]) => ({
-        name: statusLabels[status] || status,
-        value: count,
-        color: statusColors[status]
-      }));
-
+    
+    const statusData = Array.from(statusMap.values())
+      .map(item => ({ ...item, value: item.count || item.value }))
+      .filter(item => item.value > 0);
+    
     setLoanStatusData(statusData.length ? statusData : getDefaultStatusData());
 
     // Top membres par emprunt
-    const memberLoanMap = new Map();
-    loansData.forEach(loan => {
-      if (loan.member && loan.member.name) {
-        const current = memberLoanMap.get(loan.member.id) || { name: loan.member.name, amount: 0, count: 0 };
-        current.amount += loan.amount || 0;
-        current.count++;
-        memberLoanMap.set(loan.member.id, current);
-      }
-    });
+    if (isAdminRole && membersData.length > 0) {
+      const memberLoanMap = new Map();
+      loansData.forEach(loan => {
+        if (loan.memberId) {
+          const member = membersData.find(m => m.id === loan.memberId);
+          const memberName = member ? `${member.firstName || ''} ${member.name || ''}`.trim() : `Membre ${loan.memberId}`;
+          const current = memberLoanMap.get(loan.memberId) || { name: memberName, amount: 0, count: 0 };
+          current.amount += parseFloat(loan.amount) || 0;
+          current.count++;
+          memberLoanMap.set(loan.memberId, current);
+        }
+      });
 
-    const topMembersList = Array.from(memberLoanMap.values())
-      .sort((a, b) => b.amount - a.amount)
-      .slice(0, 5);
-    setTopMembers(topMembersList);
+      const topMembersList = Array.from(memberLoanMap.values())
+        .sort((a, b) => b.amount - a.amount)
+        .slice(0, 5);
+      setTopMembers(topMembersList);
+    }
   };
 
-  const generateRecentActivities = (requests, loans, allLoans) => {
+  const generateRecentActivities = (requests, loansData, contributionsData, user) => {
     const activities = [];
 
-    // Ajouter les demandes récentes
+    // Ajouter les demandes de prêt
     requests.slice(0, 3).forEach(req => {
       activities.push({
         id: `req-${req.id}`,
         action: 'Demande de prêt',
-        user: user?.firstName + ' ' + user?.name,
-        amount: req.requestAmount,
+        user: `${user?.firstName || ''} ${user?.name || ''}`.trim() || 'Utilisateur',
+        amount: parseFloat(req.requestAmount) || 0,
         status: req.status === 'PENDING' ? 'pending' : req.status === 'APPROVED' ? 'approved' : 'rejected',
-        date: req.createdDate,
-        icon: FileText
+        date: req.requestDate,
+        icon: 'FileText'
       });
     });
 
-    // Ajouter les remboursements récents
-    loans.filter(loan => loan.lastRepaymentDate).slice(0, 2).forEach(loan => {
+    // Ajouter les remboursements
+    const completedRepayments = loansData.filter(loan => loan.lastRepaymentDate && loan.isRepaid).slice(0, 2);
+    completedRepayments.forEach(loan => {
       activities.push({
         id: `repay-${loan.id}`,
         action: 'Remboursement',
-        user: user?.firstName + ' ' + user?.name,
-        amount: loan.lastRepaymentAmount || loan.amount * 0.1,
+        user: `${user?.firstName || ''} ${user?.name || ''}`.trim() || 'Utilisateur',
+        amount: parseFloat(loan.repaidAmount) || parseFloat(loan.amount) * 0.1 || 0,
         status: 'completed',
         date: loan.lastRepaymentDate,
-        icon: CreditCard
+        icon: 'CreditCard'
       });
     });
 
-    // Trier par date et prendre les 5 plus récents
+    // Ajouter les cotisations
+    contributionsData.slice(0, 3).forEach(contribution => {
+      activities.push({
+        id: `contrib-${contribution.id}`,
+        action: 'Cotisation',
+        user: `${user?.firstName || ''} ${user?.name || ''}`.trim() || 'Utilisateur',
+        amount: parseFloat(contribution.amount) || 0,
+        status: 'completed',
+        date: contribution.paymentDate,
+        icon: 'Wallet'
+      });
+    });
+
     const sortedActivities = activities
+      .filter(a => a.date)
       .sort((a, b) => new Date(b.date) - new Date(a.date))
       .slice(0, 5);
 
@@ -347,14 +462,14 @@ export default function Dashboard() {
   };
 
   const getDefaultMonthlyData = () => {
-    return [
-      { month: 'Jan', loans: 0, contributions: 0, reimbursements: 0 },
-      { month: 'Fév', loans: 0, contributions: 0, reimbursements: 0 },
-      { month: 'Mar', loans: 0, contributions: 0, reimbursements: 0 },
-      { month: 'Avr', loans: 0, contributions: 0, reimbursements: 0 },
-      { month: 'Mai', loans: 0, contributions: 0, reimbursements: 0 },
-      { month: 'Juin', loans: 0, contributions: 0, reimbursements: 0 },
-    ];
+    const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+    return months.slice(-6).map(month => ({
+      month: month,
+      contributions: 0,
+      loans: 0,
+      reimbursements: 0,
+      balance: 0
+    }));
   };
 
   const getDefaultStatusData = () => {
@@ -370,10 +485,28 @@ export default function Dashboard() {
     setRefreshing(true);
     const token = getToken();
     if (token && user?.id) {
-      await loadAllData(token, user.id);
+      await loadDashboardData(token, user.id);
       toast.success('Données actualisées');
     }
     setRefreshing(false);
+  };
+
+  const handleMemberSelect = (memberId, memberName) => {
+    setSelectedMemberId(memberId);
+    setSelectedMemberName(memberName);
+    setShowMemberSelector(false);
+    toast.info(`Affichage des données pour ${memberName}`);
+    // Ici vous pouvez charger les données spécifiques du membre
+  };
+
+  const handleShowMyData = () => {
+    setSelectedMemberId(null);
+    setSelectedMemberName('');
+    const token = getToken();
+    if (token && user?.id) {
+      loadDashboardData(token, user.id);
+      toast.info('Affichage de vos données personnelles');
+    }
   };
 
   const formatCurrency = (amount) => {
@@ -388,13 +521,12 @@ export default function Dashboard() {
   const getStatusBadge = (status) => {
     const config = {
       PENDING: { class: 'bg-warning bg-opacity-10 text-warning', label: 'En attente', icon: Clock },
-      IN_REVIEW: { class: 'bg-info bg-opacity-10 text-info', label: 'En examen', icon: Activity },
-      APPROVED: { class: 'bg-success bg-opacity-10 text-success', label: 'Approuvé', icon: CheckCircle },
-      REJECTED: { class: 'bg-danger bg-opacity-10 text-danger', label: 'Rejeté', icon: XCircle },
       pending: { class: 'bg-warning bg-opacity-10 text-warning', label: 'En attente', icon: Clock },
       completed: { class: 'bg-success bg-opacity-10 text-success', label: 'Complété', icon: CheckCircle },
       approved: { class: 'bg-success bg-opacity-10 text-success', label: 'Approuvé', icon: CheckCircle },
-      info: { class: 'bg-info bg-opacity-10 text-info', label: 'Information', icon: AlertCircle }
+      rejected: { class: 'bg-danger bg-opacity-10 text-danger', label: 'Rejeté', icon: XCircle },
+      ACTIVE: { class: 'bg-info bg-opacity-10 text-info', label: 'Actif', icon: Activity },
+      REPAID: { class: 'bg-purple bg-opacity-10 text-purple', label: 'Remboursé', icon: CheckCircle }
     };
     const c = config[status] || config.PENDING;
     const Icon = c.icon;
@@ -416,7 +548,8 @@ export default function Dashboard() {
   ];
 
   const adminMenuItems = [
-    { id: 'approvals', label: 'Approbations', icon: CheckCircle, path: '/loans/approval-dashboard' },
+    { id: 'approvals', label: 'Etat des approbations', icon: CheckCircle, path: '/loans/approval-dashboard' },
+    { id: 'approvals', label: 'Validation des prêts', icon: CheckCircle, path: '/loans/approval' },
     { id: 'members', label: 'Gestion membres', icon: Users, path: '/members/list' },
     { id: 'campaign', label: 'Campagne cotisation', icon: CalendarRange, path: '/mutuelle/contribution_period' },
     { id: 'reports', label: 'Rapports', icon: TrendingUp, path: '/reports' }
@@ -435,7 +568,19 @@ export default function Dashboard() {
     );
   }
 
-  if (!user) return null;
+  if (!user) {
+    return (
+      <div className="min-vh-100 d-flex justify-content-center align-items-center bg-light">
+        <div className="text-center">
+          <AlertCircle size={48} className="text-warning mb-3" />
+          <p className="text-muted">Impossible de charger les informations utilisateur</p>
+          <button className="btn btn-primary" onClick={() => window.location.reload()}>
+            Réessayer
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="d-flex bg-light" style={{ minHeight: '100vh' }}>
@@ -493,10 +638,10 @@ export default function Dashboard() {
               </button>
             ))}
 
-            {isAdmin && (
+            {isAdminRole && (
               <>
                 <p className={`text-secondary small mt-3 mb-2 ${sidebarCollapsed ? 'text-center' : ''}`}>
-                  {!sidebarCollapsed && 'Administration'}
+                  {!sidebarCollapsed && 'Manager'}
                 </p>
                 {adminMenuItems.map(item => (
                   <button
@@ -536,9 +681,56 @@ export default function Dashboard() {
       <div className="flex-grow-1" style={{ overflowX: 'auto' }}>
         {/* Header */}
         <div className="bg-white shadow-sm sticky-top px-4 py-3 d-flex justify-content-between align-items-center">
-          <h4 className="mb-0 fw-semibold">
-            {menuItems.find(m => m.id === activeMenu)?.label || 'Tableau de bord'}
-          </h4>
+          <div className="d-flex align-items-center gap-3">
+            <h4 className="mb-0 fw-semibold">
+              Tableau de bord
+            </h4>
+            {isAdminRole && (
+              <div className="dropdown">
+                <button
+                  className="btn btn-outline-primary btn-sm dropdown-toggle d-flex align-items-center gap-2"
+                  onClick={() => setShowMemberSelector(!showMemberSelector)}
+                >
+                  {selectedMemberName ? (
+                    <>
+                      <User size={16} />
+                      {selectedMemberName}
+                    </>
+                  ) : (
+                    <>
+                      <Globe size={16} />
+                      Tous les membres
+                    </>
+                  )}
+                </button>
+                {showMemberSelector && (
+                  <div className="dropdown-menu show p-2"
+                   style={
+                    { 
+                    position: 'absolute', top: '40px', left: '0', minWidth: '250px', maxHeight: '400px', overflowY: 'auto' 
+                    }
+                    }>
+                    <div className="dropdown-item" onClick={handleShowMyData} style={{ cursor: 'pointer' }}>
+                      <strong>👤 Mes données personnelles</strong>
+                    </div>
+                    <div className="dropdown-divider"></div>
+                    <div className="dropdown-header">Autres membres</div>
+                    {allMembers.filter(m => m.id !== user?.id).slice(0, 10).map(member => (
+                      <div
+                        key={member.id}
+                        className="dropdown-item d-flex justify-content-between align-items-center"
+                        onClick={() => handleMemberSelect(member.id, `${member.firstName} ${member.name}`)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <span>{member.firstName} {member.name}</span>
+                        <small className="text-muted">{member.role}</small>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           <div className="d-flex align-items-center gap-3">
             <button className="btn btn-light btn-sm rounded-circle p-2" onClick={refreshData} disabled={refreshing}>
               <RefreshCw size={18} className={refreshing ? 'spin' : ''} />
@@ -583,142 +775,180 @@ export default function Dashboard() {
 
         {/* Dashboard Content */}
         <div className="p-4">
+          {/* Indicateur de vue pour admin */}
+          {isAdminRole && selectedMemberName && (
+            <div className="alert alert-info mb-4 d-flex align-items-center justify-content-between">
+              <div>
+                <i className="bi bi-eye me-2"></i>
+                <strong>Vue personnalisée:</strong> Données de <strong>{selectedMemberName}</strong>
+              </div>
+              <button className="btn btn-sm btn-outline-primary" onClick={handleShowMyData}>
+                Voir mes données
+              </button>
+            </div>
+          )}
+
           {/* KPI Cards */}
           <div className="row g-3 mb-4">
             <div className="col-md-6 col-lg-3">
               <div className="bg-white rounded-4 p-3 shadow-sm">
                 <div className="d-flex align-items-center justify-content-between mb-2">
                   <div className="bg-primary bg-opacity-10 p-2 rounded-3">
-                    <FileText size={24} className="text-primary" />
+                    <Wallet size={24} className="text-primary" />
                   </div>
-                  <span className="text-muted small">Total</span>
+                  <span className="text-muted small">Cotisations</span>
                 </div>
-                <h3 className="mb-0 fw-bold">{stats.totalRequests}</h3>
-                <small className="text-muted">Demandes de prêt</small>
+                <h3 className="mb-0 fw-bold text-success">{formatCurrency(stats.totalContributions)}</h3>
+                <small className="text-muted">Total des cotisations</small>
               </div>
             </div>
             <div className="col-md-6 col-lg-3">
               <div className="bg-white rounded-4 p-3 shadow-sm">
                 <div className="d-flex align-items-center justify-content-between mb-2">
-                  <div className="bg-success bg-opacity-10 p-2 rounded-3">
-                    <HandCoins size={24} className="text-success" />
+                  <div className="bg-danger bg-opacity-10 p-2 rounded-3">
+                    <HandCoins size={24} className="text-danger" />
                   </div>
-                  <span className="text-muted small">Actifs</span>
+                  <span className="text-muted small">Prêts</span>
                 </div>
-                <h3 className="mb-0 fw-bold">{stats.activeLoans}</h3>
-                <small className="text-muted">Prêts en cours</small>
-              </div>
-            </div>
-            <div className="col-md-6 col-lg-3">
-              <div className="bg-white rounded-4 p-3 shadow-sm">
-                <div className="d-flex align-items-center justify-content-between mb-2">
-                  <div className="bg-warning bg-opacity-10 p-2 rounded-3">
-                    <Clock size={24} className="text-warning" />
-                  </div>
-                  <span className="text-muted small">À traiter</span>
-                </div>
-                <h3 className="mb-0 fw-bold">{stats.pendingApprovals}</h3>
-                <small className="text-muted">En attente</small>
+                <h3 className="mb-0 fw-bold text-danger">{formatCurrency(stats.totalAmountLoaned)}</h3>
+                <small className="text-muted">Montant total prêté</small>
               </div>
             </div>
             <div className="col-md-6 col-lg-3">
               <div className="bg-white rounded-4 p-3 shadow-sm">
                 <div className="d-flex align-items-center justify-content-between mb-2">
                   <div className="bg-info bg-opacity-10 p-2 rounded-3">
-                    <PercentCircle size={24} className="text-info" />
+                    <CreditCard size={24} className="text-info" />
                   </div>
-                  <span className="text-muted small">Taux</span>
+                  <span className="text-muted small">Remboursements</span>
                 </div>
-                <h3 className="mb-0 fw-bold">{stats.repaymentRate}%</h3>
-                <small className="text-muted">Remboursement</small>
+                <h3 className="mb-0 fw-bold text-info">{formatCurrency(stats.totalRepaid)}</h3>
+                <small className="text-muted">Montant remboursé</small>
+              </div>
+            </div>
+            <div className="col-md-6 col-lg-3">
+              <div className="bg-white rounded-4 p-3 shadow-sm">
+                <div className="d-flex align-items-center justify-content-between mb-2">
+                  <div className="bg-success bg-opacity-10 p-2 rounded-3">
+                    <PercentCircle size={24} className="text-success" />
+                  </div>
+                  <span className="text-muted small">Solde</span>
+                </div>
+                <h3 className={`mb-0 fw-bold ${stats.balance >= 0 ? 'text-success' : 'text-danger'}`}>
+                  {formatCurrency(stats.balance)}
+                </h3>
+                <small className="text-muted">Cotisations - Prêts + Remboursements</small>
               </div>
             </div>
           </div>
 
-          {/* Second row - Additional KPIs for admin */}
-          {isAdmin && (
-            <div className="row g-3 mb-4">
-              <div className="col-md-4">
-                <div className="bg-white rounded-4 p-3 shadow-sm">
-                  <div className="d-flex align-items-center gap-3">
-                    <div className="bg-primary bg-opacity-10 p-2 rounded-3">
-                      <DollarSign size={24} className="text-primary" />
-                    </div>
-                    <div>
-                      <small className="text-muted">Montant total prêté</small>
-                      <h5 className="mb-0 fw-bold">{formatCurrency(stats.totalAmountLoaned)}</h5>
-                    </div>
+          {/* Statistiques supplémentaires */}
+          <div className="row g-3 mb-4">
+            <div className="col-md-4">
+              <div className="bg-white rounded-4 p-3 shadow-sm">
+                <div className="d-flex align-items-center gap-3">
+                  <div className="bg-warning bg-opacity-10 p-3 rounded-3">
+                    <FileText size={24} className="text-warning" />
                   </div>
-                </div>
-              </div>
-              <div className="col-md-4">
-                <div className="bg-white rounded-4 p-3 shadow-sm">
-                  <div className="d-flex align-items-center gap-3">
-                    <div className="bg-success bg-opacity-10 p-2 rounded-3">
-                      <Wallet size={24} className="text-success" />
-                    </div>
-                    <div>
-                      <small className="text-muted">Montant remboursé</small>
-                      <h5 className="mb-0 fw-bold">{formatCurrency(stats.totalRepaid)}</h5>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="col-md-4">
-                <div className="bg-white rounded-4 p-3 shadow-sm">
-                  <div className="d-flex align-items-center gap-3">
-                    <div className="bg-warning bg-opacity-10 p-2 rounded-3">
-                      <Users size={24} className="text-warning" />
-                    </div>
-                    <div>
-                      <small className="text-muted">Membres actifs</small>
-                      <h5 className="mb-0 fw-bold">{stats.membersCount}</h5>
-                    </div>
+                  <div>
+                    <small className="text-muted">Demandes totales</small>
+                    <h4 className="mb-0 fw-bold">{stats.totalRequests}</h4>
                   </div>
                 </div>
               </div>
             </div>
-          )}
-
-          {/* Charts Row */}
-          <div className="row g-3 mb-4">
-            <div className="col-lg-8">
+            <div className="col-md-4">
               <div className="bg-white rounded-4 p-3 shadow-sm">
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                  <h6 className="fw-semibold mb-0">Évolution financière</h6>
-                  {monthlyData.every(d => d.loans === 0) && (
-                    <span className="text-muted small">Aucune donnée disponible</span>
-                  )}
+                <div className="d-flex align-items-center gap-3">
+                  <div className="bg-info bg-opacity-10 p-3 rounded-3">
+                    <Activity size={24} className="text-info" />
+                  </div>
+                  <div>
+                    <small className="text-muted">Prêts actifs</small>
+                    <h4 className="mb-0 fw-bold">{stats.activeLoans}</h4>
+                  </div>
                 </div>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={monthlyData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis dataKey="month" stroke="#6b7280" />
-                    <YAxis stroke="#6b7280" tickFormatter={(value) => `${value / 1000}k`} />
+              </div>
+            </div>
+            <div className="col-md-4">
+              <div className="bg-white rounded-4 p-3 shadow-sm">
+                <div className="d-flex align-items-center gap-3">
+                  <div className="bg-success bg-opacity-10 p-3 rounded-3">
+                    <TrendingUp size={24} className="text-success" />
+                  </div>
+                  <div>
+                    <small className="text-muted">Taux de remboursement</small>
+                    <h4 className="mb-0 fw-bold">{stats.repaymentRate}%</h4>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Graphique en barres - Évolution mensuelle */}
+          <div className="row g-3 mb-4">
+            <div className="col-12">
+              <div className="bg-white rounded-4 p-3 shadow-sm">
+                <h6 className="fw-semibold mb-3">
+                   Évolution mensuelle des cotisations, prêts et remboursements
+                  {selectedMemberName && ` - ${selectedMemberName}`}
+                </h6>
+                <ResponsiveContainer width="100%" height={400}>
+                  <BarChart data={monthlyData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`} />
                     <Tooltip formatter={(value) => formatCurrency(value)} />
                     <Legend />
-                    <Line type="monotone" dataKey="loans" stroke="#3b82f6" strokeWidth={2} name="Prêts" />
-                    <Line type="monotone" dataKey="reimbursements" stroke="#f59e0b" strokeWidth={2} name="Remboursements" />
-                  </LineChart>
+                    <Bar dataKey="contributions" fill="#10b981" name="Cotisations" />
+                    <Bar dataKey="loans" fill="#ef4444" name="Prêts" />
+                    <Bar dataKey="reimbursements" fill="#3b82f6" name="Remboursements" />
+                  </BarChart>
                 </ResponsiveContainer>
               </div>
             </div>
+          </div>
+
+          {/* Graphique du solde */}
+          <div className="row g-3 mb-4">
+            <div className="col-12">
+              <div className="bg-white rounded-4 p-3 shadow-sm">
+                <h6 className="fw-semibold mb-3">💰 Évolution du solde</h6>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={monthlyData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`} />
+                    <Tooltip formatter={(value) => formatCurrency(value)} />
+                    <Legend />
+                    <Bar dataKey="balance" fill="#8b5cf6" name="Solde" />
+                  </BarChart>
+                </ResponsiveContainer>
+                <div className="mt-2 text-muted small text-center">
+                  Solde = Σ(Cotisations - Prêts + Remboursements)
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Répartition des prêts et activités récentes */}
+          <div className="row g-3 mb-4">
             <div className="col-lg-4">
               <div className="bg-white rounded-4 p-3 shadow-sm h-100">
-                <h6 className="fw-semibold mb-3">Répartition des prêts</h6>
+                <h6 className="fw-semibold mb-3">🥧 Répartition des prêts</h6>
                 {loanStatusData.every(d => d.value === 0) ? (
                   <div className="text-center py-5">
                     <p className="text-muted">Aucune donnée disponible</p>
                   </div>
                 ) : (
                   <>
-                    <ResponsiveContainer width="100%" height={200}>
+                    <ResponsiveContainer width="100%" height={250}>
                       <PieChart>
                         <Pie
                           data={loanStatusData}
                           cx="50%"
                           cy="50%"
-                          innerRadius={50}
+                          innerRadius={60}
                           outerRadius={80}
                           paddingAngle={5}
                           dataKey="value"
@@ -728,13 +958,13 @@ export default function Dashboard() {
                             <Cell key={`cell-${index}`} fill={entry.color} />
                           ))}
                         </Pie>
-                        <Tooltip formatter={(value) => `${value} prêts`} />
+                        <Tooltip formatter={(value) => `${value} prêt(s)`} />
                       </PieChart>
                     </ResponsiveContainer>
-                    <div className="d-flex flex-wrap justify-content-center gap-2 mt-2">
+                    <div className="d-flex flex-wrap justify-content-center gap-3 mt-3">
                       {loanStatusData.map((item, idx) => (
-                        <div key={idx} className="d-flex align-items-center gap-1">
-                          <div style={{ width: '10px', height: '10px', backgroundColor: item.color, borderRadius: '50%' }}></div>
+                        <div key={idx} className="d-flex align-items-center gap-2">
+                          <div style={{ width: '12px', height: '12px', backgroundColor: item.color, borderRadius: '50%' }}></div>
                           <small>{item.name} ({item.value})</small>
                         </div>
                       ))}
@@ -743,10 +973,70 @@ export default function Dashboard() {
                 )}
               </div>
             </div>
+            <div className="col-lg-8">
+              <div className="bg-white rounded-4 p-3 shadow-sm h-100">
+                <h6 className="fw-semibold mb-3"> Dernières activités</h6>
+                {recentActivities.length === 0 ? (
+                  <div className="text-center py-5">
+                    <p className="text-muted">Aucune activité récente</p>
+                  </div>
+                ) : (
+                  <div className="list-group list-group-flush">
+                    {recentActivities.map(activity => {
+                      let IconComponent = FileText;
+                      if (activity.icon === 'CreditCard') IconComponent = CreditCard;
+                      if (activity.icon === 'Wallet') IconComponent = Wallet;
+                      return (
+                        <div key={activity.id} className="list-group-item d-flex align-items-center gap-3 border-0 py-3">
+                          <div className={`bg-${activity.status === 'completed' ? 'success' : activity.status === 'pending' ? 'warning' : 'danger'} bg-opacity-10 p-2 rounded-3`}>
+                            <IconComponent size={20} className="text-primary" />
+                          </div>
+                          <div className="flex-grow-1">
+                            <p className="mb-0 fw-semibold">{activity.action}</p>
+                            <small className="text-muted">
+                              {activity.user} • {activity.date ? new Date(activity.date).toLocaleDateString('fr-FR') : 'Date inconnue'}
+                            </small>
+                          </div>
+                          <div className="text-end">
+                            <span className="fw-bold">{formatCurrency(activity.amount)}</span>
+                            <br />
+                            {getStatusBadge(activity.status)}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
+          {/* Top Members Section pour Admin */}
+          {isAdminRole && !selectedMemberId && topMembers.length > 0 && (
+            <div className="row g-3 mt-2">
+              <div className="col-12">
+                <div className="bg-white rounded-4 p-3 shadow-sm">
+                  <h6 className="fw-semibold mb-3"> Top emprunteurs</h6>
+                  <div className="row g-2">
+                    {topMembers.map((member, idx) => (
+                      <div key={idx} className="col-md-6 col-lg-4">
+                        <div className="d-flex align-items-center justify-content-between p-2 bg-light rounded-3">
+                          <div>
+                            <p className="mb-0 fw-semibold">{member.name}</p>
+                            <small className="text-muted">{member.count} prêt(s)</small>
+                          </div>
+                          <span className="fw-bold text-primary">{formatCurrency(member.amount)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Recent Loans Section */}
-          <div className="row g-3">
+          <div className="row g-3 mt-2">
             <div className="col-12">
               <div className="bg-white rounded-4 p-3 shadow-sm">
                 <div className="d-flex justify-content-between align-items-center mb-3">
@@ -779,7 +1069,7 @@ export default function Dashboard() {
                           <tr key={request.id}>
                             <td className="fw-semibold">{formatCurrency(request.requestAmount)}</td>
                             <td>{request.reason?.substring(0, 50)}...</td>
-                            <td>{new Date(request.createdDate).toLocaleDateString()}</td>
+                            <td>{request.requestDate ? new Date(request.requestDate).toLocaleDateString() : '-'}</td>
                             <td>{getStatusBadge(request.status)}</td>
                           </tr>
                         ))}
@@ -790,30 +1080,6 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-
-          {/* Top Members Section for Admin */}
-          {isAdmin && topMembers.length > 0 && (
-            <div className="row g-3 mt-2">
-              <div className="col-12">
-                <div className="bg-white rounded-4 p-3 shadow-sm">
-                  <h6 className="fw-semibold mb-3">Top emprunteurs</h6>
-                  <div className="row g-2">
-                    {topMembers.map((member, idx) => (
-                      <div key={idx} className="col-md-6 col-lg-4">
-                        <div className="d-flex align-items-center justify-content-between p-2 bg-light rounded-3">
-                          <div>
-                            <p className="mb-0 fw-semibold">{member.name}</p>
-                            <small className="text-muted">{member.count} prêt(s)</small>
-                          </div>
-                          <span className="fw-bold text-primary">{formatCurrency(member.amount)}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -837,6 +1103,23 @@ export default function Dashboard() {
         }
         .spin {
           animation: spin 1s linear infinite;
+        }
+        .dropdown-menu {
+          border-radius: 12px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .dropdown-item {
+          border-radius: 8px;
+          transition: all 0.2s;
+        }
+        .dropdown-item:hover {
+          background-color: #f0f0f0;
+        }
+        .bg-purple {
+          background-color: #8b5cf6;
+        }
+        .text-purple {
+          color: #8b5cf6;
         }
       `}</style>
     </div>
