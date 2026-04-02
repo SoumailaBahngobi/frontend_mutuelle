@@ -1,7 +1,7 @@
+# Dockerfile.frontend
 # Étape 1: Build de l'application React
 FROM node:18-alpine AS build
 
-# Définir le répertoire de travail
 WORKDIR /app
 
 # Copier les fichiers de dépendances
@@ -22,7 +22,7 @@ FROM nginx:alpine
 # Copier les fichiers buildés depuis l'étape précédente
 COPY --from=build /app/build /usr/share/nginx/html
 
-# Copier une configuration Nginx personnalisée (optionnel)
+# Copier une configuration Nginx personnalisée
 COPY nginx.conf /etc/nginx/nginx.conf
 
 # Exposer le port 80
