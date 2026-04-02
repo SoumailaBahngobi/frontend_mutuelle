@@ -6,6 +6,7 @@
     "@fortawesome/free-brands-svg-icons": "^7.1.0",
     "@fortawesome/free-solid-svg-icons": "^7.1.0",
     "@fortawesome/react-fontawesome": "^3.1.0",
+    "@popperjs/core": "^2.11.8",
     "@react-keycloak/web": "^3.4.0",
     "@stripe/react-stripe-js": "^4.0.2",
     "@stripe/stripe-js": "^7.9.0",
@@ -13,19 +14,25 @@
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^13.5.0",
-    "axios": "^1.12.2",
+    "axios": "^1.13.5",
     "bootstrap": "^5.3.8",
+    "bootstrap-icons": "^1.13.1",
     "jspdf": "^2.5.1",
     "jspdf-autotable": "^3.5.28",
-    "keycloak-js": "^26.2.1",
+    "keycloak-js": "^26.2.3",
     "kkiapay": "^2.0.23",
+    "lucide-react": "^0.577.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-hot-toast": "^2.6.0",
-    "react-router-dom": "^7.9.5",
+    "react-router-dom": "^7.13.2",
     "react-scripts": "^5.0.1",
     "react-toastify": "^11.0.5",
+<<<<<<< HEAD
     "toast": "^0.5.4",
+=======
+    "recharts": "^3.8.0",
+>>>>>>> 0ca80779bd2df063c6c22313cd408bc6f07a9320
     "web-vitals": "^2.1.4",
     "xlsx": "^0.18.5"
   },
@@ -33,7 +40,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "deploy": "gh-pages -b main -d build"
   },
   "eslintConfig": {
     "extends": [
@@ -41,6 +49,7 @@
       "react-app/jest"
     ]
   },
+  "proxy": "http://localhost:8081",
   "browserslist": {
     "production": [
       ">0.2%",
@@ -52,5 +61,10 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.27",
+    "postcss": "^8.5.8",
+    "tailwindcss": "^4.2.2"
   }
 }

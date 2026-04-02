@@ -1,0 +1,139 @@
+services:
+  # Base de données pour Keycloak
+  keycloak-db:
+    image: postgres:16.3
+    container_name: keycloak_postgres
+    environment:
+      POSTGRES_DB: keycloak_db
+      POSTGRES_USER: keycloak_user
+      POSTGRES_PASSWORD: keycloak_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - keycloak_postgres_data:/var/lib/postgresql/data
+    networks:
+      - mutuelle-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak_user -d keycloak_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Base de données pour l'application mutuelle
+  app-db:
+    image: postgres:16.3
+    container_name: mutuelle_postgres
+    environment:
+      POSTGRES_DB: mutuelle
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "5432:5432"
+    volumes:
+      - app_postgres_data:/var/lib/postgresql/data
+    networks:
+      - mutuelle-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mutuelle"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Keycloak
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0.2
+    container_name: keycloak_server
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak_db
+      KC_DB_USERNAME: keycloak_user
+      KC_DB_PASSWORD: keycloak_password
+      KC_HOSTNAME: localhost
+      KC_HOSTNAME_STRICT: false
+      KC_HTTP_ENABLED: true
+      KC_PROXY: edge
+      KC_HTTP_CORS_ORIGINS: http://localhost
+      KC_HTTP_CORS_HEADERS: X-Requested-With,Content-Type,Authorization,Origin
+      KC_HTTP_CORS_ENABLED: true
+      KEYCLOAK_ADMIN: soumaila
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_LOG_LEVEL: INFO
+      KC_FEATURES: preview,token-exchange,admin-fine-grained-authz
+    ports:
+      - "8088:8080"
+    command: ["start-dev"]
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    networks:
+      - mutuelle-network
+    restart: on-failure
+
+  # Backend Spring Boot
+  backend:
+    build: .
+    container_name: mutuelle_backend
+    environment:
+      DB_URL: jdbc:postgresql://app-db:5432/mutuelle
+      DB_USERNAME: postgres
+      DB_PASSWORD: admin
+      JPA_DDL_AUTO: update
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8081
+      KEYCLOAK_AUTH_SERVER_URL: http://keycloak:8080
+      KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/mutuelle-realm
+      KEYCLOAK_JWK_URI: http://keycloak:8080/realms/mutuelle-realm/protocol/openid-connect/certs
+      KEYCLOAK_REALM: mutuelle-realm
+      KEYCLOAK_ADMIN_USERNAME: soumaila
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KEYCLOAK_CLIENT_ID: mutuelle-client
+      KEYCLOAK_REDIRECT_URI: http://localhost:8081/login/oauth2/code/keycloak
+      LOG_LEVEL_APP: INFO
+      LOG_LEVEL_SECURITY: INFO
+      KKIAPAY_BASE_URL: https://api-sandbox.kkiapay.me
+      KKIAPAY_PUBLIC_KEY: 3011c9e0170a11f1b6a0874a5fa1f25d
+      KKIAPAY_PRIVATE_KEY: pk_3011c9e0170a11f1b6a0874a5fa1f25d
+      KKIAPAY_SANDBOX: true
+      ADMIN_REGISTRATION_SECRET: SUPER_SECRET_2024
+      MAIL_HOST: sandbox.smtp.mailtrap.io
+      MAIL_PORT: 2525
+      MAIL_USERNAME: 11718c5ca3ad0f
+      MAIL_PASSWORD: c64830121b1c0a
+    ports:
+      - "8081:8081"
+    depends_on:
+      app-db:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    networks:
+      - mutuelle-network
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ✅ Frontend React avec Nginx
+  frontend:
+    build:
+      context: ../frontend_mutuelle
+      dockerfile: Dockerfile
+    container_name: mutuelle_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+      - keycloak
+    networks:
+      - mutuelle-network
+    restart: on-failure
+
+volumes:
+  keycloak_postgres_data:
+  app_postgres_data:
+
+networks:
+  mutuelle-network:
+    driver: bridge

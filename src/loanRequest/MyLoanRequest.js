@@ -22,7 +22,7 @@ const MyLoanRequests = () => {
             }
 
             // Endpoint qui retourne les demandes du membre connecté
-            const response = await axios.get('http://localhost:8080/mutuelle/loan_request/my-requests', {
+            const response = await axios.get('http://localhost:8081/mutuelle/loan_request/my-requests', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             

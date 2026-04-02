@@ -34,7 +34,7 @@ import {
 export default function Footer() {
     const location = useLocation();
     
-    // Masquer le footer sur certaines pages
+    // Masquer le footer sur certaines pages 
     const hideFooterPaths = ['/login', '/register', '/reset-password'];
     if (hideFooterPaths.includes(location.pathname)) {
         return null;
@@ -194,7 +194,7 @@ export default function Footer() {
                                 </div>
                                 <div className="contact-item">
                                     <FontAwesomeIcon icon={faClock} className="contact-icon" />
-                                    <span>Lun - Ven: 8h - 18h</span>
+                                    <span>Lun - Dim: 24h/24h</span>
                                 </div>
                             </div>
                         </div>
@@ -228,7 +228,8 @@ export default function Footer() {
                 </div>
             </footer>
 
-            <style jsx>{`
+            {/* ⚠️ REMPLACER CE BLOC : supprimer 'jsx' */}
+            <style>{`
                 .footer-complete {
                     background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
                     color: #ecf0f1;

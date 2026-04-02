@@ -1,4 +1,5 @@
 // src/layout/Navbar.js
+<<<<<<< HEAD
 import React, { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -42,6 +43,44 @@ export default function Navbar() {
     setUser(null);
     navigate("/");
   };
+=======
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useKeycloak } from '../context/KeycloakContext';
+import 'bootstrap/dist/css/bootstrap.min.css';
+import { LogInIcon,DiamondPlus, Grid2x2Check,HandCoins,LogOut,House, HistoryIcon,DatabaseZap } from 'lucide-react';
+
+export default function Navbar() {
+  const { authenticated, userProfile, logout, loading } = useKeycloak();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleLogout = () => {
+    logout();
+  };
+
+  if (loading) {
+    return (
+      <nav className="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+        <div className="container">
+          <Link className="navbar-brand fw-bold" to="/">
+            <i className="fas fa-hand-holding-heart me-2"></i>
+            Mutuelle
+          </Link>
+          <div className="ms-auto">
+            <span className="text-white">Chargement...</span>
+          </div>
+        </div>
+      </nav>
+    );
+  }
+
+  // Déterminer le rôle pour les menus admin
+  const isAdmin = userProfile &&
+    (userProfile.role === 'ADMIN' ||
+      userProfile.role === 'PRESIDENT' ||
+      userProfile.role === 'SECRETARY' ||
+      userProfile.role === 'TREASURER');
+>>>>>>> 0ca80779bd2df063c6c22313cd408bc6f07a9320
 
   return (
     <nav className="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
@@ -50,7 +89,7 @@ export default function Navbar() {
         {/* Brand */}
         <Link className="navbar-brand fw-bold" to="/">
           <i className="fas fa-hand-holding-heart me-2"></i>
-          Mutuelle
+         <HandCoins /> Mutuelle
         </Link>
 
         {/* Mobile toggle */}
@@ -70,27 +109,35 @@ export default function Navbar() {
 
             <li className="nav-item">
               <Link
+<<<<<<< HEAD
                 className={`nav-link ${
                   location.pathname === "/" ? "active" : ""
                 }`}
+=======
+                className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}
+>>>>>>> 0ca80779bd2df063c6c22313cd408bc6f07a9320
                 to="/"
               >
                 <i className="fas fa-home me-1"></i>
-                Accueil
+               <House /> Accueil
               </Link>
             </li>
 
-            {isAuthenticated && (
+            {authenticated && (
               <>
                 <li className="nav-item">
                   <Link
+<<<<<<< HEAD
                     className={`nav-link ${
                       location.pathname === "/dashboard" ? "active" : ""
                     }`}
+=======
+                    className={`nav-link ${location.pathname === '/dashboard' ? 'active' : ''}`}
+>>>>>>> 0ca80779bd2df063c6c22313cd408bc6f07a9320
                     to="/dashboard"
                   >
                     <i className="fas fa-tachometer-alt me-1"></i>
-                    Tableau de bord
+                   <Grid2x2Check /> Tableau de bord
                   </Link>
                 </li>
 
@@ -101,6 +148,7 @@ export default function Navbar() {
                     data-bs-toggle="dropdown"
                   >
                     <i className="fas fa-hand-holding-usd me-1"></i>
+<<<<<<< HEAD
                     Prêts
                   </button>
 
@@ -108,6 +156,15 @@ export default function Navbar() {
                     <li>
                       <Link className="dropdown-item" to="/loans/request">
                         Nouvelle demande
+=======
+                  <HandCoins />  Prêts
+                  </a>
+                  <ul className="dropdown-menu">
+                    <li>
+                      <Link className="dropdown-item" to="/loans/request">
+                        <i className="fas fa-plus-circle me-2"></i>
+                       <DiamondPlus /> Nouvelle demande
+>>>>>>> 0ca80779bd2df063c6c22313cd408bc6f07a9320
                       </Link>
                     </li>
                     <li>
@@ -125,7 +182,18 @@ export default function Navbar() {
                         Remboursement
                       </Link>
                     </li>
+<<<<<<< HEAD
 
+=======
+                    <li>
+                      <Link className="dropdown-item" to="/loans/repayment-history">
+                        <i className="fas fa-history me-2"></i>
+                        <HistoryIcon /> Historique remboursements
+                      </Link>
+                    </li>
+
+                    {/* Options admin ou manager pour les prêts */}
+>>>>>>> 0ca80779bd2df063c6c22313cd408bc6f07a9320
                     {isAdmin && (
                       <>
                         <li><hr className="dropdown-divider" /></li>
@@ -153,9 +221,14 @@ export default function Navbar() {
                     data-bs-toggle="dropdown"
                   >
                     <i className="fas fa-money-bill-wave me-1"></i>
+<<<<<<< HEAD
                     Cotisations
                   </button>
 
+=======
+                    <DatabaseZap /> Cotisations
+                  </a>
+>>>>>>> 0ca80779bd2df063c6c22313cd408bc6f07a9320
                   <ul className="dropdown-menu">
                     <li>
                       <Link
@@ -182,6 +255,10 @@ export default function Navbar() {
                       </Link>
                     </li>
 
+<<<<<<< HEAD
+=======
+                    {/* Options admin pour les cotisations */}
+>>>>>>> 0ca80779bd2df063c6c22313cd408bc6f07a9320
                     {isAdmin && (
                       <>
                         <li><hr className="dropdown-divider" /></li>
@@ -198,19 +275,33 @@ export default function Navbar() {
                   </ul>
                 </li>
 
+<<<<<<< HEAD
                 {/* ================= ADMIN ================= */}
+=======
+                {/* Menu Administration  ou manager*/}
+>>>>>>> 0ca80779bd2df063c6c22313cd408bc6f07a9320
                 {isAdmin && (
                   <li className="nav-item dropdown">
                     <button
                       className="nav-link dropdown-toggle btn btn-link text-white"
                       data-bs-toggle="dropdown"
                     >
+<<<<<<< HEAD
                       Administration
                     </button>
 
                     <ul className="dropdown-menu">
                       <li>
                         <Link className="dropdown-item" to="/members">
+=======
+                      <i className="fas fa-user-shield me-1"></i>
+                      Manager
+                    </a>
+                    <ul className="dropdown-menu">
+                      <li>
+                        <Link className="dropdown-item" to="/members/list">
+                          <i className="fas fa-user-plus me-2"></i>
+>>>>>>> 0ca80779bd2df063c6c22313cd408bc6f07a9320
                           Gestion membres
                         </Link>
                       </li>
@@ -236,15 +327,15 @@ export default function Navbar() {
 
           {/* ================= USER SECTION ================= */}
           <ul className="navbar-nav ms-auto">
-            {isAuthenticated ? (
+            {authenticated ? (
               <li className="nav-item dropdown">
                 <button
                   className="nav-link dropdown-toggle btn btn-link text-white d-flex align-items-center"
                   data-bs-toggle="dropdown"
                 >
-                  {user?.photo ? (
+                  {userProfile?.photo ? (
                     <img
-                      src={user.photo}
+                      src={userProfile.photo}
                       alt="Profil"
                       className="rounded-circle me-2"
                       width="32"
@@ -252,8 +343,9 @@ export default function Navbar() {
                       style={{ objectFit: "cover" }}
                     />
                   ) : (
-                    <i className="fas fa-user-circle me-2"></i>
+                    <i className="fas fa-user-circle me-2 fs-5"></i>
                   )}
+<<<<<<< HEAD
                   {user?.firstName} {user?.name}
                 </button>
 
@@ -261,6 +353,15 @@ export default function Navbar() {
                   <li>
                     <Link className="dropdown-item" to="/dashboard">
                       Tableau de bord
+=======
+                  <span>{userProfile?.firstName} {userProfile?.lastName}</span>
+                </a>
+                <ul className="dropdown-menu dropdown-menu-end">
+                  <li>
+                    <Link className="dropdown-item" to="/dashboard">
+                      <i className="fas fa-tachometer-alt me-2"></i>
+                    <Grid2x2Check />  Tableau de bord
+>>>>>>> 0ca80779bd2df063c6c22313cd408bc6f07a9320
                     </Link>
                   </li>
                   <li>
@@ -268,24 +369,39 @@ export default function Navbar() {
                       Mon profil
                     </Link>
                   </li>
+                  <Link className="dropdown-item" to="/change-password">
+                    <i className="bi bi-shield-lock me-2"></i>Changer mot de passe
+                  </Link>
                   <li><hr className="dropdown-divider" /></li>
                   <li>
+<<<<<<< HEAD
                     <button
                       className="dropdown-item text-danger"
                       onClick={handleLogout}
                     >
                       Déconnexion
+=======
+                    <button className="dropdown-item text-danger" onClick={handleLogout}>
+                      <i className="fas fa-sign-out-alt me-2"></i>
+                     <LogOut /> Déconnexion
+>>>>>>> 0ca80779bd2df063c6c22313cd408bc6f07a9320
                     </button>
                   </li>
                 </ul>
               </li>
             ) : (
               <li className="nav-item">
+<<<<<<< HEAD
                 <Link
                   className="btn btn-outline-light btn-sm"
                   to="/login"
                 >
                   Connexion
+=======
+                <Link className="btn btn-outline-light btn-sm" to="/login">
+                  <i className="fas fa-sign-in-alt me-1"></i>
+                  <LogInIcon /> Connexion
+>>>>>>> 0ca80779bd2df063c6c22313cd408bc6f07a9320
                 </Link>
               </li>
             )}
