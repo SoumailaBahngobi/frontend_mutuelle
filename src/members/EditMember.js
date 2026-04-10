@@ -17,6 +17,7 @@ function EditMember() {
     const [loading, setLoading] = useState(false);
     const [loadingMember, setLoadingMember] = useState(true);
     const [errors, setErrors] = useState({});
+    const [currentUser, setCurrentUser] = useState(null);
     const navigate = useNavigate();
     const { id } = useParams();
 
@@ -28,9 +29,43 @@ function EditMember() {
         try {
             setLoadingMember(true);
             const token = localStorage.getItem('token');
-            const response = await axios.get(`http://localhost:8080/mutuelle/member/${id}`, {
+            
+            if (!token) {
+                toast.error('Session expirée');
+                navigate('/login');
+                return;
+            }
+            
+            // Récupérer l'utilisateur courant
+            const userResponse = await axios.get('http://localhost:8081/mutuelle/auth/user-info', {
                 headers: { Authorization: `Bearer ${token}` }
             });
+            const user = userResponse.data;
+            setCurrentUser(user);
+            
+            console.log('🔍 Utilisateur:', user.email, 'Rôle:', user.role);
+            console.log('🔍 ID à modifier:', id);
+            
+            let response;
+            
+            // Vérifier si l'utilisateur est ADMIN
+            if (user.role === 'ADMIN') {
+                console.log('🔍 ADMIN - Utilisation de /member/admin/members/');
+                response = await axios.get(`http://localhost:8081/mutuelle/member/admin/members/${id}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+            } else {
+                // Non-admin : ne peut voir que son propre profil
+                if (user.id !== parseInt(id)) {
+                    toast.error('Vous ne pouvez voir que votre propre profil');
+                    navigate('/dashboard');
+                    return;
+                }
+                response = await axios.get(`http://localhost:8081/mutuelle/member/${id}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+            }
+            
             const member = response.data;
             
             setForm({
@@ -42,9 +77,20 @@ function EditMember() {
                 role: member.role || ''
             });
         } catch (error) {
-           // console.error('Erreur lors du chargement du membre:', error);
-            toast.error('Erreur lors du chargement du membre');
-            navigate('/members');
+            console.error('Erreur:', error);
+            
+            if (error.response?.status === 403) {
+                toast.error('Vous n\'avez pas les droits pour modifier ce membre');
+                navigate('/dashboard');
+            } else if (error.response?.status === 404) {
+                toast.error('Membre non trouvé');
+                navigate('/members/list');
+            } else if (error.response?.status === 401) {
+                toast.error('Session expirée');
+                navigate('/login');
+            } else {
+                toast.error('Erreur lors du chargement');
+            }
         } finally {
             setLoadingMember(false);
         }
@@ -71,7 +117,7 @@ function EditMember() {
         if (!form.npi) newErrors.npi = 'Le NPI est obligatoire';
         if (!form.phone.trim()) {
             newErrors.phone = 'Le téléphone est obligatoire';
-        } else if (!/^[0-9+\-\s()]{10,}$/.test(form.phone)) {
+        } else if (!/^[0-9+\-\s()]{8,}$/.test(form.phone)) {
             newErrors.phone = 'Format de téléphone invalide';
         }
         if (!form.role) newErrors.role = 'Le rôle est obligatoire';
@@ -91,26 +137,43 @@ function EditMember() {
         
         try {
             const token = localStorage.getItem('token');
-            const response = await axios.put(`http://localhost:8080/mutuelle/member/${id}`, form, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            let response;
             
-            if (response.status === 200) {
+            if (currentUser?.role === 'ADMIN') {
+                // ADMIN utilise le même endpoint que le GET
+                response = await axios.put(`http://localhost:8081/mutuelle/member/admin/members/${id}`, form, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+            } else {
+                // Non-admin : ne peut modifier que son propre profil
+                if (currentUser?.id !== parseInt(id)) {
+                    toast.error('Vous ne pouvez modifier que votre propre profil');
+                    navigate('/dashboard');
+                    return;
+                }
+                response = await axios.put(`http://localhost:8081/mutuelle/member/${id}`, form, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+            }
+            
+            if (response.status === 200 || response.data?.success) {
                 toast.success('Membre modifié avec succès !');
-                navigate('/members');
+                
+                if (currentUser?.role === 'ADMIN') {
+                    navigate('/members/list');
+                } else {
+                    navigate('/dashboard');
+                }
             }
         } catch (error) {
-            console.error('Erreur de modification:', error);
+            console.error('Erreur:', error);
             
-            if (error.response?.status === 400) {
-                const errorMessage = error.response.data?.message || 'Données invalides';
-                toast.error(`Erreur: ${errorMessage}`);
+            if (error.response?.status === 403) {
+                toast.error('Vous n\'avez pas les permissions');
             } else if (error.response?.status === 409) {
                 toast.error('Cet email ou NPI est déjà utilisé');
-            } else if (error.response?.status === 403) {
-                toast.error('Vous n\'avez pas les permissions pour modifier ce membre');
             } else {
-                toast.error('Erreur lors de la modification. Veuillez réessayer.');
+                toast.error('Erreur lors de la modification');
             }
         } finally {
             setLoading(false);
@@ -148,9 +211,7 @@ function EditMember() {
                                 <div className="row">
                                     <div className="col-md-6">
                                         <div className="form-group mb-3">
-                                            <label htmlFor="name" className="form-label fw-semibold">
-                                                Nom *
-                                            </label>
+                                            <label htmlFor="name" className="form-label fw-semibold">Nom *</label>
                                             <input 
                                                 type="text" 
                                                 className={`form-control ${errors.name ? 'is-invalid' : ''}`}
@@ -158,19 +219,14 @@ function EditMember() {
                                                 name="name" 
                                                 value={form.name} 
                                                 onChange={handleChange}
-                                                placeholder="Entrez le nom"
                                                 disabled={loading}
                                             />
-                                            {errors.name && (
-                                                <div className="invalid-feedback">{errors.name}</div>
-                                            )}
+                                            {errors.name && <div className="invalid-feedback">{errors.name}</div>}
                                         </div>
                                     </div>
                                     <div className="col-md-6">
                                         <div className="form-group mb-3">
-                                            <label htmlFor="firstName" className="form-label fw-semibold">
-                                                Prénom *
-                                            </label>
+                                            <label htmlFor="firstName" className="form-label fw-semibold">Prénom *</label>
                                             <input 
                                                 type="text" 
                                                 className={`form-control ${errors.firstName ? 'is-invalid' : ''}`}
@@ -178,20 +234,15 @@ function EditMember() {
                                                 name="firstName" 
                                                 value={form.firstName} 
                                                 onChange={handleChange}
-                                                placeholder="Entrez le prénom"
                                                 disabled={loading}
                                             />
-                                            {errors.firstName && (
-                                                <div className="invalid-feedback">{errors.firstName}</div>
-                                            )}
+                                            {errors.firstName && <div className="invalid-feedback">{errors.firstName}</div>}
                                         </div>
                                     </div>
                                 </div>
 
                                 <div className="form-group mb-3">
-                                    <label htmlFor="email" className="form-label fw-semibold">
-                                        Email *
-                                    </label>
+                                    <label htmlFor="email" className="form-label fw-semibold">Email *</label>
                                     <input 
                                         type="email" 
                                         className={`form-control ${errors.email ? 'is-invalid' : ''}`}
@@ -199,40 +250,30 @@ function EditMember() {
                                         name="email" 
                                         value={form.email} 
                                         onChange={handleChange}
-                                        placeholder="exemple@email.com"
                                         disabled={loading}
                                     />
-                                    {errors.email && (
-                                        <div className="invalid-feedback">{errors.email}</div>
-                                    )}
+                                    {errors.email && <div className="invalid-feedback">{errors.email}</div>}
                                 </div>
 
                                 <div className="row">
                                     <div className="col-md-6">
                                         <div className="form-group mb-3">
-                                            <label htmlFor="npi" className="form-label fw-semibold">
-                                                NPI *
-                                            </label>
+                                            <label htmlFor="npi" className="form-label fw-semibold">NPI *</label>
                                             <input 
-                                                type="number" 
+                                                type="text" 
                                                 className={`form-control ${errors.npi ? 'is-invalid' : ''}`}
                                                 id="npi" 
                                                 name="npi" 
                                                 value={form.npi} 
                                                 onChange={handleChange}
-                                                placeholder="Numéro personnel d'identification"
                                                 disabled={loading}
                                             />
-                                            {errors.npi && (
-                                                <div className="invalid-feedback">{errors.npi}</div>
-                                            )}
+                                            {errors.npi && <div className="invalid-feedback">{errors.npi}</div>}
                                         </div>
                                     </div>
                                     <div className="col-md-6">
                                         <div className="form-group mb-3">
-                                            <label htmlFor="phone" className="form-label fw-semibold">
-                                                Téléphone *
-                                            </label>
+                                            <label htmlFor="phone" className="form-label fw-semibold">Téléphone *</label>
                                             <input 
                                                 type="tel" 
                                                 className={`form-control ${errors.phone ? 'is-invalid' : ''}`}
@@ -240,27 +281,22 @@ function EditMember() {
                                                 name="phone" 
                                                 value={form.phone} 
                                                 onChange={handleChange}
-                                                placeholder="Ex: +229 01 00 00 00"
                                                 disabled={loading}
                                             />
-                                            {errors.phone && (
-                                                <div className="invalid-feedback">{errors.phone}</div>
-                                            )}
+                                            {errors.phone && <div className="invalid-feedback">{errors.phone}</div>}
                                         </div>
                                     </div>
                                 </div>
 
                                 <div className="form-group mb-4">
-                                    <label htmlFor="role" className="form-label fw-semibold">
-                                        Rôle *
-                                    </label>
+                                    <label htmlFor="role" className="form-label fw-semibold">Rôle *</label>
                                     <select 
                                         id="role" 
                                         name="role" 
                                         className={`form-control ${errors.role ? 'is-invalid' : ''}`}
                                         value={form.role} 
                                         onChange={handleChange}
-                                        disabled={loading}
+                                        disabled={loading || currentUser?.role !== 'ADMIN'}
                                     >
                                         <option value="">Sélectionner un rôle</option>
                                         <option value="MEMBER">Membre</option>
@@ -269,16 +305,23 @@ function EditMember() {
                                         <option value="TREASURER">Trésorier</option>
                                         <option value="ADMIN">Administrateur</option>
                                     </select>
-                                    {errors.role && (
-                                        <div className="invalid-feedback">{errors.role}</div>
+                                    {errors.role && <div className="invalid-feedback">{errors.role}</div>}
+                                    {currentUser?.role !== 'ADMIN' && (
+                                        <small className="text-muted">Seul un administrateur peut modifier le rôle</small>
                                     )}
                                 </div>
 
-                                <div className="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <div className="d-flex gap-2 justify-content-end">
                                     <button 
                                         type="button" 
-                                        className="btn btn-outline-secondary me-md-2"
-                                        onClick={() => navigate('/dashboard')}
+                                        className="btn btn-outline-secondary"
+                                        onClick={() => {
+                                            if (currentUser?.role === 'ADMIN') {
+                                                navigate('/members/list');
+                                            } else {
+                                                navigate('/dashboard');
+                                            }
+                                        }}
                                         disabled={loading}
                                     >
                                         Annuler
@@ -288,17 +331,7 @@ function EditMember() {
                                         className="btn btn-warning"
                                         disabled={loading}
                                     >
-                                        {loading ? (
-                                            <>
-                                                <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                                                Modification...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <i className="bi bi-check-lg me-2"></i>
-                                                Enregistrer les modifications
-                                            </>
-                                        )}
+                                        {loading ? 'Modification...' : 'Enregistrer les modifications'}
                                     </button>
                                 </div>
                             </form>
