@@ -12,7 +12,7 @@ import {
   RefreshCw, PercentCircle, Globe, User
 } from 'lucide-react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  LineChart, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts';
 
@@ -120,7 +120,7 @@ export default function Dashboard() {
           }
 
         } catch (error) {
-          console.error('Erreur chargement profil:', error);
+          //console.error('Erreur chargement profil:', error);
           toast.error('Erreur lors du chargement du profil');
           setLoading(false);
         }
@@ -151,9 +151,14 @@ export default function Dashboard() {
         axios.get('http://localhost:8081/mutuelle/loans', {
           headers: { Authorization: `Bearer ${token}` }
         }),
-        axios.get('http://localhost:8081/mutuelle/contribution/my-contributions', {
+       /* axios.get('http://localhost:8081/mutuelle/contribution/my-contributions', {
+          headers: { Authorization: `Bearer ${token}` }
+        }),*/
+
+ axios.get('http://localhost:8081/mutuelle/contribution', {
           headers: { Authorization: `Bearer ${token}` }
         }),
+
         axios.get('http://localhost:8081/mutuelle/notification', {
           headers: { Authorization: `Bearer ${token}` }
         }),
@@ -235,24 +240,39 @@ export default function Dashboard() {
   };
 
   const generateChartData = (loansData, requestsData, contributionsData, membersData) => {
-    // Créer les 12 derniers mois
+    // Créer les 12 mois de l'année (janvier à décembre)
     const monthlyMap = new Map();
-    const now = new Date();
+    const currentYear = new Date().getFullYear();
+    
+    // Mois de janvier à décembre
+    const months = [
+      { num: 1, name: 'Jan' },
+      { num: 2, name: 'Fév' },
+      { num: 3, name: 'Mar' },
+      { num: 4, name: 'Avr' },
+      { num: 5, name: 'Mai' },
+      { num: 6, name: 'Juin' },
+      { num: 7, name: 'Juil' },
+      { num: 8, name: 'Aoû' },
+      { num: 9, name: 'Sep' },
+      { num: 10, name: 'Oct' },
+      { num: 11, name: 'Nov' },
+      { num: 12, name: 'Déc' }
+    ];
 
-    for (let i = 11; i >= 0; i--) {
-      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
-      const monthName = date.toLocaleString('fr-FR', { month: 'short' });
+    // Initialiser tous les mois de l'année
+    months.forEach(month => {
+      const monthKey = `${currentYear}-${month.num}`;
       monthlyMap.set(monthKey, {
-        month: monthName,
-        year: date.getFullYear(),
-        monthNum: date.getMonth() + 1,
+        month: month.name,
+        year: currentYear,
+        monthNum: month.num,
         contributions: 0,
         loans: 0,
         reimbursements: 0,
         balance: 0
       });
-    }
+    });
 
     // Ajouter les cotisations
     contributionsData.forEach(contribution => {
@@ -299,12 +319,9 @@ export default function Dashboard() {
       }
     });
 
-    // Calculer le solde cumulé
+    // Calculer le solde cumulé dans l'ordre des mois (janvier à décembre)
     let runningBalance = 0;
-    const monthlyArray = Array.from(monthlyMap.values()).sort((a, b) => {
-      if (a.year !== b.year) return a.year - b.year;
-      return a.monthNum - b.monthNum;
-    });
+    const monthlyArray = Array.from(monthlyMap.values()).sort((a, b) => a.monthNum - b.monthNum);
 
     monthlyArray.forEach(data => {
       runningBalance += data.contributions - data.loans + data.reimbursements;
@@ -463,7 +480,7 @@ export default function Dashboard() {
 
   const getDefaultMonthlyData = () => {
     const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
-    return months.slice(-6).map(month => ({
+    return months.map(month => ({
       month: month,
       contributions: 0,
       loans: 0,
@@ -711,7 +728,7 @@ export default function Dashboard() {
                     }
                     }>
                     <div className="dropdown-item" onClick={handleShowMyData} style={{ cursor: 'pointer' }}>
-                      <strong>👤 Mes données personnelles</strong>
+                      <strong> Mes données personnelles</strong>
                     </div>
                     <div className="dropdown-divider"></div>
                     <div className="dropdown-header">Autres membres</div>
@@ -885,44 +902,105 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Graphique en barres - Évolution mensuelle */}
+          {/* Graphique en courbes - Évolution mensuelle (Janvier à Décembre) */}
           <div className="row g-3 mb-4">
             <div className="col-12">
               <div className="bg-white rounded-4 p-3 shadow-sm">
                 <h6 className="fw-semibold mb-3">
-                   Évolution mensuelle des cotisations, prêts et remboursements
+                  📈 Évolution mensuelle des cotisations, prêts et remboursements - Année {new Date().getFullYear()}
                   {selectedMemberName && ` - ${selectedMemberName}`}
                 </h6>
                 <ResponsiveContainer width="100%" height={400}>
-                  <BarChart data={monthlyData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
+                  <LineChart data={monthlyData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
                     <XAxis dataKey="month" />
                     <YAxis tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`} />
                     <Tooltip formatter={(value) => formatCurrency(value)} />
                     <Legend />
-                    <Bar dataKey="contributions" fill="#10b981" name="Cotisations" />
-                    <Bar dataKey="loans" fill="#ef4444" name="Prêts" />
-                    <Bar dataKey="reimbursements" fill="#3b82f6" name="Remboursements" />
-                  </BarChart>
+                    <defs>
+                      <linearGradient id="contributionsGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                      </linearGradient>
+                      <linearGradient id="loansGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <Area
+                      type="monotone"
+                      dataKey="contributions"
+                      stroke="#10b981"
+                      strokeWidth={2}
+                      fill="url(#contributionsGradient)"
+                      name="Cotisations"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="loans"
+                      stroke="#ef4444"
+                      strokeWidth={2}
+                      fill="url(#loansGradient)"
+                      name="Prêts"
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="reimbursements" 
+                      stroke="#3b82f6" 
+                      strokeWidth={2.5}
+                      strokeDasharray="5 5"
+                      name="Remboursements"
+                      dot={{ r: 3, fill: "#3b82f6" }}
+                    />
+                  </LineChart>
                 </ResponsiveContainer>
+                <div className="mt-3 pt-2 border-top d-flex justify-content-center gap-4">
+                  <div className="d-flex align-items-center gap-2">
+                    <div style={{ width: 20, height: 3, backgroundColor: '#10b981', borderRadius: 2 }}></div>
+                    <small className="text-muted">Cotisations (zone)</small>
+                  </div>
+                  <div className="d-flex align-items-center gap-2">
+                    <div style={{ width: 20, height: 3, backgroundColor: '#ef4444', borderRadius: 2 }}></div>
+                    <small className="text-muted">Prêts (zone)</small>
+                  </div>
+                  <div className="d-flex align-items-center gap-2">
+                    <div style={{ width: 20, height: 3, backgroundColor: '#3b82f6', borderRadius: 2, border: 'none', borderTop: '2px dashed #3b82f6' }}></div>
+                    <small className="text-muted">Remboursements (tireté)</small>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Graphique du solde */}
+          {/* Graphique du solde - Version courbe avec zone */}
           <div className="row g-3 mb-4">
             <div className="col-12">
               <div className="bg-white rounded-4 p-3 shadow-sm">
-                <h6 className="fw-semibold mb-3">💰 Évolution du solde</h6>
+                <h6 className="fw-semibold mb-3">💰 Évolution du solde (courbe) - Année {new Date().getFullYear()}</h6>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={monthlyData}>
-                    <CartesianGrid strokeDasharray="3 3" />
+                  <LineChart data={monthlyData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
                     <XAxis dataKey="month" />
                     <YAxis tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`} />
                     <Tooltip formatter={(value) => formatCurrency(value)} />
                     <Legend />
-                    <Bar dataKey="balance" fill="#8b5cf6" name="Solde" />
-                  </BarChart>
+                    <defs>
+                      <linearGradient id="balanceGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <Area
+                      type="monotone"
+                      dataKey="balance"
+                      stroke="#8b5cf6"
+                      strokeWidth={3}
+                      fill="url(#balanceGradient)"
+                      name="Solde"
+                      dot={{ r: 4, fill: "#8b5cf6" }}
+                      activeDot={{ r: 6 }}
+                    />
+                  </LineChart>
                 </ResponsiveContainer>
                 <div className="mt-2 text-muted small text-center">
                   Solde = Σ(Cotisations - Prêts + Remboursements)
@@ -935,7 +1013,7 @@ export default function Dashboard() {
           <div className="row g-3 mb-4">
             <div className="col-lg-4">
               <div className="bg-white rounded-4 p-3 shadow-sm h-100">
-                <h6 className="fw-semibold mb-3">🥧 Répartition des prêts</h6>
+                <h6 className="fw-semibold mb-3"> Répartition des prêts</h6>
                 {loanStatusData.every(d => d.value === 0) ? (
                   <div className="text-center py-5">
                     <p className="text-muted">Aucune donnée disponible</p>
@@ -1040,7 +1118,7 @@ export default function Dashboard() {
             <div className="col-12">
               <div className="bg-white rounded-4 p-3 shadow-sm">
                 <div className="d-flex justify-content-between align-items-center mb-3">
-                  <h6 className="fw-semibold mb-0">Mes demandes de prêt récentes</h6>
+                  <h6 className="fw-semibold mb-0">📝 Mes demandes de prêt récentes</h6>
                   <button className="btn btn-link text-primary p-0" onClick={() => navigate('/loans/requests')}>
                     Voir tout <ChevronRight size={16} />
                   </button>

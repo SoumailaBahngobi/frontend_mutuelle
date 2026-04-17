@@ -236,7 +236,7 @@ const AddRepayment = () => {
 
             console.log('Réponse du serveur:', response.data);
 
-            setSuccess('Remboursement enregistré avec succès !');
+           // setSuccess('Remboursement enregistré avec succès !');
             toast.success('Remboursement enregistré avec succès !');
 
             // Réinitialiser le formulaire
